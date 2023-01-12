@@ -2,4 +2,5 @@
 
 export(create_hib)
 export(load_hib)
+export(update_hib)
 import(R6)

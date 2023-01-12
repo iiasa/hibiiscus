@@ -11,7 +11,7 @@ Maintainer: Martin Jung <jung@iiasa.ac.at>
 Description: This package uses principles of ecological meta-analysis to assess the impacts of land use and land-use intensity on ecological communities. Data and modelling approach originate from the PREDICTS framework and are adapated for greater transferability, accounting of uncertainty and robustness.
 License: CC BY 4.0
 Language: en-GB
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
 Encoding: UTF-8
 Imports:
   assertthat (>= 0.2.0),
@@ -19,14 +19,16 @@ Imports:
   sf (>= 0.9),
   dplyr (>= 1.0.10),
   forcats,
+  lubridate,
+  crayon,
   readr
 Depends:
   R(>= 4.0.0)
 Suggests:
-    lme4,
-    brms,
-    posterior,
-    testthat (>= 3.0.0)
+  lme4,
+  brms,
+  posterior,
+  testthat (>= 3.0.0)
 URL: https://github.com/iiasa/hibiiscus
 BugReports: https://github.com/iiasa/hibiiscus/issues
 Config/testthat/edition: 3

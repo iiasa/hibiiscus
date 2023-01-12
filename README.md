@@ -29,11 +29,9 @@ This is a basic example which shows you how to solve a common problem:
 
 ## Citation
 
-<summary>
-\[XXX,…, Jung M\] (2022). hibiiscus - Modelling framework for
+<code> \[XXX,…, Jung M\] (2022). hibiiscus - Modelling framework for
 hierachical ecological impact analysis. R package version 0.1,
-<https://github.com/iiasa/hibiiscus>.
-</summary>
+<https://github.com/iiasa/hibiiscus>. </code>
 
 ## Acknowledgement
 
