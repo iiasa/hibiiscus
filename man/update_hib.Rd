@@ -4,10 +4,20 @@
 \alias{update_hib}
 \title{This function updates an existing Database object with further data}
 \usage{
-update_hib(path_input)
+update_hib(obj, path_species, path_sites, version = "2016", output = NULL, ...)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}
+
+\item{path_species}{A [`character`] pointing to a `PREDICTS` formatted occurrence database.}
+
+\item{path_sites}{A [`character`] pointing to a `PREDICTS` formatted site database, or "" otherwise.}
+
+\item{version}{A [`character`] denoting the version of the PREDICTS database to use. Has to be either
+\code{"2016"}, \code{"2022"} or \code{"custom"}. In the latter case it is important that formatting is consistent
+with earlier versions of the PREDICTS database (Default: \code{"2016"}).}
+
+\item{...}{Other non-specified parameters.}
 }
 \description{
 The function [`create_hib`] allows to save the output of the formatted database object in a specific

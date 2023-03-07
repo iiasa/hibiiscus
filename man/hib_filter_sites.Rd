@@ -4,15 +4,16 @@
 \alias{hib_filter_sites}
 \title{Filter the database object by site(s)}
 \usage{
-hib_filter_sites(obj, sites)
+hib_filter_sites(obj, condition)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A [`hib_database`] object.}
 
-\item{ids}{[`character`] giving ids to be filtered out}
+\item{condition}{A [`conditional`] statement identifying how to filter the sites dataframe}
 }
 \description{
-The output of this function returns a database object containing sites and species
-of only those contained within in.
+This function returns a database object containing only sites whose characteristics 
+are retained
 }
-\keyword{database}
+\keyword{database,}
+\keyword{filtering}

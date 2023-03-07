@@ -1,21 +1,20 @@
 #' Create a database object
 #' 
 #' @description 
-#' This function creates a [`R6`] object containing the loaded \code{PREDICTS} database. It
-#' assumes that both a species occurrence and a site database is present. All files are loaded and
-#' compiled in a single database that can be stored for future use.
+#' This function creates a [`R6`] object containing the loaded \code{PREDICTS} database. 
+#' It assumes that a species database is present, with a site database being optional. 
+#' All files are loaded and compiled in a single database that can be stored for future use.
 #' 
 #' This object is then used in other functions of this package to prepare or filter the
 #' database and enable ecological impact analyses. 
 #' @note 
 #' Other or later \code{PREDICTS} formatted object need to be supplied via ...
 #' @param path_species A [`character`] pointing to a `PREDICTS` formatted occurrence database.
-#' @param path_sites A [`character`] pointing to a `PREDICTS` formatted site database.
+#' @param path_sites A [`character`] pointing to a `PREDICTS` formatted site database, or "" otherwise.
 #' @param version A [`character`] denoting the version of the PREDICTS database to use. Has to be either
 #' \code{"2016"}, \code{"2022"} or \code{"custom"}. In the latter case it is important that formatting is consistent
-#' with earlier version of the PREDICTS database (Default: \code{"2016"}).
-#' @param output A optional [`character`] name to store the underlying database. If set to \code{NULL} the database is only created in
-#' a temporary directory (Default: \code{NULL}).
+#' with earlier versions of the PREDICTS database (Default: \code{"2016"}).
+
 #' @param ... Other non-specified parameters.
 #' @references 
 #' * 1. Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Senior, R.A., Bennett, D.J., Booth, H., et al. (2014). The PREDICTS database: a global database of how local terrestrial biodiversity responds to human impacts. Ecol. Evol. 4, 4701–4735. 10.1002/ece3.1303.
@@ -29,51 +28,76 @@
 #'   obj
 #' }
 #' @export
-create_hib <- function(path_species, path_sites, version = "2016", output = NULL, ...){
+create_hib <- function(path_species, path_sites = "", version = "2016", ...){
+  # NOTE RC - dropping output path - not really needed - use save_hib instead.
+  # output = NULL,
+  #  #' @param output A optional [`character`] name to store the underlying database. 
+  # If set to \code{NULL} the database is only created in a temporary directory (Default: \code{NULL}).
+  
+  # 2022 release doesn't have a site rds... - could make one? 
+  # Or allow path_sites to be ""
   assertthat::assert_that(
     is.character(path_species),
     file.exists(path_species),
-    is.character(path_sites),
-    file.exists(path_sites),
-    is.character(version),
-    is.null(output) || is.character(output)
+    # is.character(path_sites),
+    # file.exists(path_sites),
+    (is.character(path_sites) & file.exists(path_sites) ) || (is.character(path_sites) & path_sites == ""),
+    is.character(version)
+    # is.null(output) || is.character(output)
   )
 
   # Check that version is correct
   version <- match.arg(version, c("2016", "2022", "custom"), several.ok = TRUE)
   
-  # If output is null, create one
-  if(is.null(output)){
-    output <- paste0(tempfile(),".rds")
-  }
-  if(!assertthat::has_extension(output, "rds")){
-    output <- paste0(output, ".rds")
-  }
+  # # If output is null, create one
+  # if(is.null(output)){
+  #   output <- paste0(tempfile(),".rds")
+  # }
+  # if(!assertthat::has_extension(output, "rds")){
+  #   output <- paste0(output, ".rds")
+  # }
   
   # ------ #
-  message("Create database object...")
+  message("Creating database object...")
   obj <- Database$new(
     version = version,
     paths = list(sites = path_sites,
-                 species = path_species,
-                 path_output = output)
+                 species = path_species)#,
+                 # path_output = output)
   )
   
   # Save the output (using the output path specified above)
-  saveRDS(obj, output)
-  assertthat::assert_that(file.exists(output),
-                          msg = "Writing a copy of the database failed...")
+  # TODO: 
+  # saving should be an optional function - e.g. after some data processing 
+  # - not just the raw data
+  # saveRDS(obj, output)
+  # assertthat::assert_that(file.exists(output),
+  #                         msg = "Writing a copy of the database failed...")
   
   return(obj)
 }
 
+
+#' Save a previously created database object
+#' 
+#' @description 
+#' The function [`save_hib`] saves the output of the formatted [`hib_database`] object in a specific
+#' place.
+#' @details 
+#' Expecting a file with \code{rds} ending.
+#' @param obj A [`hib_database`].
+#' @param output_path A [`character`] pointing to a filename.
+#' @keywords save, database
+#' @export
+save_hib <- function(obj, output_path) obj$save_hib(output_path)
+
+
 #' Load a previously created database object
 #' 
 #' @description 
-#' The function [`create_hib`] allows to save the output of the formatted database object in a specific
-#' place. This function can load such a previously created database, allowing interaction with the output. 
+#' The function [`load_hib`] loads a previously created [`hib_database`]. 
 #' @details 
-#' To be run after [`create_hib`]. Expecting a file with \code{rds} ending.
+#' Expecting a file with \code{rds} ending.
 #' @param path_input A [`character`] pointing to a filename.
 #' @keywords database, preparation
 #' @examples 
@@ -88,6 +112,8 @@ load_hib <- function(path_input){
     assertthat::has_extension(path_input, "rds")
   )
   # Try and read in the database
+  message(crayon::green(paste0("Loading hib database from: '", path_input, "...")))
+  
   obj <- readr::read_rds(path_input)
   
   #Make some sensitivity checks that the object is correct
@@ -95,3 +121,5 @@ load_hib <- function(path_input){
   
   return(obj)
 }
+
+

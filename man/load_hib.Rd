@@ -10,11 +10,10 @@ load_hib(path_input)
 \item{path_input}{A [`character`] pointing to a filename.}
 }
 \description{
-The function [`create_hib`] allows to save the output of the formatted database object in a specific
-place. This function can load such a previously created database, allowing interaction with the output.
+The function [`load_hib`] loads a previously created [`hib_database`].
 }
 \details{
-To be run after [`create_hib`]. Expecting a file with \code{rds} ending.
+Expecting a file with \code{rds} ending.
 }
 \examples{
 \dontrun{

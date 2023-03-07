@@ -4,26 +4,23 @@
 \alias{create_hib}
 \title{Create a database object}
 \usage{
-create_hib(path_species, path_sites, version = "2016", output = NULL, ...)
+create_hib(path_species, path_sites = "", version = "2016", ...)
 }
 \arguments{
 \item{path_species}{A [`character`] pointing to a `PREDICTS` formatted occurrence database.}
 
-\item{path_sites}{A [`character`] pointing to a `PREDICTS` formatted site database.}
+\item{path_sites}{A [`character`] pointing to a `PREDICTS` formatted site database, or "" otherwise.}
 
 \item{version}{A [`character`] denoting the version of the PREDICTS database to use. Has to be either
 \code{"2016"}, \code{"2022"} or \code{"custom"}. In the latter case it is important that formatting is consistent
-with earlier version of the PREDICTS database (Default: \code{"2016"}).}
-
-\item{output}{A optional [`character`] name to store the underlying database. If set to \code{NULL} the database is only created in
-a temporary directory (Default: \code{NULL}).}
+with earlier versions of the PREDICTS database (Default: \code{"2016"}).}
 
 \item{...}{Other non-specified parameters.}
 }
 \description{
-This function creates a [`R6`] object containing the loaded \code{PREDICTS} database. It
-assumes that both a species occurrence and a site database is present. All files are loaded and
-compiled in a single database that can be stored for future use.
+This function creates a [`R6`] object containing the loaded \code{PREDICTS} database. 
+It assumes that a species database is present, with a site database being optional. 
+All files are loaded and compiled in a single database that can be stored for future use.
 
 This object is then used in other functions of this package to prepare or filter the
 database and enable ecological impact analyses.
