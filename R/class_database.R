@@ -362,9 +362,10 @@ Database <- R6Class("Database",
                       invisible()
                     } #,
                     # Filter database
+                    # TODO: put filter methods here...
                     # by sites: "Country", "UN_subregion" , "UN_region",  "Ecoregion" , "Biome", "Realm"...
                     # hib_filter_sites()
-                    # by taxa: "Kingdom", "Phylum",  "Class", "Order", "Family", "Genus"
+                    
                   ),
                   # Private entries to be created
                   private = list(

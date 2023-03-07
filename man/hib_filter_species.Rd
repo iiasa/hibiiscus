@@ -15,5 +15,10 @@ hib_filter_species(obj, condition)
 This function returns a database object containing only species (and associated sites) whose characteristics 
 are retained
 }
+\examples{
+\dontrun{
+  hib_filter_species(hib_obj, Class == "Insecta")
+}
+}
 \keyword{database,}
 \keyword{filtering}
