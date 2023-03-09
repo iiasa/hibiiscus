@@ -1,17 +1,16 @@
 #' This function updates an existing Database object with further data
 #' 
 #' @description 
-#' The function [`create_hib`] allows to save the output of the formatted database object in a specific
-#' place. This function can update an existing database, for example by adding the 2022 or a custom PREDICTs version 
+#' This function can update an existing database, for example by adding the 2022 or a custom PREDICTS version 
 #' to it.
 #' @details 
-#' To be run after [`create_hib`]. Expects a [`Database`] object.
+#' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
 #' @inheritParams create_hib
 #' @keywords database, preparation
 #' @examples 
 #' \dontrun{
-#'   obj <- load_hib(path_input)
+#'   obj <- update_hib(obj1, obj2)
 #' } 
 #' @export
 update_hib <- function(obj, path_species, path_sites, version = "2016", output = NULL, ...){

@@ -16,6 +16,7 @@ Database <- R6Class("Database",
                     paths = NULL,
                     sites = NULL,
                     species = NULL,
+                    diversity = NULL,
                     processing_flags = NULL,
                     # Executed when created
                     initialize = function(version, paths){
@@ -297,7 +298,22 @@ Database <- R6Class("Database",
                       stats <- list(number_sites = nrow(self$sites),
                                     number_lu = length( unique(self$sites$Predominant_land_use) ),
                                     number_lui = length(unique(self$sites$Use_intensity)),
-                                    number_species = length( unique(self$species$Best_guess_binomial) ))
+                                    number_species = length( unique(self$species$Best_guess_binomial) ),
+                                    filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
+                                    div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
+                      # Neaten diversity metrics formatting
+                      if (is.null(self$diversity)){
+                        stats$div_metrics = "NA"
+                      }
+                      if (!is.null(self$diversity)){
+                        stats$div_metrics <- gsub("_", " ", stats$div_metrics)
+                        stats$div_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
+                                                  stats$div_metrics)
+                      }
+                      # Neaten filtering formatting
+                      if (length(self$processing_flags$filtering_steps) == 0){
+                        stats$filters_applied = "NA"
+                      }
                       message(
                         paste0("Hibiiscus PREDICTS database (including versions: ", crayon::bold(self$version),")","\n",
                                "(Last updated: ", crayon::green( self$last_update ), ")",
@@ -305,9 +321,18 @@ Database <- R6Class("Database",
                                "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                                                      crayon::green(stats$number_lui), "\n",
-                               "\t Number of species:             ", crayon::green(stats$number_species)
+                               "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+                               "\n",
+                               # TODO: include processing flag output - filtering summary, 
+                               "\t Effort-correction applied:     ", crayon::green(self$processing_flags$measures_effort_corrected), "\n",
+                               # Filter summ
+                               "\t Filtering conducted:           ", crayon::green(gsub("; ", 
+                                                                                        ";\n\t                                ",
+                                                                                        stats$filters_applied)), "\n",
+                               "\t Diversity metrics calculated:  ", crayon::green(stats$div_metrics)
                                )
                         )
+                      
                     },
                     # Save object
                     save_hib = function(output_path = NULL){
@@ -348,6 +373,7 @@ Database <- R6Class("Database",
                       # add a message...
                       message(crayon::green("Correcting measuremnts for sampling effort...\n"))
                       
+                      # TODO: CHECK - should this only adjust Abundance?
                       self$species <- self$species %>%
                         dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
                                                                          T ~ Sampling_effort)) %>%
@@ -359,7 +385,7 @@ Database <- R6Class("Database",
                       # Add a flag to some background info - Measures are effort corrected = T
                       self$processing_flags$measures_effort_corrected <- T
                       self$last_update <- lubridate::today()
-                      invisible()
+                      invisible(self)
                     } #,
                     # Filter database
                     # TODO: put filter methods here...
