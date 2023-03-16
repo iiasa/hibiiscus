@@ -4,7 +4,7 @@
 \alias{update_hib}
 \title{This function updates an existing Database object with further data}
 \usage{
-update_hib(obj, path_species, path_sites, version = "2016", output = NULL, ...)
+update_hib(obj, path_species, path_sites = "", version = "2022", ...)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}

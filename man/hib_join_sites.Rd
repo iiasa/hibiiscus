@@ -4,18 +4,16 @@
 \alias{hib_join_sites}
 \title{Joins external site information to a database object}
 \usage{
-hib_join_sites(obj, ids, info)
+hib_join_sites(obj, site_info)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}
 
-\item{ids}{[`character`] giving the id column to be added.}
-
-\item{info}{A [`vector`] of categorical or numeric information to be added to the database.}
+\item{site_info}{A [`dataframe`] or similar of categorical or numeric information to be added to the database.}
 }
 \description{
 This function joins external information to a [`Database`] object. Such information could be 
-for example additional filtering data for sites not already present in the database.
+for example additional site-specific data that are not already present in the database.
 }
 \keyword{database,}
 \keyword{external}

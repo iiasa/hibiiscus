@@ -4,14 +4,12 @@
 \alias{hib_join_species}
 \title{Joins external species information to a database object}
 \usage{
-hib_join_species(obj, ids, info)
+hib_join_species(obj, spp_info)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}
 
-\item{ids}{[`character`] giving the id column to be added.}
-
-\item{info}{A [`vector`] of categorical or numeric information to be added to the database.}
+\item{spp_info}{A [`dataframe`] or similar of categorical or numeric information to be added to the database.}
 }
 \description{
 This function joins external information to a [`Database`] object. Such information could be 

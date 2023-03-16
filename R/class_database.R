@@ -62,6 +62,21 @@ Database <- R6Class("Database",
                       if (paths$sites != ""){
                         sites <- readr::read_rds(paths$sites)
                         sites$version <- version
+                        
+                        if ("N_samples" %in% colnames(sites)){
+                          if (class(sites$N_samples) == "table"){
+                            sites$N_samples <- as.vector(sites$N_samples)
+                          }  
+                        }
+                        
+                        assertthat::assert_that(
+                          assertthat::has_name(sites, "Source_ID"),
+                          assertthat::has_name(sites, "SS"),
+                          assertthat::has_name(sites, "Diversity_metric"),
+                          assertthat::has_name(sites, "SSBS"),
+                          assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
+                          assertthat::has_name(sites, "Use_intensity")
+                        )
                       }
                       
                     
@@ -71,7 +86,11 @@ Database <- R6Class("Database",
                         assertthat::assert_that(
                           assertthat::has_name(species, "Sample_start_earliest"),
                           assertthat::has_name(species, "Sample_end_latest"),
-                          assertthat::has_name(species, "Higher_taxon")
+                          assertthat::has_name(species, "Higher_taxon"),
+                          assertthat::has_name(species, "Predominant_land_use"),
+                          assertthat::has_name(species, "Use_intensity")
+                          # Predominant land use
+                          # Use intensity
                           )
                         message(crayon::green("Generating sites dataframe..."))
                         
@@ -127,9 +146,19 @@ Database <- R6Class("Database",
                                            Sample_midpoint = Sample_midpoint[1], 
                                            N_samples = n()) %>%
                           dplyr::ungroup()
+                        
     
                         sites$version <- version
                       }
+                      
+                      # TODO
+                      # Add LUI column - 
+                      sites <- sites %>%
+                        mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                                           sep = "_"))
+                      species <- species %>%
+                        mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                                           sep = "_"))
                       
                       # Alternative initialisation approach - version specific
                       # # Use some standard site columns - subset to those in species df
@@ -277,6 +306,8 @@ Database <- R6Class("Database",
                         assertthat::has_name(sites, "Diversity_metric"),
                         assertthat::has_name(sites, "SSBS"),
                         assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
+                        assertthat::has_name(sites, "Use_intensity"),
+                        
                         # And the species data
                         assertthat::has_name(species, "Source_ID"),
                         assertthat::has_name(species, "SS"),
@@ -323,9 +354,9 @@ Database <- R6Class("Database",
                                                                      crayon::green(stats$number_lui), "\n",
                                "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                "\n",
-                               # TODO: include processing flag output - filtering summary, 
+                               
                                "\t Effort-correction applied:     ", crayon::green(self$processing_flags$measures_effort_corrected), "\n",
-                               # Filter summ
+                               
                                "\t Filtering conducted:           ", crayon::green(gsub("; ", 
                                                                                         ";\n\t                                ",
                                                                                         stats$filters_applied)), "\n",

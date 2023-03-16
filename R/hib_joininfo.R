@@ -4,22 +4,28 @@
 #' This function joins external information to a [`Database`] object. Such information could be 
 #' for example prepared data on species traits.
 #' @param obj A [`Database`] object.
-#' @param ids [`character`] giving the id column to be added.
-#' @param info A [`vector`] of categorical or numeric information to be added to the database.
+#' @param spp_info A [`dataframe`] or similar of categorical or numeric information to be added to the database.
 #' @keywords database, external
-hib_join_species <- function(obj, ids, info){
-  stop("TBD")
+hib_join_species <- function(obj, spp_info){
+  # stop("TBD")
+  obj$species <- left_join(obj$species,
+                           spp_info)
+  
+  return(obj)
 }
 
 #' Joins external site information to a database object
 #' 
 #' @description 
 #' This function joins external information to a [`Database`] object. Such information could be 
-#' for example additional filtering data for sites not already present in the database.
+#' for example additional site-specific data that are not already present in the database.
 #' @param obj A [`Database`] object.
-#' @param ids [`character`] giving the id column to be added.
-#' @param info A [`vector`] of categorical or numeric information to be added to the database.
+#' @param site_info A [`dataframe`] or similar of categorical or numeric information to be added to the database.
 #' @keywords database, external
-hib_join_sites <- function(obj, ids, info){
-  stop("TBD")
+hib_join_sites <- function(obj, site_info){
+  # stop("TBD")
+  obj$sites <- left_join(obj$sites,
+                         site_info)
+  
+  return(obj)
 }

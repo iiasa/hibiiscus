@@ -16,6 +16,7 @@ hib_calc_ta <- function(obj){
   # TODO:
   # Assertion checks
   assertthat::assert_that(
+    assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
     
@@ -25,25 +26,40 @@ hib_calc_ta <- function(obj){
   # Check if effort correction applied...
   if (obj$processing_flags$measures_effort_corrected == T){
     abund_df <- obj$species %>%
-      filter(Diversity_metric_type == "Abundance") %>%
-      group_by(SSBS) %>%
-      summarise(Total_abundance = sum(Effort_corrected_measurement))
+      dplyr::filter(Diversity_metric_type == "Abundance") %>%
+      dplyr::group_by(SSBS, SS) %>%
+      dplyr::summarise(Total_abundance = sum(Effort_corrected_measurement)) %>%
+      dplyr::ungroup()
   }
   if (obj$processing_flags$measures_effort_corrected == F){
     abund_df <- obj$species %>%
-      filter(Diversity_metric_type == "Abundance") %>%
-      group_by(SSBS) %>%
-      summarise(Total_abundance = sum(Measurement))
+      dplyr::filter(Diversity_metric_type == "Abundance") %>%
+      dplyr::group_by(SSBS, SS) %>%
+      dplyr::summarise(Total_abundance = sum(Measurement),
+                       N_spp_SBSS = dplyr::n_distinct(Best_guess_binomial)) %>%
+      dplyr::ungroup()
   }
   
+  # Re-scale abundance to 0-1 per study (SS)
+  abund_df <- abund_df %>% 
+    dplyr::group_by(SS) %>%
+    dplyr::mutate(Rescaled_total_abundance = Total_abundance / max(Total_abundance)) %>%
+    dplyr::ungroup()
   # bind to obj$sites
   # obj$sites <- dplyr::left_join(obj$sites,
   #                               abund_df,
   #                               by = "SSBS")
   
+  # Get N species used
+  n_spp <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance") %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
+  
   # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Total_abundance",
                            Data = list(abund_df),
+                           N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
   div_empty <- is.null(obj$diversity)
@@ -87,7 +103,7 @@ hib_calc_sr <- function(obj){
   # Check if effort correction applied...
   if (obj$processing_flags$measures_effort_corrected == T){
     sr_df1 <- obj$species %>%
-      dplyr::filter(Diversity_metric_type == "Abundance" || 
+      dplyr::filter(Diversity_metric_type == "Abundance" |
                       Diversity_metric_type == "Occurence") %>%
       dplyr::group_by(SSBS) %>%
       dplyr::summarise(Species_richness = sum(Effort_corrected_measurement > 0))
@@ -101,7 +117,7 @@ hib_calc_sr <- function(obj){
   }
   if (obj$processing_flags$measures_effort_corrected == F){
     sr_df1 <- obj$species %>%
-      dplyr::filter(Diversity_metric_type == "Abundance" || 
+      dplyr::filter(Diversity_metric_type == "Abundance" | 
                       Diversity_metric_type == "Occurence") %>%
       dplyr::group_by(SSBS) %>%
       dplyr::summarise(Species_richness = sum(Measurement > 0))
@@ -119,9 +135,19 @@ hib_calc_sr <- function(obj){
   #                               sr_df,
   #                               by = "SSBS")
   
+  # Get N species used
+  n_spp <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance"  | 
+                    Diversity_metric_type == "Occurence"  | 
+                    Diversity_metric_type == "Species richness") %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
+  
+  
   # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Species_richness",
                            Data = list(sr_df),
+                           N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
   div_empty <- is.null(obj$diversity)
@@ -182,9 +208,16 @@ hib_calc_simpson <- function(obj){
   #                               simp_df,
   #                               by = "SSBS")
   
+  # Get N species used
+  n_spp <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance") %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
+  
   # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Simpson_diversity",
                            Data = list(simp_df),
+                           N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
   div_empty <- is.null(obj$diversity)
@@ -293,10 +326,19 @@ hib_calc_chao1 <- function(obj){
   # obj$sites <- dplyr::left_join(obj$sites,
   #                               simp_df,
   #                               by = "SSBS")
+  n_spp <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance" &
+                    Diversity_metric_is_suitable_for_Chao) %>%
+    dplyr::group_by(SS) %>%
+    dplyr::filter(all(floor(Measurement) == Measurement)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
   
   # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Chao1_diversity",
                            Data = list(chao1_df),
+                           N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
   div_empty <- is.null(obj$diversity)
@@ -481,9 +523,18 @@ hib_calc_rsr <- function(obj){
   #                               simp_df,
   #                               by = "SSBS")
   
+  n_spp <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance" &
+                    Diversity_metric_is_suitable_for_Chao) %>%
+    dplyr::group_by(SS) %>%
+    dplyr::filter(all(floor(Measurement) == Measurement)) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
   # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Rarefied_species_richness",
                            Data = list(rsr_df),
+                           N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
   div_empty <- is.null(obj$diversity)
@@ -662,7 +713,10 @@ hib_calc_sim <- function(obj,
   }
   
   
-  
+  n_spp <- spp_tmp %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
+    
   # Need to get combinations of data... - s1, s2, ...
   # %%%
   # From https://adrianadepalma.github.io/BII_tutorial/bii_example.html
@@ -844,6 +898,7 @@ hib_calc_sim <- function(obj,
   # 
   out_tib <- dplyr::tibble(Metric = "Compositional_similarity",
                            Data = list(sim_df),
+                           N_species_total = n_spp,
                            Flag = paste0("Primary minimal baseline: ", primary_minimal_baseline))
   
   div_empty <- is.null(obj$diversity)

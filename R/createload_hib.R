@@ -47,7 +47,7 @@ create_hib <- function(path_species, path_sites = "", version = "2016", ...){
   )
 
   # Check that version is correct
-  version <- match.arg(version, c("2016", "2022", "custom"), several.ok = TRUE)
+  version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
   
   # # If output is null, create one
   # if(is.null(output)){
@@ -59,6 +59,9 @@ create_hib <- function(path_species, path_sites = "", version = "2016", ...){
   
   # ------ #
   message("Creating database object...")
+  names(path_species) <- version
+  names(path_sites) <- version
+  
   obj <- Database$new(
     version = version,
     paths = list(sites = path_sites,
