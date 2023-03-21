@@ -8,7 +8,7 @@ Authors@R:
            email = "jung@iiasa.ac.at",
            comment = c(ORCID = "0000-0002-7569-1390"))
 Maintainer: Martin Jung <jung@iiasa.ac.at>           
-Description: This package uses principles of ecological meta-analysis to assess the impacts of land use and land-use intensity on ecological communities. Data and modelling approach originate from the PREDICTS framework and are adapated for greater transferability, accounting of uncertainty and robustness.
+Description: This package uses principles of ecological meta-analysis to assess the impacts of land use and land-use intensity on ecological communities. Data and modelling approach originate from the PREDICTS framework and are adapted for greater transferability, accounting of uncertainty and robustness.
 License: CC BY 4.0
 Language: en-GB
 RoxygenNote: 7.2.3
@@ -21,7 +21,10 @@ Imports:
   forcats,
   lubridate,
   crayon,
-  readr
+  readr,
+  purrr,
+  tidyr,
+  tibble
 Depends:
   R(>= 4.0.0)
 Suggests:

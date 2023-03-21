@@ -18,7 +18,7 @@ hib_fit_lme4 <- function(obj,
                          form,
                          family = gaussian,
                          REML = T,
-                         # link = "identity",
+                         calc_CIs = NULL,
                          optimise_ranefs = F,
                          model_dredge = F,
                          model_average = F){
@@ -31,6 +31,11 @@ hib_fit_lme4 <- function(obj,
   # file.path("lme4")
   # rcmdcheck::rcmdcheck(path = "lme4",
   #                      libpath = .libPaths())
+  
+  # Check that calc_CIS is one of :
+  if (!is.null(calc_CIs)){
+    calc_CIs <- match.arg(calc_CIs, c("Wald", "profile", "boot"), several.ok = F)  
+  }
   
   # TODO: add progress messages
   message(crayon::green("Collating data for model fitting...\n"))
@@ -170,13 +175,19 @@ hib_fit_lme4 <- function(obj,
   fixef_df <- as.data.frame(lme4::fixef(m0))
   colnames(fixef_df) <- "Coefficient_value"
   fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
+  print(calc_CIs)
+  if (!is.null(calc_CIs)){
+    confint_df <- lme4::confint.merMod(m0, parm = "beta_", method = calc_CIs)
+    confint_df <- as.data.frame(confint_df)
+    colnames(confint_df) <- c("loCI", "hiCI")
+    confint_df$Coefficient_name <- rownames(confint_df)
+    fixef_df <- dplyr::left_join(fixef_df,
+                                 confint_df)
+  }
   
-  # confint(m0, method = "Wald")
-  # confint(m0, method="boot", nsim=1000, parm="beta_")
-  # lme4::confint.merMod(m0)
-  
-  metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], summary(m0)$AICtab[c("AIC", "BIC")], MuMIn::AICc(m0))
+  metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], AIC(m0), BIC(m0), MuMIn::AICc(m0))
   names(metr_vec) <- c("R2m", "R2c", "AIC", "BIC", "AICc")
+  
   
   n_spp <- obj$diversity$N_species_total[[div_data_idx]]
   

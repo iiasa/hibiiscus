@@ -131,3 +131,8 @@ hib_filter_species <- function(obj, condition){
 # need a style of hib_filter_species(obj, filter_formula)
 # where filter_formula is something like Family == "X", or Family != "X"
 
+
+# What about filtering sites if any spp meets a criteria...
+# Is this sensible?
+
+

@@ -152,7 +152,7 @@ Database <- R6Class("Database",
                       }
                       
                       # TODO
-                      # Add LUI column - 
+                      # Add LUI column - ??
                       sites <- sites %>%
                         mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))

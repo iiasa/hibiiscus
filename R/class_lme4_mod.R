@@ -136,6 +136,12 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         assertthat::assert_that(file.exists(output_path),
                                                 msg = "Writing a copy of the model failed...")
                         invisible()
+                      },
+                      # TODO: plot function - just use sjplot?
+                      plot = function(){
+
+                        sjPlot::plot_model(self$model, 
+                                           show.intercept = T)
                       }
                     ),
                     private = list()
