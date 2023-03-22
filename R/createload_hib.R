@@ -65,17 +65,8 @@ create_hib <- function(path_species, path_sites = "", version = "2016", ...){
   obj <- Database$new(
     version = version,
     paths = list(sites = path_sites,
-                 species = path_species)#,
-                 # path_output = output)
+                 species = path_species)
   )
-  
-  # Save the output (using the output path specified above)
-  # TODO: 
-  # saving should be an optional function - e.g. after some data processing 
-  # - not just the raw data
-  # saveRDS(obj, output)
-  # assertthat::assert_that(file.exists(output),
-  #                         msg = "Writing a copy of the database failed...")
   
   return(obj)
 }

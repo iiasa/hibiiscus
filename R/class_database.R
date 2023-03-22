@@ -22,8 +22,7 @@ Database <- R6Class("Database",
                     initialize = function(version, paths){
                       assertthat::assert_that(is.character(version), is.list(paths))
                       
-                      # TODO
-                      # Assert path$sites/species is character ??
+                      # Assert path$sites/species is character ?? - already checked in create_hib
     
                       # ------ #
                       message(crayon::green(paste0("Initializing input datasets for PREDICTS version ", version, "...")) )
@@ -32,7 +31,7 @@ Database <- R6Class("Database",
                       # Note RC: But the species data has all the sites
                       # And the 2022 data is just the full spp data
                       
-                      # TODO: maybe just harmonise - given paths/version
+            
                       # %%%%%
                       # Load species data
                       species <- readr::read_rds(paths$species)
@@ -151,8 +150,8 @@ Database <- R6Class("Database",
                         sites$version <- version
                       }
                       
-                      # TODO
-                      # Add LUI column - ??
+                      
+                      # Add LUI column - 
                       sites <- sites %>%
                         mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
@@ -404,7 +403,6 @@ Database <- R6Class("Database",
                       # add a message...
                       message(crayon::green("Correcting measuremnts for sampling effort...\n"))
                       
-                      # TODO: CHECK - should this only adjust Abundance?
                       self$species <- self$species %>%
                         dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
                                                                          T ~ Sampling_effort)) %>%

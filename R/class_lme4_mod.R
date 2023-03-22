@@ -53,12 +53,10 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           is.numeric(n_spp)
                           )
                         
-                        # TODO
                         # ------ #
                         message(crayon::green("Initialising fitted hib model object ...") )
                         
                         # %%%%%%%%%%%%%%%
-                        # self$checkself(sites, species)
                         
                         # Save inputs in self
                         # Set mod_df as data
@@ -139,7 +137,6 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       },
                       # TODO: plot function - just use sjplot?
                       plot = function(){
-
                         sjPlot::plot_model(self$model, 
                                            show.intercept = T)
                       }

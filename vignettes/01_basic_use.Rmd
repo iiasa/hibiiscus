@@ -1,0 +1,122 @@
+---
+title: "Basic usage"
+author: "Richard Cornford"
+date: "2023-03-21"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+fontsize: 11pt
+vignette: >
+  %\VignetteIndexEntry{Basic usage}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      collapse = TRUE,
+                        comment = "#>")
+knitr::opts_chunk$set(fig.align = "center")
+```
+
+Below, you can find examples on how to use some of the core functions of the hibiiscus package.
+
+* First, we show how to create a hibiiscus database (based on data from the 
+PREDICTS project, see <https://www.nhm.ac.uk/our-science/our-work/biodiversity/predicts.html>).
+
+* We then show various ways in which a hibiiscus database object can be manipulated,
+for example filtering to remove particular sites, or realigning land-use variables.
+We follow this by saving the hibiiscus database for future use.
+
+* Next, diversity metrics for each site will be calculated, before finally, a mixed-effects
+model will be fitted using `lme4`.
+
+
+### 1. Load package and PREDICTS-like data
+
+```{r Load packages}
+# library(hibiiscus)
+devtools::load_all()
+library(assertthat)
+library(dplyr)
+```
+
+```{r Load data, cache=F}
+# PREDICTS data, 2016 release
+hib_db <- create_hib(path_species = "~/Documents/IIASA/lamasus/raw_data/PREDICTS/2016/database.rds", 
+                     path_sites   = "~/Documents/IIASA/lamasus/raw_data/PREDICTS/2016/sites.rds", 
+                     version = "2016")
+
+# View a summary of the hib database object
+print(hib_db)
+
+```
+
+
+### 2. Filter data to focus on European sites and remove locations where land-use is unclear
+
+```{r Filter data, cache=F}
+hib_db <- hib_filter_sites(hib_db, 
+                           UN_region == "Europe" &
+                             Predominant_land_use != "Cannot decide")
+```
+
+
+### 3. Condense land-use categories 
+Here, we will add a new column to the site data, effectively grouping land-use types into
+"Natural", "Semi-natural" and "Human".
+
+```{r Group LU types, cache=F}
+alt_lu_df <- data.frame("Predominant_land_use"= c("Primary vegetation",
+                                                  "Mature secondary vegetation",
+                                                  "Intermediate secondary vegetation",
+                                                  "Young secondary vegetation",
+                                                  "Secondary vegetation (indeterminate age)",
+                                                  "Plantation forest",
+                                                  "Pasture",
+                                                  "Cropland",
+                                                  "Urban"),
+                        "Grouped_LU" = c("Natural", "Natural", 
+                                         "Semi-natural",  "Semi-natural", "Semi-natural",
+                                         "Human", "Human", "Human", "Human"))
+
+alt_lu_df$Grouped_LU <- factor(alt_lu_df$Grouped_LU,
+                               levels = c("Natural", "Semi-natural", "Human"))
+hib_db <- hib_join_sites(hib_db,
+                         alt_lu_df)
+
+
+# Save the database object for future use
+# save_hib(hib_db, 
+#          "../Data/example_hib.rds")
+
+```
+
+
+### 4. Correct measurements for sampling effort and calculate total abundance per site
+
+```{r Diversity metrics, cache=F}
+hib_db$hib_effort_correction()
+
+hib_db <- hib_calc_ta(hib_db)
+
+```
+
+
+### 5. Fit an overly simplified model of total abundance in response to land-use
+
+```{r Fit model, cache=F}
+hib_ta_mod <- hib_fit_lme4(hib_db,
+                           sqrt(Rescaled_total_abundance) ~ Grouped_LU + (1 | SS) + (1 | SSB),
+                           REML = F,
+                           calc_CIs = "Wald")
+
+print(hib_ta_mod)
+
+```
+
+```{r Simple plot of model, fig.width=6, fig.height=5}
+hib_ta_mod$plot()
+```

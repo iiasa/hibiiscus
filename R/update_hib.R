@@ -76,8 +76,6 @@ update_hib <- function(obj, path_species, path_sites = "", version = "2022", ...
     obj$paths$species <- c(obj$paths$species, new_obj$paths$species)
     obj$paths$sites <- c(obj$paths$sites, new_obj$paths$sites)
     
-    # print(obj)
-    
     # TODO
     # Potential extra issues - previous filtering of old version/div object?
     # Can rm diversity?, but filtering etc can't be undone

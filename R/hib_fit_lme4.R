@@ -37,7 +37,6 @@ hib_fit_lme4 <- function(obj,
     calc_CIs <- match.arg(calc_CIs, c("Wald", "profile", "boot"), several.ok = F)  
   }
   
-  # TODO: add progress messages
   message(crayon::green("Collating data for model fitting...\n"))
   # Collate data from database - based on columns specified in the formula
   mod_covars <- all.vars(form[[3]])
@@ -175,8 +174,9 @@ hib_fit_lme4 <- function(obj,
   fixef_df <- as.data.frame(lme4::fixef(m0))
   colnames(fixef_df) <- "Coefficient_value"
   fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
-  print(calc_CIs)
+  # print(calc_CIs)
   if (!is.null(calc_CIs)){
+    message(crayon::green("Getting confidence intervals ..."))
     confint_df <- lme4::confint.merMod(m0, parm = "beta_", method = calc_CIs)
     confint_df <- as.data.frame(confint_df)
     colnames(confint_df) <- c("loCI", "hiCI")

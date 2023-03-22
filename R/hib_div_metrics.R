@@ -869,33 +869,17 @@ hib_calc_sim <- function(obj,
                                                         spp_data = spp_site_data)
                               out_df <- out_df %>% bind_cols(out_met)
                                          
-                              # if (sum(grepl("bray", metric_vec)) > 0 ){
-                              #   bray_metr_vec <- metric_vec[grepl("bray", metric_vec)]
-                              #   tmp_bray <- hib_calc_sim_bray(spp_site_data, bray_metr_vec)
-                              #   out_df <- dplyr::bind_cols(out_df, tmp_bray)
-                              # }
-                              # Other sim metrics - sorensen?...
-                              
                               return(out_df)
                             }
                             )
   
   # %%%
   # calc metrics of interest...
-  # could be v slow....
+  # can be v slow....
   # need to multithread...
   
-  
-  # For bray
-  # bray.part(x)
-  # x data frame of species abundances, where rows are sites and columns are species.
-  # 1 - bray.part(x) [bray.bal or bray]
-  
-  # sorenson - is this the same?
-  
   # TODO: other options to add...
-  # TODO: add primary_minimal_baseline flag to tibble
-  # 
+  
   out_tib <- dplyr::tibble(Metric = "Compositional_similarity",
                            Data = list(sim_df),
                            N_species_total = n_spp,

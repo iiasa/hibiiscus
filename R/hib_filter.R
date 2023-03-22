@@ -108,30 +108,8 @@ hib_filter_species <- function(obj, condition){
   return(obj)
 }
 
-# subset(db_2022$species, Class == "Mammalia" & Realm == "Australasia")
-# test <- hib_filter_species_alt(db_2022, Class == 'Mammalia' & Realm == 'Australasia')
-# print(test)
-# deparse(text = test)
-# 
-# deparse(test)
 
-
-# hib_filter_species <- function(obj, column_nam, vals_to_keep){
-# stop("TBD")
-# Re-generate site summary data - e.g. N samples may have changed...spp considered
-# Re-calculate effort-adjusted measurements? - ensure users filter first..!!
-# Append filtering flag to database object
-# taxa-focussed filter: ....
-# }
-
-
-# Basically need to re-write a daplyr::filter function
-# the after filtering species/sites, filters the other too
-# and then recalcs site metics/effort_corrected_measurements...
-# need a style of hib_filter_species(obj, filter_formula)
-# where filter_formula is something like Family == "X", or Family != "X"
-
-
+# TODO
 # What about filtering sites if any spp meets a criteria...
 # Is this sensible?
 
