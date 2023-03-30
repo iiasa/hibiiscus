@@ -43,6 +43,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         assertthat::assert_that(
                           # Check database obj
                           # db_obj$checkself(),
+                          inherits(db_obj, "Database"),
                           # Check model data
                           is.data.frame(mod_df),
                           # Check model

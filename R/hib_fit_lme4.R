@@ -1,27 +1,40 @@
-#' Fit an lme4 stype mixed-effects model
+#' Fit an lme4 style mixed-effects model
 #' 
 #' @description 
 #' This function fits an lme4 model using the supplied database, formula and other
 #' function arguments tuning the model fitting process
 #' @details 
-#' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
-#' @param form A [`formula`] in the style of lme4 - including fixed and random effects.
-#' 
+#' @param form A [`formula`] in the style of lme4 - including fixed and random 
+#' effects.
+#' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by lme4
+#' @param REML A [`boolean`] - if using a gaussian family, should model be fitted 
+#' useing REML or ML - as in lme4
+#' @param calc_CIs An indication of whether fixed effect confidence intervals (95%) 
+#' should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"
+#' @param optimise_ranefs Not currently applicable - future dev
+#' @param model_dredge Not currently applicable - future dev
+#' @param model_average Not currently applicable - future dev
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{
-#'   mod <- hib_fit_lme4(obj, ...)
+#'   mod <- hib_fit_lme4(obj, y ~ x + ( 1 | a ), ...)
 #' } 
 #' @export
 hib_fit_lme4 <- function(obj, 
                          form,
                          family = gaussian,
                          REML = T,
-                         calc_CIs = NULL,
-                         optimise_ranefs = F,
-                         model_dredge = F,
-                         model_average = F){
+                         calc_CIs = NULL #,
+                         # optimise_ranefs = F,
+                         # model_dredge = F,
+                         # model_average = F
+                         ){
+  
+  # TODO:
+  # Add functionality for optimal random effects structure - log-liklihood tests
+  # Add functionality for dredging/testing a range of model params...?
+  # Add functionality to return averaged model output
   
   # Check whether lme4 package is available
   # TODO: figure out check_package...
@@ -31,6 +44,21 @@ hib_fit_lme4 <- function(obj,
   # file.path("lme4")
   # rcmdcheck::rcmdcheck(path = "lme4",
   #                      libpath = .libPaths())
+  
+  # print(attr(family, "class"))
+  # print(family)
+  
+  # TODO:
+  # Add assertions
+  assertthat::assert_that(
+    inherits(obj, "Database"), # obj is a hib database
+    # form can be a formula,
+    is.function(family) || is.character(family), # family is character or function
+    is.logical(REML), # REML is bool
+    is.null(calc_CIs) || is.character(calc_CIs)   # calc_CIs is null or chr
+  )
+
+  # ... is bool
   
   # Check that calc_CIS is one of :
   if (!is.null(calc_CIs)){
