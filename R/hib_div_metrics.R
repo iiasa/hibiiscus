@@ -607,7 +607,9 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   # add ChaoJaccard, ChaoSorensen
   else if (metric %in% c("chao-jaccard", "chao-sorensen")){
     # transpose data for use in SpadeR
-    spp_site_data <- t(spp_site_data)
+    spp_site_data <- as.data.frame(t(spp_site_data))
+    # print(as.data.frame(spp_site_data))
+    # print(class(as.data.frame(spp_site_data)))
     out <- SpadeR::SimilarityPair(X = spp_site_data, datatype = "abundance")
     # Get the metric of interest...and rename columns
     if (metric == "chao-jaccard"){
@@ -1053,7 +1055,7 @@ hib_calc_sim <- function(obj,
   metrics_out <- colnames(sim_df)
   metrics_out <- metrics_out[!metrics_out %in% c("s1", "s2", 
                                                  "ChaoJaccard_se", 
-                                                 "ChaoJaccard_lo95", "ChaoJaccard_hi95"
+                                                 "ChaoJaccard_lo95", "ChaoJaccard_hi95",
                                                  "ChaoSorensen_se", 
                                                  "ChaoSorensen_lo95", "ChaoSorensen_hi95")]
   
