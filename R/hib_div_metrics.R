@@ -583,7 +583,8 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   )
   
   metric <- match.arg(metric, c("jaccard", "sorensen", "bray", "ruzicka",
-                                "hypervolume", "chao-jaccard", "chao-sorensen"), 
+                                "hypervolume", "chao-jaccard", "chao-sorensen",
+                                "cosine-similarity"), 
                       several.ok = FALSE)
   
   # if (use_relative_abund == T){
@@ -591,21 +592,9 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   # }
   # print(metric)
   # print(spp_site_data)
-  if (metric %in% c("jaccard", "sorensen")){
-    spp_site_data[spp_site_data > 0] <- 1
-    # print(spp_site_data)
-    out <- 1 - unlist(betapart::beta.pair(spp_site_data, 
-                                          index.family = metric))
-  } else if (metric %in% c("bray", "ruzicka")){
-    if (use_relative_abundance){
-      spp_site_data <- spp_site_data/rowSums(spp_site_data)
-    }
-    out <- 1 - unlist(betapart::beta.pair.abund(spp_site_data, 
-                                                index.family = metric))
-  }
-  # TODO
-  # add ChaoJaccard, ChaoSorensen
-  else if (metric %in% c("chao-jaccard", "chao-sorensen")){
+  
+
+  if (metric %in% c("chao-jaccard", "chao-sorensen")){
     # transpose data for use in SpadeR
     spp_site_data <- as.data.frame(t(spp_site_data))
     # print(as.data.frame(spp_site_data))
@@ -658,6 +647,31 @@ hib_calc_sim_ <- function(spp_site_data, metric,
     out <- data.frame("Hypervolume" = vol)
     return (out)
   }
+  
+  else if (metric == "cosine-similarity"){
+    x <- as.matrix(spp_site_data)
+    # N rows == 2
+    x1 <- x[1,]
+    x2 <- x[2,]
+    cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
+    out <- data.frame("Cosine_similarity" = cosine)
+    return (out)
+  }
+  
+  
+  else if (metric %in% c("jaccard", "sorensen")){
+    spp_site_data[spp_site_data > 0] <- 1
+    # print(spp_site_data)
+    out <- 1 - unlist(betapart::beta.pair(spp_site_data, 
+                                          index.family = metric))
+  } 
+  else if (metric %in% c("bray", "ruzicka")){
+    if (use_relative_abundance){
+      spp_site_data <- spp_site_data/rowSums(spp_site_data)
+    }
+    out <- 1 - unlist(betapart::beta.pair.abund(spp_site_data, 
+                                                index.family = metric))
+  }
 
   out <- as.data.frame.list(out)
   # print(out)
@@ -699,6 +713,62 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   }
   
   return (out)
+}
+
+
+hib_calc_sim_euc <- function(spp_site_data, 
+                             metric,
+                             comp_df,
+                             use_relative_abundance){
+  
+  assertthat::assert_that(
+    is.character(metric)
+    # assertthat::has_name(spp_site_data, "SSBS"),
+    # assertthat::has_name(spp_site_data, "Taxon_name_entered"),
+    # assertthat::has_name(spp_site_data, "Measurement")
+  )
+  # print(use_relative_abundance)
+  
+  metric <- match.arg(metric, c("euclidean", "chord", "hellinger"), 
+                      several.ok = FALSE)
+  
+  
+  if ((use_relative_abundance) & metric == "euclidean"){
+    spp_site_data <- spp_site_data/rowSums(spp_site_data)
+  }
+  
+  if (metric == "chord"){
+    # divide each row by sqrt(sum(row_vals^2))
+    spp_site_data <- spp_site_data/sqrt(rowSums(spp_site_data^2))
+  }
+  
+  if (metric == "hellinger"){
+    # divide each row by sum(row_vals), then sqrt results
+    spp_site_data <- spp_site_data/rowSums(spp_site_data)
+    spp_site_data <- sqrt(spp_site_data)
+  }
+  # Get dist
+  dist_matr <- as.matrix(dist(spp_site_data))
+  
+  rownames(dist_matr) <- rownames(spp_site_data)
+  colnames(dist_matr) <- rownames(spp_site_data)
+  
+  # Convert to long
+  dist_df <- as.data.frame(dist_matr)
+  dist_df$s1 <- rownames(dist_df)
+  dist_df <- tidyr::pivot_longer(dist_df, cols = !s1, 
+                                 names_to = "s2", 
+                                 values_to = "Distance")
+  
+  dist_df <- dist_df %>%
+    dplyr::filter(s1 != s2) %>% 
+    dplyr::mutate(metric_nm = tools::toTitleCase(metric),
+                  contrast = paste(s1, s2, sep = "_"))
+  # print(head(dist_df))
+  # %>%
+  #   dplyr::filter(contrast %in% comp_df$contrast)
+  
+  return(dist_df)
 }
 
 #' Calculate compositional similarity (wrapper)
@@ -744,7 +814,9 @@ hib_calc_sim <- function(obj,
   
   sim_metric <- match.arg(sim_metric, c("jaccard", "sorensen", "bray", "ruzicka",
                                         "euclidean", "hypervolume",
-                                        "chao-jaccard", "chao-sorensen"), several.ok = TRUE)
+                                        "chao-jaccard", "chao-sorensen",
+                                        "cosine-similarity",
+                                        "euclidean", "chord", "hellinger"), several.ok = TRUE)
   
   # Workflow from : https://adrianadepalma.github.io/BII_tutorial/bii_example.html
   # Only use known land-use sites
@@ -923,7 +995,8 @@ hib_calc_sim <- function(obj,
   sim_df <- NULL
   
   non_euc_metr <- sim_metric[sim_metric %in% c("jaccard", "sorensen", "bray", "ruzicka",
-                                               "hypervolume", "chao-jaccard", "chao-sorensen")]
+                                               "hypervolume", "chao-jaccard", "chao-sorensen",
+                                               "cosine-similarity")]
   # TODO
   # add ChaoJaccard, ChaoSorensen
   
@@ -973,20 +1046,26 @@ hib_calc_sim <- function(obj,
   # But need to know which are prim_min... and only keep those... makes sense to just incl in above
   # But v inefficient...
   # Better to calc all distance within study, add  site idx to long version
+  
+  euc_metr <- sim_metric[sim_metric %in% c("euclidean", "chord", "hellinger")]
+  
   euc_sim_df <- NULL
-  if ("euclidean" %in% sim_metric){
+  
+  if (length(euc_metr) > 0){
+  # if ("euclidean" %in% sim_metric){
     
-    if (use_relative_abundance){
-      spp_tmp_euc <- spp_tmp %>%
-        group_by(SS, SSBS) %>%
-        mutate(Measurement = Measurement/sum(Measurement)) %>%
-        dplyr::ungroup()
-      }
+    # if (use_relative_abundance){
+    #   spp_tmp_euc <- spp_tmp %>%
+    #     group_by(SS, SSBS) %>%
+    #     mutate(Measurement = Measurement/sum(Measurement)) %>%
+    #     dplyr::ungroup()
+    #   }
 
     euc_sim_df <- purrr::map_dfr(.x = studies,
                                  .f = function(ss = .x, 
-                                               spp_data = spp_tmp_euc,
-                                               comp_df = site_comp_df){
+                                               spp_data = spp_tmp,
+                                               comp_df = site_comp_df,
+                                               metric_vec = euc_metr){
                                    spp_site_data <- spp_data %>%
                                      # filter out the SS that matches the SS we're interested in
                                      dplyr::filter(SS == ss) %>%
@@ -1002,43 +1081,83 @@ hib_calc_sim <- function(obj,
                                    # }
                                    
                                    # print(head(spp_site_data))
-                                   dist_matr <- as.matrix(dist(spp_site_data))
                                    
-                                   rownames(dist_matr) <- rownames(spp_site_data)
-                                   colnames(dist_matr) <- rownames(spp_site_data)
                                    
-                                   # print(head(dist_matr))
-                                   
-                                   dist_df <- as.data.frame(dist_matr)
-                                   dist_df$s1 <- rownames(dist_df)
-                                   dist_df <- tidyr::pivot_longer(dist_df, cols = !s1, 
-                                                                  names_to = "s2", 
-                                                                  values_to = "Euclidean_distance")
-                                   
-                                   dist_df <- dist_df %>%
-                                     dplyr::filter(s1 != s2) %>% 
-                                     dplyr::mutate(contrast = paste(s1, s2, sep = "_")) %>%
+                                   # TODO; put euc, chord and hellinger all here...
+                                   # all use dist, just different normalisation...
+                                   # %%%%
+                                   # out_df <- comp_df %>% dplyr::filter(SS == ss)
+                                   # 
+                                   # # print(paste0(s1, s2, sep = "_"))
+                                   # 
+                                   # # Depending on sim_metric values, calc metrics of comp-sim
+                                   out_df <- purrr::map_dfr(.x = metric_vec,
+                                                             .f = function(metric = .x,
+                                                                           spp_data = spp_site_data,
+                                                                           comp_df = comp_df){
+                                                               hib_calc_sim_euc(spp_data, metric,
+                                                                                comp_df,
+                                                                                use_relative_abundance)
+                                                             })
+                                   out_df <- out_df %>%
                                      dplyr::filter(contrast %in% comp_df$contrast)
-                                   # print(head(dist_df))
-                                   # dist_df$SS <- ss
-                                   # Subset to comps of interest
-                                   # dist_df <- dplyr::filter(dist_df,
-                                   #                          contrast %in% comp_df$contrast)
-                                   
-                                   if (rescale_euclidean_distance == T){
-                                     dist_df$Euclidean_distance <- dist_df$Euclidean_distance / sqrt(2)
-                                   }
-                                   
-                                   return(dist_df)
+                                   out_df <- tidyr::pivot_wider(out_df,
+                                                                names_from = metric_nm, 
+                                                                values_from = Distance)
+                                   # print(head(out_df))
+                                   # out_df <- out_df %>% bind_cols(out_met)
+                                   # %%%%
+                                   # 
+                                   # dist_matr <- as.matrix(dist(spp_site_data))
+                                   # 
+                                   # rownames(dist_matr) <- rownames(spp_site_data)
+                                   # colnames(dist_matr) <- rownames(spp_site_data)
+                                   # 
+                                   # # print(head(dist_matr))
+                                   # 
+                                   # dist_df <- as.data.frame(dist_matr)
+                                   # dist_df$s1 <- rownames(dist_df)
+                                   # dist_df <- tidyr::pivot_longer(dist_df, cols = !s1, 
+                                   #                                names_to = "s2", 
+                                   #                                values_to = "Euclidean_distance")
+                                   # 
+                                   # dist_df <- dist_df %>%
+                                   #   dplyr::filter(s1 != s2) %>% 
+                                   #   dplyr::mutate(contrast = paste(s1, s2, sep = "_")) %>%
+                                   #   dplyr::filter(contrast %in% comp_df$contrast)
+                                   # # print(head(dist_df))
+                                   # # dist_df$SS <- ss
+                                   # # Subset to comps of interest
+                                   # # dist_df <- dplyr::filter(dist_df,
+                                   # #                          contrast %in% comp_df$contrast)
+                                   # 
+                                   # 
+                                   # if (rescale_euclidean_distance == T){
+                                   #   dist_df$Euclidean_distance <- dist_df$Euclidean_distance / sqrt(2)
+                                   # }
+                                   # 
+                                   return(out_df)
                                  })
+    
+    # print(head(euc_sim_df))
+    if ((rescale_euclidean_distance) & ("Euclidean" %in% colnames(euc_sim_df))){
+      euc_sim_df$Euclidean <- euc_sim_df$Euclidean / sqrt(2)
+    }
+    # drop contrast and ss columns
+    euc_sim_df <- euc_sim_df %>% 
+      # dplyr::select(-SS) %>% 
+      dplyr::select(-contrast)
+    # print(head(euc_sim_df))
   }
   
   # Combine metrics into single df
   if ((!is.null(sim_df)) & (!is.null(euc_sim_df))){
-    sim_df <- left_join(sim_df, euc_sim_df[,c("s1", "s2", "Euclidean_distance")])
+    sim_df <- left_join(sim_df, euc_sim_df) 
+    # [,c("s1", "s2", "Euclidean_distance")]
   }
   if (is.null(sim_df) & (!is.null(euc_sim_df))){
-    sim_df <- euc_sim_df[,c("s1", "s2", "Euclidean_distance")]
+    sim_df <- euc_sim_df
+    # [,c("s1", "s2", "Euclidean_distance")]
   }
   
   

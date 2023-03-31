@@ -1,10 +1,10 @@
-#' Template objects for databases 
+#' Template objects for lme4 model 
 #' 
 #' @description 
-#' This is the template object for a database containing PREDICTS or PREDICTS-like data.
-#' It contains all the functions inherent to the database. Any functions in the package that is 
-#' operating or interacting with the data (preparation, linking, modelling) need to be coded in here 
-#' or provided separately.
+#' This is the template object for an lme4 model class.
+#' It contains all the functions inherent to the model class. Any functions in 
+#' the package that operate on or interact with the model(summarising, plottting) 
+#' need to be coded in here or provided separately.
 #' @keywords internal
 #' @import R6
 #' @noRd

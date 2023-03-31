@@ -24,11 +24,13 @@ Imports:
   readr,
   purrr,
   tidyr,
-  tibble
+  tibble,
+  SpadeR
 Depends:
   R(>= 4.0.0)
 Suggests:
   lme4,
+  INLA,
   brms,
   posterior,
   testthat (>= 3.0.0)

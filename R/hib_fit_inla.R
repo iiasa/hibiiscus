@@ -18,20 +18,22 @@ hib_fit_inla <- function(obj,
                          # maybe initially separate formula into response (chr), fixed, random (non-spatial)
                          # response,
                          # fixed_covar,
-                         # TODO: maybe combine response and fixed effects into 
                          response_fixed_form,
                          random_covar,
                          family = "gaussian",
                          fit_settings,
                          incl_spatial_term = T,
                          input_mesh = NULL,
-                         mesh_settings,
+                         mesh_settings = list(mesh_dim = "2d",
+                                              max.edge = c(75,100),
+                                              cutoff = 1e-12,
+                                              offset = NULL),
                          prior_list){
   # Assertions
   assertthat::assert_that(
     inherits(obj, "Database"), # obj is a hib database
     # form can be a formula,
-    is.character(response),
+    # is.character(response),
     # assertthat::assert_that(attr(fixed_covar, "class") == "formula"),
     assertthat::assert_that(attr(response_fixed_form, "class") == "formula"),
     assertthat::assert_that(attr(random_covar, "class") == "formula"),
@@ -43,9 +45,10 @@ hib_fit_inla <- function(obj,
   # Checks on supplied formulas - rhs only for ranefs
   
   # TODO:
-  # and maybe renam random_covar to random_form?
+  # and maybe rename random_covar to random_form?
   
   # Add progress messages
+  message(crayon::green("Collating data for model fitting...\n"))
   
   mod_resp <- all.vars(response_fixed_form[[2]])
   fixed_covars <- all.vars(response_fixed_form[[3]])
@@ -89,12 +92,13 @@ hib_fit_inla <- function(obj,
   }
   
   
-  # Convert categorical fixed-effects to multiple dummy vars...
-  X <- model.matrix(fixed_covar, data = mod_df)
   
   # But need to drop "baseline" level... - only if -1 in fixed_covar
   # all.vars(fixed_covar)
   fixed_covar_form <- formula(delete.response(terms(response_fixed_form)))
+  
+  # Convert categorical fixed-effects to multiple dummy vars...
+  X <- model.matrix(fixed_covar_form, data = mod_df)
   
   drop_baseline_level <- function(model_matr, model_df, fixed_covar_form){
     # Loop through fixed eff covars (other than Intercept)
@@ -120,7 +124,7 @@ hib_fit_inla <- function(obj,
     return(model_matr)
   }
   
-  if (any(grepl("-1", fixed_covar))){
+  if (any(grepl("-1", fixed_covars))){
     X <- drop_baseline_level(X, mod_df, fixed_covar_form)
   }
   
@@ -145,20 +149,58 @@ hib_fit_inla <- function(obj,
   # build mesh- if desired...
   if (incl_spatial_term){
     if (is.null(input_mesh)){
+      message(crayon::green("Building mesh...\n"))
       # Create a mesh
-      coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
-      # input_mesh <- create_inla_mesh(coords, mesh_settings)
-      # mesh <- inla.mesh.create(loc = coords)
-      mesh <- inla.mesh.2d(loc = coords,
-                           max.edge = c(75, 100))
+      # check that mesh_dim, max.edge, cutoff and offset are all in mesh_settings
+      # if any not, print out a message telling user that default settings (x..)
+      # are being used
+      missing_mesh_specs <- c("mesh_dim", "max.edge", "cutoff", "offset")[!(c("mesh_dim", "max.edge", "cutoff", "offset") %in% names(mesh_settings))]
+      if ("mesh_dim" %in% missing_mesh_specs){
+        message(crayon::yellow("Mesh dimension (2d or 3d) not provided, using default value: 2d \n"))
+        mesh_settings$mesh_dim <- "2d"
+      }
+      if ("max.edge" %in% missing_mesh_specs){
+        # TODO: better default - link to location distances...
+        message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
+        mesh_settings$max.edge <- c(75,100)
+      }
+      if ("cutoff" %in% missing_mesh_specs){
+        message(crayon::yellow("Mesh cutoff not provided, using default value: 1e-12 \n"))
+        mesh_settings$cutoff <- 1e-12
+      }
+      if ("offset" %in% missing_mesh_specs){
+        message(crayon::yellow("Mesh offset not provided, using default values: c(10,20) \n"))
+        mesh_settings$offset <- c(10,20)
+      }
       
-    } else {
-      # or use provided mesh
-      mesh <- input_mesh
-    }
+      # TODO: move this to a function - hib_build_inla_mesh <- function(coords, mesh_settings)??
+      coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
+      
+      
+      if (mesh_settings$mesh_dim == "3d"){
+        input_mesh <- inla.mesh.create(loc = coords,
+                                       globe = T,
+                                       refine = list(max.edge = mesh_settings$max.edge))
+      }
+      
+      if (mesh_settings$mesh_dim == "2d"){
+        # Try and set some sensible baseline mesh params if not provided
+        input_mesh <- inla.mesh.2d(loc = coords,
+                                   max.edge = mesh_settings$max.edge,
+                                   cutoff = mesh_settings$cutoff,
+                                   offset = mesh_settings$offset)
+      }
+      
+      # input_mesh <- inla.mesh.2d(loc = coords,
+      #                            max.edge = c(75, 100))
+    } 
+    # else {
+    #   # or use provided mesh
+    #   mesh <- input_mesh
+    # }
     
     # Set up spde model
-    site.spde <- inla.spde2.matern(mesh, alpha = 2)
+    site.spde <- inla.spde2.matern(input_mesh, alpha = 2)
     
     # TODO: add prior specs...
     
@@ -166,7 +208,7 @@ hib_fit_inla <- function(obj,
     # w.Host <- inla.spde.make.index('w', n.spde = site.spde$n.spde) # making the w
     
     # Create weights (A) matrix
-    A <- inla.spde.make.A(mesh, 
+    A <- inla.spde.make.A(input_mesh, 
                           loc = coords)
     s.site <- inla.spde.make.index('s', n.spde = site.spde$n.spde)
     
@@ -205,9 +247,9 @@ hib_fit_inla <- function(obj,
     #                    sep = " - ")
     # Above is not correct!!!
     
-    terms_to_drop_idx <- which(attr(terms(fixed_covar), "term.labels") %in% factor_fixed_terms)
+    terms_to_drop_idx <- which(attr(terms(fixed_covar_form), "term.labels") %in% factor_fixed_terms_chr)
     
-    fixed_chr <- as.character(formula(drop.terms(terms(fixed_covar), dropx = terms_to_drop_idx)))[2]
+    fixed_chr <- as.character(formula(drop.terms(terms(fixed_covar_form), dropx = terms_to_drop_idx)))[2]
     
     # as.character(drop.terms(terms(fixed_covar), dropx = terms_to_drop_idx))
     
@@ -239,9 +281,9 @@ hib_fit_inla <- function(obj,
 
   inla_form <- formula(inla_form)
   
-  
+  message(crayon::green("Fitting model (this may take a while)...\n"))
   # fit model
-  m_inla <- inla(formula = inla_form,
+  m0 <- inla(formula = inla_form,
                  family = "gaussian",
                  data=inla.stack.data(stk),
                  # control.fixed = 
@@ -249,12 +291,64 @@ hib_fit_inla <- function(obj,
                  control.predictor = list(A = inla.stack.A(stk)),
                  verbose = T)
   # summary(m_inla)
-  return(m_inla)
-  
+  # return(m_inla)
+  # TODO:
   # create inla_mod class
+  message(crayon::green("Collating model details ..."))
   
-  # return inla_mod class
+  n_spp <- obj$diversity$N_species_total[[div_data_idx]]
+
+  # instantiate an inla__mod class
+  mod_obj <- hib_inla_model$new(
+    db_obj = obj,
+    mod_df = mod_df,
+    inla_obj = m0,
+    # TODO:
+    user_formula = formula(paste(as.character(response_fixed_form)[2],
+                                 as.character(response_fixed_form)[1],
+                                 as.character(response_fixed_form)[3],
+                                 "+",
+                                 as.character(random_covar)[2], sep = " ")),
+    inla_fitted_formula = inla_form,
+    inla_incl_spatial_term = incl_spatial_term,
+    inla_stack = stk,
+    inla_mesh = input_mesh,
+    inla_mesh_settings = mesh_settings,
+    
+  # fixef_df = fixef_df,
+  #   metr_vec = metr_vec,
+    n_spp = n_spp
+  # TODO:
+
+  # family = "gaussian",
+  # fit_settings,
+  # mesh_settings,
+  # prior_list
+  )
   
+  return(mod_obj)
+  
+  # %%%%%
+  # lmer example
+
+  # fixef_df <- as.data.frame(lme4::fixef(m0))
+  # colnames(fixef_df) <- "Coefficient_value"
+  # fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
+  # # print(calc_CIs)
+  # if (!is.null(calc_CIs)){
+  #   message(crayon::green("Getting confidence intervals ..."))
+  #   confint_df <- lme4::confint.merMod(m0, parm = "beta_", method = calc_CIs)
+  #   confint_df <- as.data.frame(confint_df)
+  #   colnames(confint_df) <- c("loCI", "hiCI")
+  #   confint_df$Coefficient_name <- rownames(confint_df)
+  #   fixef_df <- dplyr::left_join(fixef_df,
+  #                                confint_df)
+  # }
+  # 
+  # metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], AIC(m0), BIC(m0), MuMIn::AICc(m0))
+  # names(metr_vec) <- c("R2m", "R2c", "AIC", "BIC", "AICc")
+  
+  # %%%%%
 }
 
 
