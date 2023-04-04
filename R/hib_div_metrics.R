@@ -554,8 +554,8 @@ hib_calc_rsr <- function(obj){
 #' Calculate similarity metrics
 #' 
 #' @description 
-#' This function calculates either Sorensen, Jaccard, Bray-curtis or Ruzika 
-#' similarity metrics between sites, using the betapart package
+#' This function calculates either "jaccard", "sorensen", "bray", "ruzicka",
+#' "hypervolume", "cosine-similarity" similarity metrics between sites
 #' @details 
 #' Expects a dataframe/tibble with species abundance records at two sites 
 #' - sites as rows, species as columns
@@ -584,22 +584,30 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   
   metric <- match.arg(metric, c("jaccard", "sorensen", "bray", "ruzicka",
                                 "hypervolume", "chao-jaccard", "chao-sorensen",
+                                "horn", "morista-horn",
                                 "cosine-similarity"), 
                       several.ok = FALSE)
-  
   # if (use_relative_abund == T){
   #   spp_site_data <- spp_site_data/rowSums(spp_site_data)
   # }
   # print(metric)
   # print(spp_site_data)
   
-
-  if (metric %in% c("chao-jaccard", "chao-sorensen")){
+  # DEV NOTE: SpadeR functions throw errors - if sampling removes spp/sites, if 
+  # very few spp in a site...
+  if (metric %in% c("chao-jaccard", "chao-sorensen",
+                    "horn", "morista-horn")){
+    stop("In development...")
     # transpose data for use in SpadeR
     spp_site_data <- as.data.frame(t(spp_site_data))
+    print(spp_site_data)
     # print(as.data.frame(spp_site_data))
     # print(class(as.data.frame(spp_site_data)))
-    out <- SpadeR::SimilarityPair(X = spp_site_data, datatype = "abundance")
+    out <- SpadeR::SimilarityPair(X = spp_site_data, datatype = "abundance",
+                                  nboot = 1) 
+    # Testing no boots (single boot) to avoid internal function errors
+    # Could also extract empirical values, rather than estimated values....
+    # $Empirical_relative
     # Get the metric of interest...and rename columns
     if (metric == "chao-jaccard"){
       out <- as.data.frame.list(out$estimated_relative["ChaoJaccard",])
@@ -611,6 +619,21 @@ hib_calc_sim_ <- function(spp_site_data, metric,
       colnames(out) <- c("ChaoSorensen", "ChaoSorensen_se", 
                          "ChaoSorensen_lo95", "ChaoSorensen_hi95")
     }
+    # TODO: 
+    # Check names in spadeR output
+    # Horn Index
+    if (metric == "horn"){
+      out <- as.data.frame.list(out$estimated_relative["C12=U12(q=1,Horn)",])
+      colnames(out) <- c("Horn", "Horn_se",
+                         "Horn_lo95", "Horn_hi95")
+    }
+    # Morista-Horn Index
+    if (metric == "morista-horn"){
+      out <- as.data.frame.list(out$estimated_relative["C22(q=2,Morisita)",])
+      colnames(out) <- c("MoristaHorn", "MoristaHorn_se",
+                         "MoristaHorn_lo95", "MoristaHorn_hi95")
+    }
+    
     # Output is in similarity form (1 == comms are equal)
     return(out)
   }
@@ -618,12 +641,16 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   # Add in hypervolume approach
   else if (metric == "hypervolume"){
     
+    if (use_relative_abundance){
+      row_abund <- rowSums(spp_site_data)
+      row_abund[row_abund == 0] <- 1
+      spp_site_data <- spp_site_data/row_abund
+      # spp_site_data <- spp_site_data/colSums(spp_site_data)
+    }
+    
     # transpose site_spp_data for use in convhulln (M rows of N dimensions)
     spp_site_data <- t(spp_site_data)
     
-    if (use_relative_abundance){
-      spp_site_data <- spp_site_data/colSums(spp_site_data)
-    }
     # add origin to spp_site_data
     spp_site_data <- rbind(spp_site_data,
                            rep(0, ncol(spp_site_data)))
@@ -654,6 +681,17 @@ hib_calc_sim_ <- function(spp_site_data, metric,
     x1 <- x[1,]
     x2 <- x[2,]
     cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
+    
+    # if one of the sites doesn't have any individuals/species in it
+    # i.e. the row sum is 0
+    if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
+      # then the similarity between sites should be 0
+      cosine <- 0
+      # if both sites have no individuals/species
+    } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
+      # then class the similarity as NA
+      cosine <- NA
+    }
     out <- data.frame("Cosine_similarity" = cosine)
     return (out)
   }
@@ -667,7 +705,11 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   } 
   else if (metric %in% c("bray", "ruzicka")){
     if (use_relative_abundance){
-      spp_site_data <- spp_site_data/rowSums(spp_site_data)
+      # rowSums could be 0 (zero)!!! - adjust equal 1 if it does...
+      row_abund <- rowSums(spp_site_data)
+      row_abund[row_abund == 0] <- 1
+      spp_site_data <- spp_site_data/row_abund
+      # spp_site_data <- spp_site_data/rowSums(spp_site_data)
     }
     out <- 1 - unlist(betapart::beta.pair.abund(spp_site_data, 
                                                 index.family = metric))
@@ -677,6 +719,8 @@ hib_calc_sim_ <- function(spp_site_data, metric,
   # print(out)
   # if one of the sites doesn't have any individuals/species in it
   # i.e. the row sum is 0
+  # TODO: but is the below true for the gradient/turnover components calculated
+  # by betapart...
   if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
     # then the similarity between sites should be 0
     out[1,] <- 0
@@ -716,6 +760,25 @@ hib_calc_sim_ <- function(spp_site_data, metric,
 }
 
 
+#' Calculate Euclidean distance-style similarity metrics
+#' 
+#' @description 
+#' This function calculates either "euclidean", "chord" or "hellinger" deistance
+#' between sites
+#' @details 
+#' Expects a dataframe/tibble with species abundance records at two sites 
+#' - sites as rows, species as columns
+#' @param spp_site_data A dataframe/tibble object.
+#' @param metric A [`character`] of either "euclidean", "chord", "hellinger"
+#' @param comp_df A [`dataframe`] containing the necessary comparisons
+#' @param use_relative_abundance A [`logical`] value - whether relative abundance 
+#' values should be used; applicable for euclidean
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   metric_val <- hib_calc_sim_(spp_site_data, "sorensen")
+#' } 
+#' @export
 hib_calc_sim_euc <- function(spp_site_data, 
                              metric,
                              comp_df,
@@ -734,17 +797,25 @@ hib_calc_sim_euc <- function(spp_site_data,
   
   
   if ((use_relative_abundance) & metric == "euclidean"){
-    spp_site_data <- spp_site_data/rowSums(spp_site_data)
+    row_abund <- rowSums(spp_site_data)
+    row_abund[row_abund==0] <- 1
+    spp_site_data <- spp_site_data/row_abund
   }
   
   if (metric == "chord"){
     # divide each row by sqrt(sum(row_vals^2))
-    spp_site_data <- spp_site_data/sqrt(rowSums(spp_site_data^2))
+    # TODO: should I be changing 0 to 1??
+    row_abund <- sqrt(rowSums(spp_site_data^2))
+    row_abund[row_abund==0] <- 1
+    spp_site_data <- spp_site_data/row_abund
   }
   
   if (metric == "hellinger"){
     # divide each row by sum(row_vals), then sqrt results
-    spp_site_data <- spp_site_data/rowSums(spp_site_data)
+    # TODO: should I be changing 0 to 1??
+    row_abund <- rowSums(spp_site_data)
+    row_abund[row_abund==0] <- 1
+    spp_site_data <- spp_site_data/row_abund
     spp_site_data <- sqrt(spp_site_data)
   }
   # Get dist
@@ -813,10 +884,27 @@ hib_calc_sim <- function(obj,
   )
   
   sim_metric <- match.arg(sim_metric, c("jaccard", "sorensen", "bray", "ruzicka",
-                                        "euclidean", "hypervolume",
+                                        "hypervolume",
                                         "chao-jaccard", "chao-sorensen",
+                                        "horn", "morista-horn",
                                         "cosine-similarity",
                                         "euclidean", "chord", "hellinger"), several.ok = TRUE)
+  
+  # Development 
+  if (any(sim_metric %in% c("chao-jaccard", "chao-sorensen", "horn", "morista-horn"))){
+    bad_metr <- sim_metric[sim_metric %in% c("chao-jaccard", "chao-sorensen", 
+                                              "horn", "morista-horn")]
+    message(crayon::yellow(paste0("Warning: the following specified metrics are not yet supported - ",
+                                  paste(bad_metr, collapse = ", "), 
+                                  "\n",
+                                  "These metrics will not be calculated...\n")))
+    sim_metric <- sim_metric[!sim_metric %in% c("chao-jaccard", "chao-sorensen", "horn", "morista-horn")]
+    
+    if (length(sim_metric) == 0){
+      message(crayon::yellow(paste0("Warning: No supported metrics specified...\n")))
+      return(obj)
+    }
+  }
   
   # Workflow from : https://adrianadepalma.github.io/BII_tutorial/bii_example.html
   # Only use known land-use sites
@@ -996,12 +1084,13 @@ hib_calc_sim <- function(obj,
   
   non_euc_metr <- sim_metric[sim_metric %in% c("jaccard", "sorensen", "bray", "ruzicka",
                                                "hypervolume", "chao-jaccard", "chao-sorensen",
+                                               "horn", "morista-horn",
                                                "cosine-similarity")]
   # TODO
   # add ChaoJaccard, ChaoSorensen
   
   if (length(non_euc_metr)>0){
-    
+    message(crayon::green("Calculating non-euclidean similarity metrics..."))
     sim_df <- purrr::map2_dfr(.x = site_comp_df$s1,
                               .y = site_comp_df$s2,
                               .f = function(s1 = .x, s2 = .y, 
@@ -1015,9 +1104,12 @@ hib_calc_sim <- function(obj,
                                   # pull out the site name, species name and abundance information
                                   dplyr::select(SSBS, Taxon_name_entered, Measurement) %>%
                                   # pivot so that each column is a species and each row is a site
-                                  tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement) %>%
+                                  tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
+                                                     values_fill = 0) %>%
                                   # set the rownames to the SSBS and then remove that column
                                   tibble::column_to_rownames("SSBS")
+                                
+                                # print(spp_site_data)
                                 
                                 out_df <- data.frame(s1 = s1, 
                                                      s2 = s2)
@@ -1053,7 +1145,7 @@ hib_calc_sim <- function(obj,
   
   if (length(euc_metr) > 0){
   # if ("euclidean" %in% sim_metric){
-    
+    message(crayon::green("Calculating euclidean-based similarity metrics..."))
     # if (use_relative_abundance){
     #   spp_tmp_euc <- spp_tmp %>%
     #     group_by(SS, SSBS) %>%
@@ -1072,7 +1164,8 @@ hib_calc_sim <- function(obj,
                                      # pull out the site name, species name and abundance information
                                      dplyr::select(SSBS, Taxon_name_entered, Measurement) %>%
                                      # pivot so that each column is a species and each row is a site
-                                     tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement) %>%
+                                     tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
+                                                        values_fill = 0) %>%
                                      # set the rownames to the SSBS and then remove that column
                                      tibble::column_to_rownames("SSBS")
                                    
@@ -1082,15 +1175,7 @@ hib_calc_sim <- function(obj,
                                    
                                    # print(head(spp_site_data))
                                    
-                                   
-                                   # TODO; put euc, chord and hellinger all here...
-                                   # all use dist, just different normalisation...
-                                   # %%%%
-                                   # out_df <- comp_df %>% dplyr::filter(SS == ss)
-                                   # 
-                                   # # print(paste0(s1, s2, sep = "_"))
-                                   # 
-                                   # # Depending on sim_metric values, calc metrics of comp-sim
+                                   # Depending on sim_metric values, calc metrics of comp-sim
                                    out_df <- purrr::map_dfr(.x = metric_vec,
                                                              .f = function(metric = .x,
                                                                            spp_data = spp_site_data,
@@ -1143,9 +1228,8 @@ hib_calc_sim <- function(obj,
     if ((rescale_euclidean_distance) & ("Euclidean" %in% colnames(euc_sim_df))){
       euc_sim_df$Euclidean <- euc_sim_df$Euclidean / sqrt(2)
     }
-    # drop contrast and ss columns
+    # drop contrast column
     euc_sim_df <- euc_sim_df %>% 
-      # dplyr::select(-SS) %>% 
       dplyr::select(-contrast)
     # print(head(euc_sim_df))
   }
@@ -1153,11 +1237,9 @@ hib_calc_sim <- function(obj,
   # Combine metrics into single df
   if ((!is.null(sim_df)) & (!is.null(euc_sim_df))){
     sim_df <- left_join(sim_df, euc_sim_df) 
-    # [,c("s1", "s2", "Euclidean_distance")]
   }
   if (is.null(sim_df) & (!is.null(euc_sim_df))){
     sim_df <- euc_sim_df
-    # [,c("s1", "s2", "Euclidean_distance")]
   }
   
   
@@ -1176,12 +1258,17 @@ hib_calc_sim <- function(obj,
                                                  "ChaoJaccard_se", 
                                                  "ChaoJaccard_lo95", "ChaoJaccard_hi95",
                                                  "ChaoSorensen_se", 
-                                                 "ChaoSorensen_lo95", "ChaoSorensen_hi95")]
+                                                 "ChaoSorensen_lo95", "ChaoSorensen_hi95",
+                                                 "Horn_se", 
+                                                 "Horn_lo95", "Horn_hi95",
+                                                 "MoristaHorn_se", 
+                                                 "MoristaHorn_lo95", "MoristaHorn_hi95")]
   
   metrics_out_ls <- purrr::map(metrics_out,
                                function(x,
                                         df = sim_df){
-                                 if (x %in% c("ChaoJaccard", "ChaoSorensen")){
+                                 if (x %in% c("ChaoJaccard", "ChaoSorensen",
+                                              "Horn", "MoristaHorn")){
                                    return(df[,c("s1", "s2", x,
                                                 paste0(x, "_se"),
                                                 paste0(x, "_lo95"),

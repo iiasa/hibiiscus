@@ -30,6 +30,7 @@ Depends:
   R(>= 4.0.0)
 Suggests:
   lme4,
+  MuMIn,
   INLA,
   brms,
   posterior,

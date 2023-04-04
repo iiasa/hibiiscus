@@ -4,7 +4,14 @@
 \alias{hib_calc_sim}
 \title{Calculate compositional similarity (wrapper)}
 \usage{
-hib_calc_sim(obj, sim_metric = "bray", primary_minimal_baseline = T)
+hib_calc_sim(
+  obj,
+  sim_metric = "bray",
+  primary_minimal_baseline = T,
+  use_relative_abundance = F,
+  rescale_hypervolume = T,
+  rescale_euclidean_distance = T
+)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}

@@ -4,16 +4,27 @@
 \alias{hib_calc_sim_}
 \title{Calculate similarity metrics}
 \usage{
-hib_calc_sim_(spp_site_data, metric)
+hib_calc_sim_(
+  spp_site_data,
+  metric,
+  use_relative_abundance,
+  rescale_hypervolume
+)
 }
 \arguments{
 \item{spp_site_data}{A dataframe/tibble object.}
 
-\item{metric}{A [`character`] of either sorensen, jaccard, bray or ruzicka}
+\item{metric}{A [`character`] of either sorensen, jaccard, bray, ruzicka, hypervolume}
+
+\item{use_relative_abundance}{A [`logical`] value - whether relative abundance 
+values should be used; applicable for "bray", "ruzicka", and "hypervolume"}
+
+\item{rescale_hypervolume}{A [`logical`] value - whether hypervolume should be
+divided by 0.5 (theoretical maximum volume for 2 communities)}
 }
 \description{
-This function calculates either Sorensen, Jaccard, Bray-curtis or Ruzika 
-similarity metrics between sites, using the betapart package
+This function calculates either "jaccard", "sorensen", "bray", "ruzicka",
+"hypervolume", "cosine-similarity" similarity metrics between sites
 }
 \details{
 Expects a dataframe/tibble with species abundance records at two sites 

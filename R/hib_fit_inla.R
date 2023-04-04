@@ -7,6 +7,15 @@
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
 #' @param form A [`formula`] in the style of inla(bru) - including fixed and random effects.
+#' @param response_fixed_form A [`formula`] with the response and fixed effects
+#' @param random_covar  A [`formula`] with random, non-spatial, iid effects specified
+#' @param family A [`character`] indicating the model family, e.g., "gaussian"
+#' @param fit_settings In development
+#' @param incl_spatial_term A [`logical`], whether or not to include a spatial 
+#' random effect
+#' @param input_mesh Optionally provide an inla mesh object
+#' @param mesh_settings Optionally specify inal mash settings, e.g., max.edge
+#' @param prior_list In development
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{
@@ -159,10 +168,20 @@ hib_fit_inla <- function(obj,
         message(crayon::yellow("Mesh dimension (2d or 3d) not provided, using default value: 2d \n"))
         mesh_settings$mesh_dim <- "2d"
       }
+      
+      # TODO: currently, other settings are not needed if mash_dim == "3d"
+      
       if ("max.edge" %in% missing_mesh_specs){
         # TODO: better default - link to location distances...
-        message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
-        mesh_settings$max.edge <- c(75,100)
+        if (mesh_settings$mesh_dim == "2d"){
+          message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
+          mesh_settings$max.edge <- c(75,100)
+        }
+        # else if (mesh_settings$mesh_dim == "3d"){
+        #   message(crayon::yellow("Mesh max.edge not provided, using default values: 75 \n"))
+        #   mesh_settings$max.edge <- c(75)
+        # }
+        
       }
       if ("cutoff" %in% missing_mesh_specs){
         message(crayon::yellow("Mesh cutoff not provided, using default value: 1e-12 \n"))
@@ -178,9 +197,11 @@ hib_fit_inla <- function(obj,
       
       
       if (mesh_settings$mesh_dim == "3d"){
+        coords <- inla.mesh.map(coords, projection = "longlat")
         input_mesh <- inla.mesh.create(loc = coords,
-                                       globe = T,
-                                       refine = list(max.edge = mesh_settings$max.edge))
+                                       globe = 8)
+        # globe = T,
+        # refine = list(max.edge = mesh_settings$max.edge)
       }
       
       if (mesh_settings$mesh_dim == "2d"){

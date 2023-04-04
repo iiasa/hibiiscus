@@ -2,34 +2,37 @@
 % Please edit documentation in R/hib_fit_lme4.R
 \name{hib_fit_lme4}
 \alias{hib_fit_lme4}
-\title{Fit an lme4 stype mixed-effects model}
+\title{Fit an lme4 style mixed-effects model}
 \usage{
-hib_fit_lme4(
-  obj,
-  form,
-  family = gaussian,
-  REML = T,
-  calc_CIs = NULL,
-  optimise_ranefs = F,
-  model_dredge = F,
-  model_average = F
-)
+hib_fit_lme4(obj, form, family = gaussian, REML = T, calc_CIs = NULL)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}
 
-\item{form}{A [`formula`] in the style of lme4 - including fixed and random effects.}
+\item{form}{A [`formula`] in the style of lme4 - including fixed and random 
+effects.}
+
+\item{family}{A [`family`] function, e.g. gaussian, poisson - as allowed by lme4}
+
+\item{REML}{A [`boolean`] - if using a gaussian family, should model be fitted 
+useing REML or ML - as in lme4}
+
+\item{calc_CIs}{An indication of whether fixed effect confidence intervals (95%) 
+should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"}
+
+\item{optimise_ranefs}{Not currently applicable - future dev}
+
+\item{model_dredge}{Not currently applicable - future dev}
+
+\item{model_average}{Not currently applicable - future dev}
 }
 \description{
 This function fits an lme4 model using the supplied database, formula and other
 function arguments tuning the model fitting process
 }
-\details{
-Expects a [`Database`] object.
-}
 \examples{
 \dontrun{
-  mod <- hib_fit_lme4(obj, ...)
+  mod <- hib_fit_lme4(obj, y ~ x + ( 1 | a ), ...)
 } 
 }
 \keyword{fitting}
