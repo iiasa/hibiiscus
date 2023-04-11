@@ -68,14 +68,13 @@ hib_fit_lme4 <- function(obj,
   message(crayon::green("Collating data for model fitting...\n"))
   # Collate data from database - based on columns specified in the formula
   
-  # TODO: currrent implementation only works for "within-site" diversity metrics...
+  # TODO: current implementation only works for "within-site" diversity metrics...
   # Need to update/improve approach to allow for "between-site" (compositional similarity)
   # analysis
   
   mod_covars <- all.vars(form[[3]])
   mod_resp <- all.vars(form[[2]])
   
-  mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
   
   
   # TODO: consider diversity_within and diversity_between
@@ -84,23 +83,66 @@ hib_fit_lme4 <- function(obj,
   # if response is in diversity_between, need to use site_contrasts df for covars
   
   
+  within_site_resp <- purrr::map(obj$diversity_within$Data,
+                                 colnames) %>%
+    unlist() %>%
+    unique() 
+  between_site_resp <- purrr::map(obj$diversity_between$Data,
+                                 colnames) %>%
+    unlist() %>%
+    unique() 
+  
+  print(mod_resp)
+  print(within_site_resp)
+  if (mod_resp %in% within_site_resp){
+    print("getting model data")
+    mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
+    # find relevant obj$diversity$Data[[]] - which one contains the response...
+    div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,
+                                        function(x, resp){
+                                          tmp <- colnames(x)
+                                          any(grepl(resp, tmp))
+                                        },
+                                        resp = mod_resp)))
+    assertthat::assert_that(
+      length(div_data_idx) == 1
+    )
+    
+    mod_df <- mod_df %>%
+      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
+    
+    mod_df <- na.omit(mod_df)
+    
+    n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
+    
+  } else if (mod_resp %in% between_site_resp){
+    mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]
+    
+    # find relevant obj$diversity$Data[[]] - which one contains the response...
+    div_data_idx <- which(unlist(lapply(obj$diversity_between$Data,
+                                        function(x, resp){
+                                          tmp <- colnames(x)
+                                          any(grepl(resp, tmp))
+                                        },
+                                        resp = mod_resp)))
+    assertthat::assert_that(
+      length(div_data_idx) == 1
+    )
+    
+    mod_df <- mod_df %>%
+      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
+    
+    mod_df <- na.omit(mod_df)
+    
+    n_spp <- obj$diversity_between$N_species_total[[div_data_idx]]
+    
+  } else {
+    message(crayon::magenta("Error: response variable specified is not available.\n"))
+    stop()
+  }
+  
+  
 
-  # find relevant obj$diversity$Data[[]] - which one contains the response...
-  div_data_idx <- which(unlist(lapply(obj$diversity$Data,
-                                      function(x, resp){
-                                        tmp <- colnames(x)
-                                        any(grepl(resp, tmp))
-                                      },
-                                      resp = mod_resp)))
-  assertthat::assert_that(
-    length(div_data_idx) == 1
-  )
-  
-  mod_df <- mod_df %>%
-    dplyr::left_join(obj$diversity$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
-  
-  mod_df <- na.omit(mod_df)
-  
   # TODO:
   # Re-level LU/UI/LUI columns - optional... what if they include cannot decide... 
   # - or have other, groupings - primary, secondary...
@@ -230,7 +272,7 @@ hib_fit_lme4 <- function(obj,
   names(metr_vec) <- c("R2m", "R2c", "AIC", "BIC", "AICc")
   
   
-  n_spp <- obj$diversity$N_species_total[[div_data_idx]]
+  # n_spp <- obj$diversity$N_species_total[[div_data_idx]]
   
   # instantiate a lme4_mod class
   mod_obj <- hib_lme4_model$new(

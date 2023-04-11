@@ -73,7 +73,14 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         self$processing_flags <- db_obj$processing_flags
                         
                         # Calc n sites/species used in  model - need to calc spp with div metrics!!
-                        N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                        # N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                        
+                        if ("SSBS" %in% colnames(mod_df)){
+                          self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                        } else if ("SSBS1" %in% colnames(mod_df)){
+                          # print("SSBS1 found")
+                          self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                        }
                         
                         self$processing_flags$N_spp <- n_spp
                         
@@ -91,7 +98,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       print = function(){
                         # N spp/sites...
                         # print(summary(self$model))
-                        stats <- list(number_sites = dplyr::n_distinct(self$data$SSBS),
+                        stats <- list(number_sites = self$processing_flags$N_sites,
                                       # number_lu = length( unique(self$data$Predominant_land_use) ),
                                       # number_lui = length(unique(self$data$Use_intensity)),
                                       number_species = self$processing_flags$N_spp ) #,

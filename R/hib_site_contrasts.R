@@ -41,7 +41,7 @@ hib_calc_site_contrasts <- function(obj,
   message(crayon::green("Collating data for site contrasts...\n"))
   
   # get obj$sites columns of interest - SSBS, SS, LUI, lat/long etc
-  cols_of_interest <- c("SSBS", "SS")
+  cols_of_interest <- c("SSBS", "SSB", "SS")
   if ("lui_contrast" %in% metrics){
     cols_of_interest <- c(cols_of_interest, "LUI")
   }
@@ -189,6 +189,18 @@ hib_calc_site_contrasts <- function(obj,
     }
       
   }
+  
+  # Also, by default incl SSB - either SSB or NA if sites are from different blocks
+  site_comp_df <- site_comp_df %>%
+    # get the lat and long for s1
+    dplyr::left_join(site_df[, c("SSBS", "SSB")], 
+                     by = c("SSBS1" = "SSBS")) %>%
+    dplyr::rename(SSB1 = SSB) %>%
+    dplyr::left_join(site_df[, c("SSBS", "SSB")], 
+                     by = c("SSBS2" = "SSBS")) %>%
+    dplyr::rename(SSB2 = SSB) %>%
+    dplyr::mutate(SSB = dplyr::case_when(SSB1 == SSB2 ~ SSB1,
+                                         T ~ NA))
   
   # %%%
   # add site_contrasts to obj

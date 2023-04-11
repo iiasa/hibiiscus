@@ -1200,14 +1200,14 @@ hib_calc_div_between <- function(obj,
                                    
                                    # Should add a flag to indicate if one or both sites
                                    # are empty
-                                   empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
-                                                             SSBS1_is_empty = (rowSums(spp_site_data) == 0))
-                                   empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
-                                                              SSBS2_is_empty = (rowSums(spp_site_data) == 0))
-                                   
-                                   out_df <- out_df %>%
-                                     left_join(empty_sites1) %>%
-                                     left_join(empty_sites2)
+                                   # empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
+                                   #                           SSBS1_is_empty = (rowSums(spp_site_data) == 0))
+                                   # empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
+                                   #                            SSBS2_is_empty = (rowSums(spp_site_data) == 0))
+                                   # 
+                                   # out_df <- out_df %>%
+                                   #   left_join(empty_sites1) %>%
+                                   #   left_join(empty_sites2)
                                    # 
                                    # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
                                    #   # then the similarity between sites should be 0
@@ -1301,14 +1301,14 @@ hib_calc_div_between <- function(obj,
                                 
                                 out_df <- out_df %>% bind_cols(out_met)
                                 
-                                empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
-                                                           SSBS1_is_empty = (rowSums(spp_site_data) == 0))
-                                empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
-                                                           SSBS2_is_empty = (rowSums(spp_site_data) == 0))
-                                
-                                out_df <- out_df %>%
-                                  left_join(empty_sites1) %>%
-                                  left_join(empty_sites2)
+                                # empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
+                                #                            SSBS1_is_empty = (rowSums(spp_site_data) == 0))
+                                # empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
+                                #                            SSBS2_is_empty = (rowSums(spp_site_data) == 0))
+                                # 
+                                # out_df <- out_df %>%
+                                #   left_join(empty_sites1) %>%
+                                #   left_join(empty_sites2)
                                 return(out_df)
                               }
     )
@@ -1325,6 +1325,28 @@ hib_calc_div_between <- function(obj,
   
   # convert to long tibble...
   # add processing flags per metric - 
+  
+  # Calc is_empty flags once and add to each sub df?
+  empty_sites1 <- spp_tmp %>%
+    dplyr::group_by(SSBS) %>%
+    dplyr::select(SSBS, Taxon_name_entered, Measurement) %>%
+    # pivot so that each column is a species and each row is a site
+    tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
+                       values_fill = 0) %>%
+    tibble::column_to_rownames("SSBS") %>%
+    dplyr::mutate(SSBS1_is_empty = (rowSums(.) == 0)) %>%
+    tibble::rownames_to_column("SSBS1") %>%
+    dplyr::select(SSBS1, SSBS1_is_empty)
+  
+  empty_sites2 <- empty_sites1 %>%
+    dplyr::rename(SSBS2 = SSBS1,
+                  SSBS2_is_empty = SSBS1_is_empty)
+  
+    
+  veg_df <- veg_df %>%
+    left_join(empty_sites1) %>%
+    left_join(empty_sites2)
+  # 
   metrics_out <- colnames(veg_df)
   metrics_out <- metrics_out[!metrics_out %in% c("SSBS1", "SSBS2", "SS",
                                                  "SSBS1_is_empty", "SSBS2_is_empty")] 
