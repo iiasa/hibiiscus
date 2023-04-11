@@ -1270,7 +1270,6 @@ hib_calc_div_between <- function(obj,
                                 out_df <- data.frame(SSBS1 = s1, 
                                                      SSBS2 = s2,
                                                      SS    = ss)
-                                # TODO: add contrast!
                                 
                                 # Depending on sim_metric values, calc metrics of comp-sim
                                 # out_met <- purrr::map_dfc(.x = metric_vec,

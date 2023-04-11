@@ -19,6 +19,9 @@ Database <- R6Class("Database",
                     # diversity = NULL,
                     diversity_within = NULL,
                     diversity_between = NULL,
+                    
+                    site_contrasts = NULL,
+                    
                     processing_flags = NULL,
                     # Executed when created
                     initialize = function(version, paths){
@@ -335,7 +338,9 @@ Database <- R6Class("Database",
                                     # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
                                     
                                     div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
-                                    div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ") 
+                                    div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ")
+                                    # TODO: site contrast info
+                                    # site_contrast_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ") 
                                     )  
                       # TODO: check both within and between site metrics/diversity data
                       

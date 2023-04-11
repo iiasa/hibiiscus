@@ -76,12 +76,15 @@ hib_fit_lme4 <- function(obj,
   mod_resp <- all.vars(form[[2]])
   
   mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
-  # TODO: 
-  # if response is in diversity_between, need to get site_contrasts df
   
   
   # TODO: consider diversity_within and diversity_between
+  # check where response variable is - diversity_within v diversity_between
+  # if response is in diversity_within, need to use sites df for covars
+  # if response is in diversity_between, need to use site_contrasts df for covars
   
+  
+
   # find relevant obj$diversity$Data[[]] - which one contains the response...
   div_data_idx <- which(unlist(lapply(obj$diversity$Data,
                                       function(x, resp){
