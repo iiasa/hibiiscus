@@ -67,10 +67,20 @@ hib_fit_lme4 <- function(obj,
   
   message(crayon::green("Collating data for model fitting...\n"))
   # Collate data from database - based on columns specified in the formula
+  
+  # TODO: currrent implementation only works for "within-site" diversity metrics...
+  # Need to update/improve approach to allow for "between-site" (compositional similarity)
+  # analysis
+  
   mod_covars <- all.vars(form[[3]])
   mod_resp <- all.vars(form[[2]])
   
   mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
+  # TODO: 
+  # if response is in diversity_between, need to get site_contrasts df
+  
+  
+  # TODO: consider diversity_within and diversity_between
   
   # find relevant obj$diversity$Data[[]] - which one contains the response...
   div_data_idx <- which(unlist(lapply(obj$diversity$Data,

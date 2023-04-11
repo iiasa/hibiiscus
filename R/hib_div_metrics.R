@@ -35,8 +35,9 @@ hib_calc_ta <- function(obj){
     abund_df <- obj$species %>%
       dplyr::filter(Diversity_metric_type == "Abundance") %>%
       dplyr::group_by(SSBS, SS) %>%
-      dplyr::summarise(Total_abundance = sum(Measurement),
-                       N_spp_SBSS = dplyr::n_distinct(Best_guess_binomial)) %>%
+      dplyr::summarise(Total_abundance = sum(Measurement)#,
+                       # N_spp_SBSS = dplyr::n_distinct(Best_guess_binomial)
+                       ) %>%
       dplyr::ungroup()
   }
   
@@ -62,16 +63,19 @@ hib_calc_ta <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  div_empty <- is.null(obj$diversity)
+  # TODO
+  return(out_tib)
   
-  if (!div_empty){
-    obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  }  
-  if (div_empty){
-    obj$diversity <- out_tib
-  }
-
-  return(obj)
+  # div_empty <- is.null(obj$diversity)
+  # 
+  # if (!div_empty){
+  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
+  # }  
+  # if (div_empty){
+  #   obj$diversity <- out_tib
+  # }
+  # 
+  # return(obj)
 }
 
 
@@ -150,16 +154,19 @@ hib_calc_sr <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  div_empty <- is.null(obj$diversity)
+  # TODO:
+  return(out_tib)
   
-  if (!div_empty){
-    obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  }  
-  if (div_empty){
-    obj$diversity <- out_tib
-  }
-  
-  return(obj)
+  # div_empty <- is.null(obj$diversity)
+  # 
+  # if (!div_empty){
+  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
+  # }  
+  # if (div_empty){
+  #   obj$diversity <- out_tib
+  # }
+  # 
+  # return(obj)
 }
 
 
@@ -177,7 +184,7 @@ hib_calc_sr <- function(obj){
 #' } 
 #' @export
 hib_calc_simpson <- function(obj){
-  message(crayon::green("Calculating Simpson's diversity ...\n"))
+  message(crayon::green("Calculating within-site Simpson's diversity ...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -220,16 +227,19 @@ hib_calc_simpson <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  div_empty <- is.null(obj$diversity)
+  # TODO:
+  return(out_tib)
   
-  if (!div_empty){
-    obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  }  
-  if (div_empty){
-    obj$diversity <- out_tib
-  }
-  
-  return(obj)
+  # div_empty <- is.null(obj$diversity)
+  # 
+  # if (!div_empty){
+  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
+  # }  
+  # if (div_empty){
+  #   obj$diversity <- out_tib
+  # }
+  # 
+  # return(obj)
 }
 
 # TODO:
@@ -341,16 +351,19 @@ hib_calc_chao1 <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  div_empty <- is.null(obj$diversity)
+  # TODO:
+  return(out_tib)
   
-  if (!div_empty){
-    obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  }  
-  if (div_empty){
-    obj$diversity <- out_tib
-  }
-  
-  return(obj)
+  # div_empty <- is.null(obj$diversity)
+  # 
+  # if (!div_empty){
+  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
+  # }  
+  # if (div_empty){
+  #   obj$diversity <- out_tib
+  # }
+  # 
+  # return(obj)
 }
 
 # Rarefied richness
@@ -537,115 +550,273 @@ hib_calc_rsr <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  div_empty <- is.null(obj$diversity)
+  # TODO:
+  return(out_tib)
   
-  if (!div_empty){
-    obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  }  
-  if (div_empty){
-    obj$diversity <- out_tib
-  }
-  
-  return(obj)
+  # div_empty <- is.null(obj$diversity)
+  # 
+  # if (!div_empty){
+  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
+  # }  
+  # if (div_empty){
+  #   obj$diversity <- out_tib
+  # }
+  # 
+  # return(obj)
 
 }
 
 
-#' Calculate similarity metrics
+#' Calculate within-site diversity metrics
 #' 
 #' @description 
-#' This function calculates either "jaccard", "sorensen", "bray", "ruzicka",
-#' "hypervolume", "cosine-similarity" similarity metrics between sites
+#' This function calculates diversity per site, wrapper for the above functions
+#' @details 
+#' Expects a [`Database`] object.
+#' @param obj A [`Database`] object.
+#' @param metrics A [`character`] vector, any of "Total_abundance", "Species_richness", 
+#' "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness"
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   obj <- hib_calc_div_within(obj, c("Total_abundance", "Species_richness"))
+#' } 
+#' @export
+hib_calc_div_within <- function(obj, metrics){
+  # Assertions
+  assertthat::assert_that(
+    assertthat::has_name(obj$species, "SSBS"),
+    assertthat::has_name(obj$species, "SS"),
+    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    is.character(metrics)
+  )
+  
+  # Match supplied metrics to options.
+  metrics <- match.arg(metrics,
+                       c("Total_abundance", "Species_richness", "Chao1_diversity",  
+                         "Simpson_diversity", "Rarefied_species_richness"),
+                       several.ok = T)
+  
+  message(crayon::green("Calculating within-site diversity metrics ...\n"))
+  
+  out_tib <- purrr::map(.x = metrics, 
+                       .f = function(metric = .x, db_obj = obj){
+                         if (metric == "Total_abundance"){
+                           return(hib_calc_ta(db_obj))
+                         }
+                         if (metric == "Species_richness"){
+                           return(hib_calc_sr(db_obj))
+                         }
+                         if (metric == "Chao1_diversity"){
+                           return(hib_calc_chao1(db_obj))
+                         }
+                         if (metric == "Simpson_diversity"){
+                           return(hib_calc_simpson(db_obj))
+                         }
+                         if (metric == "Rarefied_species_richness"){
+                           return(hib_calc_rsr(db_obj))
+                         }
+                         }
+                       ) %>% bind_rows()
+  
+  div_empty <- is.null(obj$diversity_within)
+  
+  if (!div_empty){
+    obj$diversity_within <- dplyr::bind_rows(obj$diversity_within, out_tib)
+  }  
+  if (div_empty){
+    obj$diversity_within <- out_tib
+  }
+  
+  return(obj)
+}
+# %%%%%
+
+
+# TODO: similarity v within-site metrics should be stored separately..
+# diversity_within - focussed around SSBS
+# diversity_between - focussed around SSBS_1 v SSBS_2 - key cols - SSBS_contrast, SS, <Metric>
+
+
+
+# TODO: vegan R package can calc many "distance" metrics in an approach analagous
+# to the dist() function, may be much quicker, includes Horn-Morista...
+# Takes a site (rows) by spp (columns) matrix as input
+
+# vegan metrics:
+# c("manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", 
+# "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", 
+# "cao", "mahalanobis", "chisq", "chord", "hellinger", "aitchison", "robust.aitchison")
+
+# conflicts between current metrics and vegan metrics...
+# c("jaccard", "bray")
+
+# what about sorensen - what is this?? - binary bray...
+# ruzika - equivalent to quantitative jaccard??
+
+# also need to record if one site has 0 total abundance...
+
+# use_relative_abundance should only apply to euclidean and hypervolume.. - maybe bray..
+# all other metrics specifically include some sort of scaling
+
+
+# TODO:
+# %%%%%%%%%%%%%
+
+#' Calculate vegan-based dissimilarity metrics
+#' 
+#' @description 
+#' This function calculates vegan-based dissimilarity metrics between sites
 #' @details 
 #' Expects a dataframe/tibble with species abundance records at two sites 
 #' - sites as rows, species as columns
 #' @param spp_site_data A dataframe/tibble object.
-#' @param metric A [`character`] of either sorensen, jaccard, bray, ruzicka, hypervolume
-#' @param use_relative_abundance A [`logical`] value - whether relative abundance 
-#' values should be used; applicable for "bray", "ruzicka", and "hypervolume"
-#' @param rescale_hypervolume  A [`logical`] value - whether hypervolume should be
-#' divided by 0.5 (theoretical maximum volume for 2 communities)
+#' @param metric A [`character`] - see vegdist
+#' @param binary A [`logical`] value - should distance be based on presence/absence
+#' @param rel_abund A [`logical`] value - whether relative abundance values should 
+#' be used; applicable for euclidean ...
+#' @param rescale A [`logical`] value - should distance be rescaled relative to
+#' theoretical max (if applicable and not 1)
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   metric_val <- hib_calc_sim_(spp_site_data, "sorensen")
+#'   metric_val <- hib_calc_veg(spp_site_data, "euclidean")
 #' } 
 #' @export
-hib_calc_sim_ <- function(spp_site_data, metric, 
-                          use_relative_abundance,
-                          rescale_hypervolume){
+hib_calc_veg <- function(spp_site_data, 
+                         metric,
+                         binary,
+                         rel_abund,
+                         rescale
+                         ){
   
   assertthat::assert_that(
-    is.character(metric)
+    is.character(metric),
+    is.logical(binary) || is.null(binary),
+    is.logical(rel_abund) || is.null(rel_abund),
+    is.logical(rescale) || is.null(rescale)
     # assertthat::has_name(spp_site_data, "SSBS"),
     # assertthat::has_name(spp_site_data, "Taxon_name_entered"),
     # assertthat::has_name(spp_site_data, "Measurement")
   )
+  # print(use_relative_abundance)
   
-  metric <- match.arg(metric, c("jaccard", "sorensen", "bray", "ruzicka",
-                                "hypervolume", "chao-jaccard", "chao-sorensen",
-                                "horn", "morista-horn",
-                                "cosine-similarity"), 
+  metric <- match.arg(metric, 
+                      c("manhattan", "euclidean", "canberra", "clark", "bray", 
+                        "kulczynski", "jaccard", "gower", "altGower", 
+                        "morisita", "horn", "mountford", "raup", "binomial", 
+                        "chao", "cao", "mahalanobis", "chisq", "chord", 
+                        "hellinger", "aitchison", "robust.aitchison"), 
                       several.ok = FALSE)
-  # if (use_relative_abund == T){
-  #   spp_site_data <- spp_site_data/rowSums(spp_site_data)
-  # }
-  # print(metric)
-  # print(spp_site_data)
   
-  # DEV NOTE: SpadeR functions throw errors - if sampling removes spp/sites, if 
-  # very few spp in a site...
-  if (metric %in% c("chao-jaccard", "chao-sorensen",
-                    "horn", "morista-horn")){
-    stop("In development...")
-    # transpose data for use in SpadeR
-    spp_site_data <- as.data.frame(t(spp_site_data))
-    print(spp_site_data)
-    # print(as.data.frame(spp_site_data))
-    # print(class(as.data.frame(spp_site_data)))
-    out <- SpadeR::SimilarityPair(X = spp_site_data, datatype = "abundance",
-                                  nboot = 1) 
-    # Testing no boots (single boot) to avoid internal function errors
-    # Could also extract empirical values, rather than estimated values....
-    # $Empirical_relative
-    # Get the metric of interest...and rename columns
-    if (metric == "chao-jaccard"){
-      out <- as.data.frame.list(out$estimated_relative["ChaoJaccard",])
-      colnames(out) <- c("ChaoJaccard", "ChaoJaccard_se", 
-                         "ChaoJaccard_lo95", "ChaoJaccard_hi95")
-    }
-    if (metric == "chao-sorensen"){
-      out <- as.data.frame.list(out$estimated_relative["ChaoSorensen",])
-      colnames(out) <- c("ChaoSorensen", "ChaoSorensen_se", 
-                         "ChaoSorensen_lo95", "ChaoSorensen_hi95")
-    }
-    # TODO: 
-    # Check names in spadeR output
-    # Horn Index
-    if (metric == "horn"){
-      out <- as.data.frame.list(out$estimated_relative["C12=U12(q=1,Horn)",])
-      colnames(out) <- c("Horn", "Horn_se",
-                         "Horn_lo95", "Horn_hi95")
-    }
-    # Morista-Horn Index
-    if (metric == "morista-horn"){
-      out <- as.data.frame.list(out$estimated_relative["C22(q=2,Morisita)",])
-      colnames(out) <- c("MoristaHorn", "MoristaHorn_se",
-                         "MoristaHorn_lo95", "MoristaHorn_hi95")
-    }
-    
-    # Output is in similarity form (1 == comms are equal)
-    return(out)
+  
+  # if ((rel_abund) & (metric == "euclidean")){
+  #   row_abund <- rowSums(spp_site_data)
+  #   row_abund[row_abund==0] <- 1
+  #   spp_site_data <- spp_site_data/row_abund
+  # }
+  if (rel_abund){
+    row_abund <- rowSums(spp_site_data)
+    row_abund[row_abund==0] <- 1
+    spp_site_data <- spp_site_data/row_abund
   }
   
+  
+  dist_obj <- vegan::vegdist(spp_site_data,
+                             method = metric,
+                             binary = binary)
+  
+  # Extract distance matrix
+  dist_matr <- as.matrix(dist_obj)
+  max_dist <- attr(dist_obj, "maxdist")
+  rm(dist_obj)
+  
+  rownames(dist_matr) <- rownames(spp_site_data)
+  colnames(dist_matr) <- rownames(spp_site_data)
+  
+  # Convert to long
+  dist_df <- as.data.frame(dist_matr)
+  dist_df$SSBS1 <- rownames(dist_df)
+  dist_df <- tidyr::pivot_longer(dist_df, cols = !SSBS1, 
+                                 names_to = "SSBS2", 
+                                 values_to = "Distance")
+  
+  dist_df <- dist_df %>%
+    dplyr::filter(SSBS1 != SSBS2) %>% 
+    dplyr::mutate(metric_nm = tools::toTitleCase(metric),
+                  contrast = paste(SSBS1, SSBS2, sep = "_"))
+  
+  if (rescale & !is.na(max_dist)){
+    dist_df$Distance <- dist_df$Distance / max_dist
+  }
+  # Ideally, if rescale is T and max_dist is NA, edit rescale to be F in output
+  
+  
+  # TODO: if as_sim, convert to similarity score (not possible for unscaled distances...)
+  
+  return(dist_df)
+}
+
+
+# TODO:
+# %%%%%%%%%%%%%
+# ' Calculate non-vegan-based dissimilarity metrics
+#' 
+#' @description 
+#' This function calculates non-vegan-based dissimilarity metrics between sites
+#' @details 
+#' Expects a dataframe/tibble with species abundance records at two sites 
+#' - sites as rows, species as columns
+#' @param spp_site_data A dataframe/tibble object.
+#' @param metric A [`character`] - cosine, hypervolume
+#' @param binary A [`logical`] value - should distance be based on presence/absence
+#' @param rel_abund A [`logical`] value - whether relative abundance values should 
+#' be used; applicable for ...hypervolume
+#' @param rescale A [`logical`] value - should distance be rescaled relative to
+#' theoretical max (if applicable and not 1)
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   metric_val <- hib_calc_nonveg(spp_site_data, "cosine")
+#' } 
+#' @export
+hib_calc_nonveg <- function(spp_site_data, 
+                            metric,
+                            binary, # Not needed
+                            rel_abund,
+                            rescale
+                            ){
+  
+  assertthat::assert_that(
+    is.character(metric),
+    is.logical(binary) || is.null(binary),
+    is.logical(rel_abund) || is.null(rel_abund),
+    is.logical(rescale) || is.null(rescale)
+    # assertthat::has_name(spp_site_data, "SSBS"),
+    # assertthat::has_name(spp_site_data, "Taxon_name_entered"),
+    # assertthat::has_name(spp_site_data, "Measurement")
+  )
+  # print(use_relative_abundance)
+  metric <- match.arg(metric, 
+                      c("hypervolumne", "cosine",
+                        "baselga_bray_balanced", "baselga_bray_gradient", 
+                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"),
+                      # "baselga_bray","baselga_ruzicka",
+                      # "baselga_jaccard", "baselga_sorensen") 
+                      several.ok = FALSE)
+  
   # Add in hypervolume approach
-  else if (metric == "hypervolume"){
+  if (metric == "hypervolume"){
     
-    if (use_relative_abundance){
+    if (rel_abund){
       row_abund <- rowSums(spp_site_data)
       row_abund[row_abund == 0] <- 1
       spp_site_data <- spp_site_data/row_abund
       # spp_site_data <- spp_site_data/colSums(spp_site_data)
+    }
+    if (binary){
+      spp_site_data[spp_site_data > 0] <- 1
     }
     
     # transpose site_spp_data for use in convhulln (M rows of N dimensions)
@@ -654,10 +825,7 @@ hib_calc_sim_ <- function(spp_site_data, metric,
     # add origin to spp_site_data
     spp_site_data <- rbind(spp_site_data,
                            rep(0, ncol(spp_site_data)))
-    # vol <- geometry::convhulln(spp_site_data,
-    #                            output.options = T)$vol
-    
-    # %%%
+
     vol <- tryCatch(
       {
         geometry::convhulln(spp_site_data, 
@@ -667,15 +835,16 @@ hib_calc_sim_ <- function(spp_site_data, metric,
         0
       }
     )
-    # %%%
-    if (rescale_hypervolume == T){
+    
+    if (rescale & rel_abund){
       vol <- vol/0.5
     }
+    
     out <- data.frame("Hypervolume" = vol)
-    return (out)
+    # return (out)
   }
   
-  else if (metric == "cosine-similarity"){
+  else if (metric == "cosine"){
     x <- as.matrix(spp_site_data)
     # N rows == 2
     x1 <- x[1,]
@@ -692,226 +861,187 @@ hib_calc_sim_ <- function(spp_site_data, metric,
       # then class the similarity as NA
       cosine <- NA
     }
-    out <- data.frame("Cosine_similarity" = cosine)
-    return (out)
+    out <- data.frame("Cosine" = cosine)
+    # return (out)
   }
   
   
-  else if (metric %in% c("jaccard", "sorensen")){
-    spp_site_data[spp_site_data > 0] <- 1
-    # print(spp_site_data)
-    out <- 1 - unlist(betapart::beta.pair(spp_site_data, 
-                                          index.family = metric))
-  } 
-  else if (metric %in% c("bray", "ruzicka")){
-    if (use_relative_abundance){
+  # else if (metric %in% c("jaccard", "sorensen")){
+  #   # "baselga_jaccard", "baselga_sorensen"
+  #   spp_site_data[spp_site_data > 0] <- 1
+  #   # print(spp_site_data)
+  #   out <- 1 - unlist(betapart::beta.pair(spp_site_data, 
+  #                                         index.family = metric))
+  # } 
+  else if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient",
+                         "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")){
+    # "baselga_bray","baselga_ruzicka",
+    
+    # (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient",
+                  # "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"))
+    
+    # stop("In development")
+    
+    if (rel_abund){
       # rowSums could be 0 (zero)!!! - adjust equal 1 if it does...
       row_abund <- rowSums(spp_site_data)
       row_abund[row_abund == 0] <- 1
       spp_site_data <- spp_site_data/row_abund
-      # spp_site_data <- spp_site_data/rowSums(spp_site_data)
     }
-    out <- 1 - unlist(betapart::beta.pair.abund(spp_site_data, 
-                                                index.family = metric))
-  }
-
-  out <- as.data.frame.list(out)
-  # print(out)
-  # if one of the sites doesn't have any individuals/species in it
-  # i.e. the row sum is 0
-  # TODO: but is the below true for the gradient/turnover components calculated
-  # by betapart...
-  if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
-    # then the similarity between sites should be 0
-    out[1,] <- 0
-    # if both sites have no individuals/species
-  } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
-    # then class the similarity as NA
-    out[1,] <- NA
+    if (binary){
+      spp_site_data[spp_site_data > 0] <- 1
+    }
+    
+    if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient")){
+      out <- unlist(betapart::beta.pair.abund(spp_site_data, 
+                                              index.family = "bray"))
+    }
+    if (metric %in% c("baselga_ruzicka_balanced", "baselga_ruzicka_gradient")){
+      out <- unlist(betapart::beta.pair.abund(spp_site_data, 
+                                              index.family = "ruzicka"))
+    }
+    
+    out <- as.data.frame.list(out)
+    # print(out)
+    # if one of the sites doesn't have any individuals/species in it
+    # i.e. the row sum is 0
+    # TODO: but is the below true for the gradient/turnover components calculated
+    # by betapart...
+    # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
+    #   # then the similarity between sites should be 0
+    #   out[1,] <- 0
+    #   # if both sites have no individuals/species
+    # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
+    #   # then class the similarity as NA
+    #   out[1,] <- NA
+    # }
+    
+    # Rename columns
+    if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient")){
+      out <- out %>%
+        dplyr::rename(baselga_bray_balanced = beta.bray.bal,
+                      baselga_bray_gradient = beta.bray.gra)
+    }
+    if (metric %in% c("baselga_ruzicka_balanced", "baselga_ruzicka_gradient")){
+      out <- out %>%
+        dplyr::rename(baselga_ruzicka_balanced = beta.ruz.bal,
+                      baselga_ruzicka_gradient = beta.ruz.gra)
+    }
+    
+    out <- out %>%
+      dplyr::select(!!metric)
+    
+    colnames(out) <- tools::toTitleCase(colnames(out))
   }
   
-  # Rename columns
-  if (metric == "sorensen"){
-    out <- out %>%
-      dplyr::rename(Simpson = beta.sim,
-                    Simpson_nested = beta.sne,
-                    Sorensen = beta.sor)
-  }
-  if (metric == "jaccard"){
-    out <- out %>%
-      dplyr::rename(Jaccard_turnover = beta.jtu,
-                    Jaccard_nested = beta.jne,
-                    Jaccard = beta.jac)
-  }
-  if (metric == "bray"){
-    out <- out %>%
-      dplyr::rename(Balanced_bray_curtis = beta.bray.bal,
-                    Gradient_bray_curtis = beta.bray.gra,
-                    Bray_curtis = beta.bray)
-  }
-  if (metric == "ruzicka"){
-    out <- out %>%
-      dplyr::rename(Balanced_ruzicka = beta.ruz.bal,
-                    Gradient_ruzicka = beta.ruz.gra,
-                    Ruzicka = beta.ruz)
-  }
+  # TODO:
+  # fix above...
   
-  return (out)
+  # TODO: if as_sim, convert to similarity score (not possible for unscaled distances...)
+  
+  
+  return(out)
 }
 
 
-#' Calculate Euclidean distance-style similarity metrics
+#' Calculate compositional dissimilarity (wrapper) between sites
 #' 
 #' @description 
-#' This function calculates either "euclidean", "chord" or "hellinger" deistance
-#' between sites
-#' @details 
-#' Expects a dataframe/tibble with species abundance records at two sites 
-#' - sites as rows, species as columns
-#' @param spp_site_data A dataframe/tibble object.
-#' @param metric A [`character`] of either "euclidean", "chord", "hellinger"
-#' @param comp_df A [`dataframe`] containing the necessary comparisons
-#' @param use_relative_abundance A [`logical`] value - whether relative abundance 
-#' values should be used; applicable for euclidean
-#' @keywords database, processing
-#' @examples 
-#' \dontrun{
-#'   metric_val <- hib_calc_sim_(spp_site_data, "sorensen")
-#' } 
-#' @export
-hib_calc_sim_euc <- function(spp_site_data, 
-                             metric,
-                             comp_df,
-                             use_relative_abundance){
-  
-  assertthat::assert_that(
-    is.character(metric)
-    # assertthat::has_name(spp_site_data, "SSBS"),
-    # assertthat::has_name(spp_site_data, "Taxon_name_entered"),
-    # assertthat::has_name(spp_site_data, "Measurement")
-  )
-  # print(use_relative_abundance)
-  
-  metric <- match.arg(metric, c("euclidean", "chord", "hellinger"), 
-                      several.ok = FALSE)
-  
-  
-  if ((use_relative_abundance) & metric == "euclidean"){
-    row_abund <- rowSums(spp_site_data)
-    row_abund[row_abund==0] <- 1
-    spp_site_data <- spp_site_data/row_abund
-  }
-  
-  if (metric == "chord"){
-    # divide each row by sqrt(sum(row_vals^2))
-    # TODO: should I be changing 0 to 1??
-    row_abund <- sqrt(rowSums(spp_site_data^2))
-    row_abund[row_abund==0] <- 1
-    spp_site_data <- spp_site_data/row_abund
-  }
-  
-  if (metric == "hellinger"){
-    # divide each row by sum(row_vals), then sqrt results
-    # TODO: should I be changing 0 to 1??
-    row_abund <- rowSums(spp_site_data)
-    row_abund[row_abund==0] <- 1
-    spp_site_data <- spp_site_data/row_abund
-    spp_site_data <- sqrt(spp_site_data)
-  }
-  # Get dist
-  dist_matr <- as.matrix(dist(spp_site_data))
-  
-  rownames(dist_matr) <- rownames(spp_site_data)
-  colnames(dist_matr) <- rownames(spp_site_data)
-  
-  # Convert to long
-  dist_df <- as.data.frame(dist_matr)
-  dist_df$s1 <- rownames(dist_df)
-  dist_df <- tidyr::pivot_longer(dist_df, cols = !s1, 
-                                 names_to = "s2", 
-                                 values_to = "Distance")
-  
-  dist_df <- dist_df %>%
-    dplyr::filter(s1 != s2) %>% 
-    dplyr::mutate(metric_nm = tools::toTitleCase(metric),
-                  contrast = paste(s1, s2, sep = "_"))
-  # print(head(dist_df))
-  # %>%
-  #   dplyr::filter(contrast %in% comp_df$contrast)
-  
-  return(dist_df)
-}
-
-#' Calculate compositional similarity (wrapper)
-#' 
-#' @description 
-#' This function calculates compositional similarity between sites within a study
+#' This function calculates compositional dissimilarity between sites within a study
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
-#' @param sim_metric A similarity metric, any/all of c("balanced bray-curtis", "bray-curtis", ...)
-#' @param primary_minimal_baseline A [`boolean`] value, determines whether 
-#' compositional similarity is calculated for all site combinations per study, or
+#' @param metrics A [`character`] vector of dissimilarity metrics, any/all of ...
+#' @param binary A [`logical`] vector applicable for vegan-based metrics, see [`vegdist`], 
+#' for non-vegan metrics, this will be ignored
+#' @param rel_abund A [`logical`] vector determining whether relative abundance 
+#' should be used to calculate the dissimilarity metric, only applicable for some metrics, 
+#' e.g., euclidean, hypervolume - Note: many metrics include rescaling to 'relative abundances'
+#' as part of the calculation
+#' @param rescale A [`logical`] vector determining if dissimilarity measure should 
+#' be rescaled relative to its maximum value - applies to metrics that are not 
+#' on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), chord, hellinger
+#' @param primin_baseline A [`logical`] value, determines whether 
+#' compositional dis/similarity is calculated for all site combinations per study, or
 #' only relative to a primary minimal baseline
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_sim(obj, c("balanced bray-curtis"))
+#'   obj <- hib_calc_div_between(obj, 
+#'                               c("bray", "jaccard"),
+#'                               c(F, T),
+#'                               c(T, F),
+#'                               c(F, F),
+#'                               T)
 #' } 
 #' @export
-hib_calc_sim <- function(obj, 
-                         sim_metric = "bray", 
-                         primary_minimal_baseline = T,
-                         use_relative_abundance = F,
-                         rescale_hypervolume = T,
-                         rescale_euclidean_distance = T){
-  message(crayon::green("Calculating compositional similarity...\n"))
-  # TODO:
-  # Assertion checks
+hib_calc_div_between <- function(obj, 
+                                 metrics,
+                                 binary = F,
+                                 rel_abund = T,
+                                 rescale = T,
+                                 primin_baseline = T){
+  # Assertions
   assertthat::assert_that(
-    is.character(sim_metric),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement"),
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    is.character(metrics),
     
     assertthat::has_name(obj$species, "Predominant_land_use"),
     assertthat::has_name(obj$species, "Taxon_name_entered"),
     
     assertthat::has_name(obj$sites, "SSBS"),
     assertthat::has_name(obj$sites, "SS")
-    # ?Effort_correct_measurement?
-    # Use_intensity
   )
   
-  sim_metric <- match.arg(sim_metric, c("jaccard", "sorensen", "bray", "ruzicka",
-                                        "hypervolume",
-                                        "chao-jaccard", "chao-sorensen",
-                                        "horn", "morista-horn",
-                                        "cosine-similarity",
-                                        "euclidean", "chord", "hellinger"), several.ok = TRUE)
+  message(crayon::green("Preparing site-contrasts to calculate compositional dis/similarity...\n"))
   
-  # Development 
-  if (any(sim_metric %in% c("chao-jaccard", "chao-sorensen", "horn", "morista-horn"))){
-    bad_metr <- sim_metric[sim_metric %in% c("chao-jaccard", "chao-sorensen", 
-                                              "horn", "morista-horn")]
-    message(crayon::yellow(paste0("Warning: the following specified metrics are not yet supported - ",
-                                  paste(bad_metr, collapse = ", "), 
-                                  "\n",
-                                  "These metrics will not be calculated...\n")))
-    sim_metric <- sim_metric[!sim_metric %in% c("chao-jaccard", "chao-sorensen", "horn", "morista-horn")]
-    
-    if (length(sim_metric) == 0){
-      message(crayon::yellow(paste0("Warning: No supported metrics specified...\n")))
-      return(obj)
-    }
-  }
+  veg_metrics <- c("manhattan", "euclidean", "canberra", "clark", "bray", 
+                   "kulczynski", "jaccard", "gower", "altGower", 
+                   "morisita", "horn", "mountford", "raup", "binomial", 
+                   "chao", "cao", "mahalanobis", "chisq", "chord", 
+                   "hellinger", "aitchison", "robust.aitchison")
+                   
+                   # Non-Vegan  
+  non_veg_metrics <- c("hypervolumne", "cosine",
+                       "baselga_bray_balanced", "baselga_bray_gradient",
+                       "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")
+  # "baselga_bray","baselga_ruzicka",
+  # "baselga_jaccard", "baselga_sorensen")
   
-  # Workflow from : https://adrianadepalma.github.io/BII_tutorial/bii_example.html
-  # Only use known land-use sites
-  # Only use abundance metric data
-  # Only use studies (SS) with single sampling effort - use Measurement...
-  # Only use studies with >1 species
-  # Only use studies with primary minimal land-use
+  metrics_ <- c(veg_metrics, non_veg_metrics)
+  
+  # first, combine metrics, binary, rel_abund and rescale into a df
+  metrics_spec_df <- data.frame(metric    = metrics,
+                                binary    = binary,
+                                rel_abund = rel_abund,
+                                rescale   = rescale)
+  # print(metrics_spec_df)
+  
+  matchable_metrics_idx <- !is.na(pmatch(metrics_spec_df$metric,
+                                         metrics))
+  
+  # print(matchable_metrics_idx)
+  
+  # subset to matchable metrics
+  metrics_spec_df <- metrics_spec_df[matchable_metrics_idx,]
+  # print(head(metrics_spec_df))
+  # run match.arg on matchable metrics
+  metrics_spec_df$metric <- match.arg(metrics_spec_df$metric, 
+                                       metrics_,
+                                       several.ok = T)
+  
+  # split to veg and non_veg spec dfs
+  veg_metrics_df <- subset(metrics_spec_df,
+                           metric %in% veg_metrics)
+  non_veg_metrics_df <- subset(metrics_spec_df,
+                               metric %in% non_veg_metrics)
+  
+  # print(veg_metrics_df)
+  # print(non_veg_metrics_df)
+  # Get site comparisons
   spp_tmp <- obj$species
   
   spp_tmp <- spp_tmp %>%
@@ -925,7 +1055,8 @@ hib_calc_sim <- function(obj,
     filter(n_sample_effort == 1 &
              n_species > 1)
   
-  if (primary_minimal_baseline == T){
+  if (primin_baseline == T){
+    # TODO: should this be ammended to primary forest...
     spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
                                       grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
     spp_tmp <- spp_tmp %>%
@@ -939,26 +1070,17 @@ hib_calc_sim <- function(obj,
       left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
       droplevels()
     
-  } else if (primary_minimal_baseline == F){
+  } else if (primin_baseline == F){
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-      # left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
       droplevels()
   }
-  
-  # TODO: don't what this to affect chaoJaccard/chaoSorensen
-  # if (use_relative_abundance){
-  #   spp_tmp <- spp_tmp %>% 
-  #     group_by(SS, SSBS) %>% 
-  #     mutate(Measurement = Measurement/sum(Measurement)) %>%
-  #     dplyr::ungroup()
-  #   }
   
   
   n_spp <- spp_tmp %>%
     dplyr::select(Best_guess_binomial) %>%
     dplyr::n_distinct()
-    
+  
   # Need to get combinations of data... - s1, s2, ...
   # %%%
   # From https://adrianadepalma.github.io/BII_tutorial/bii_example.html
@@ -966,22 +1088,10 @@ hib_calc_sim <- function(obj,
   # get a vector of each study to loop over
   studies <- unique(as.character(site_tmp$SS))
   
-  # print(studies)
-  # %>%
-  #   dplyr::distinct(SS) %>%
-  #   dplyr::pull()
-  
   site_comp_df <- purrr::map_dfr(.x = studies, .f = function(x){
     
-    # filter out the given study
-     #%>%
-      # simplify the data so we only have one row for each site
-      # dplyr::distinct(SSBS, .keep_all = TRUE)
-    
-    # print(site_data)
-    
     # pull out the sites that are Primary minimal (we only want to use comparisons with the baseline)
-    if (primary_minimal_baseline == T){
+    if (primin_baseline == T){
       site_data <- dplyr::filter(site_tmp, SS == x) %>%
         # pull out the SSBS and LandUse information
         dplyr::select(SSBS, prim_min)
@@ -989,7 +1099,7 @@ hib_calc_sim <- function(obj,
       baseline_sites <- site_data %>%
         dplyr::filter(prim_min == 1) %>%
         dplyr::pull(SSBS)
-    } else if (primary_minimal_baseline == F){
+    } else if (primin_baseline == F){
       site_data <- dplyr::filter(site_tmp, SS == x)
       
       baseline_sites <- site_data %>%
@@ -1002,102 +1112,142 @@ hib_calc_sim <- function(obj,
     
     # get all site x site comparisons for this study
     site_comparisons <- expand.grid(baseline_sites, site_list) %>%
-      
       # rename the columns so they will be what the compositional similarity function expects for ease
       dplyr::rename(s1 = Var1, s2 = Var2) %>%
-      
       # remove the comparisons where the same site is being compared to itself
       dplyr::filter(s1 != s2) %>%
-      
       # make the values characters rather than factors
       dplyr::mutate(s1 = as.character(s1),
                     s2 = as.character(s2),
-                    
                     # add the full name
                     contrast = paste(s1, s2, sep = "_"),
-                    
                     # add the study id
                     SS = as.character(x))
-
+    
     return(site_comparisons)
   })
-  # print(head(site_comp_df))
+  
   message(crayon::green(paste0(nrow(site_comp_df), 
                                " site comparisons to make...\n"))
           )
-  # # Need furrr
-  # future::plan(future::multisession, workers = 4)
-  # 
-  # # I'm using map2 (because there are two arguments I'm passing through - s1 and s2)
-  # # and the map2_dbl because the output I want is a vector of numbers (double rather than integer format)
-  # # so this function is going to go through each s1 and s2 in turn
-  # # and pass them into the get_bray function
-  # 
-  # # # %%%%%
-  # # # RC: this bit is relevant to any/all metrics
-  # # sp_data <- data %>%
-  # #   
-  # #   # filter out the SSBS that matches the pair of sites we're interested in
-  # #   dplyr::filter(SSBS %in% c(s1, s2)) %>%
-  # #   
-  # #   # pull out the site name, species name and abundance information
-  # #   dplyr::select(SSBS, Taxon_name_entered, Measurement) %>%
-  # # # %%%%# 
-  #   
-  # sim_df <- furrr::future_map2_dfr(.x = site_comp_df$s1,
-  #                         .y = site_comp_df$s2,
-  #                         .f = function(s1 = .x, s2 = .y, 
-  #                                       spp_data = spp_tmp,
-  #                                       metric_vec = sim_metric){
-  #                           require(hibiiscus)
-  #                           require(betapart)
-  #                           spp_site_data <- spp_data %>%
-  #                             # filter out the SSBS that matches the pair of sites we're interested in
-  #                             dplyr::filter(SSBS %in% c(s1, s2)) %>%
-  #                             # pull out the site name, species name and abundance information
-  #                             dplyr::select(SSBS, Taxon_name_entered, Measurement)
-  #                           
-  #                           out_df <- data.frame(s1 = s1, 
-  #                                                s2 = s2)
-  #                           
-  #                           # Depending on sim_metric values, calc metrics of comp-sim
-  #                           if (sum(grepl("bray", metric_vec)) > 0 ){
-  #                             bray_metr_vec <- metric_vec[grepl("bray", metric_vec)]
-  #                             tmp_bray <- hib_calc_sim_bray(spp_site_data, bray_metr_vec)
-  #                             out_df <- dplyr::bind_cols(out_df, tmp_bray)
-  #                           }
-  #                           # Other sim metrics - sorensen?...
-  #                           
-  #                           
-  #                           return(out_df)
-  #                         }
-  #                         )
-  # 
-  # # stop running things in parallel for now
-  # future::plan(future::sequential)
-  # # %%%
   
+  message(crayon::green("Calculating compositional dis/similarity...\n"))
   
+  # do vegan-based metrics...
   # %%%
-  # Non-parallel option - V slow for even a 1000 sites...
-  sim_df <- NULL
+  veg_df <- NULL
   
-  non_euc_metr <- sim_metric[sim_metric %in% c("jaccard", "sorensen", "bray", "ruzicka",
-                                               "hypervolume", "chao-jaccard", "chao-sorensen",
-                                               "horn", "morista-horn",
-                                               "cosine-similarity")]
-  # TODO
-  # add ChaoJaccard, ChaoSorensen
+  if (nrow(veg_metrics_df) > 0){
+    message(crayon::green("Calculating vegan-based dissimilarity metrics...\n"))
+    
+    veg_df <- purrr::map_dfr(.x = studies,
+                                 .f = function(ss = .x, 
+                                               spp_data = spp_tmp,
+                                               comp_df = site_comp_df,
+                                               metric_df = veg_metrics_df){
+                                   # TODO: add other processing flags too!!
+                                   # binary, rel_abund, rescale
+                                   
+                                   spp_site_data <- spp_data %>%
+                                     # filter out the SS that matches the SS we're interested in
+                                     dplyr::filter(SS == ss) %>%
+                                     # pull out the site name, species name and abundance information
+                                     dplyr::select(SSBS, Taxon_name_entered, Measurement) %>%
+                                     # pivot so that each column is a species and each row is a site
+                                     tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
+                                                        values_fill = 0) %>%
+                                     # set the rownames to the SSBS and then remove that column
+                                     tibble::column_to_rownames("SSBS")
+                                   
+                                   # print(head(spp_site_data))
+                                   
+                                   # Depending on metric_vec values, calc metrics of interest
+                                   # out_df <- purrr::map_dfr(.x = metric_vec,
+                                   #                          .f = function(metric = .x,
+                                   #                                        spp_data = spp_site_data){
+                                   #                            hib_calc_veg(spp_data, 
+                                   #                                         metric,
+                                   #                                         binary,
+                                   #                                         rel_abund,
+                                   #                                         rescale)
+                                   #                          })
+                                   # print(spp_site_data)
+                                   # print(metric_df)
+                                   # %%%
+                                   out_df <- purrr::pmap(.l = metric_df,
+                                                            .f = function(metric,
+                                                                          binary,
+                                                                          rel_abund,
+                                                                          rescale,
+                                                                          spp_data = spp_site_data){
+                                                              # print(metric)
+                                                              hib_calc_veg(spp_data, 
+                                                                           metric,
+                                                                           binary,
+                                                                           rel_abund,
+                                                                           rescale)
+                                                            }) %>%
+                                     dplyr::bind_rows()
+                                   # %%%
+                                   
+                                   out_df <- out_df %>%
+                                     dplyr::filter(contrast %in% comp_df$contrast)
+                                   
+                                   out_df <- tidyr::pivot_wider(out_df,
+                                                                names_from = metric_nm, 
+                                                                values_from = Distance)
+                                   out_df$SS <- ss
+                                   
+                                   # Should add a flag to indicate if one or both sites
+                                   # are empty
+                                   empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
+                                                             SSBS1_is_empty = (rowSums(spp_site_data) == 0))
+                                   empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
+                                                              SSBS2_is_empty = (rowSums(spp_site_data) == 0))
+                                   
+                                   out_df <- out_df %>%
+                                     left_join(empty_sites1) %>%
+                                     left_join(empty_sites2)
+                                   # 
+                                   # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
+                                   #   # then the similarity between sites should be 0
+                                   #   out[1,] <- 0
+                                   #   # if both sites have no individuals/species
+                                   # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
+                                   #   # then class the similarity as NA
+                                   #   out[1,] <- NA
+                                   # }
+                                   
+                                   return(out_df)
+                                 })
+    
+    # # print(head(euc_sim_df))
+    # if ((rescale_euclidean_distance) & ("Euclidean" %in% colnames(euc_sim_df))){
+    #   euc_sim_df$Euclidean <- euc_sim_df$Euclidean / sqrt(2)
+    # }
+    # # drop contrast column
+    # euc_sim_df <- euc_sim_df %>% 
+    #   dplyr::select(-contrast)
+    # # print(head(euc_sim_df))
+    veg_df <- veg_df %>%
+      dplyr::select(-contrast)
+  }
+  # %%%
   
-  if (length(non_euc_metr)>0){
-    message(crayon::green("Calculating non-euclidean similarity metrics..."))
-    sim_df <- purrr::map2_dfr(.x = site_comp_df$s1,
+  # do other metrics...
+  non_veg_df <- NULL
+  
+  if (nrow(non_veg_metrics_df) > 0){
+    message(crayon::green("Calculating non-vegan dissimilarity metrics...\n"))
+    
+    # stop("TODO")
+    non_veg_df <- purrr::map2_dfr(.x = site_comp_df$s1,
                               .y = site_comp_df$s2,
-                              .f = function(s1 = .x, s2 = .y, 
+                              .f = function(s1 = .x, 
+                                            s2 = .y, 
                                             spp_data = spp_tmp,
-                                            metric_vec = non_euc_metr){
-                                # require(hibiiscus)
-                                # require(betapart)
+                                            metric_d = non_veg_metrics_df){
+
                                 spp_site_data <- spp_data %>%
                                   # filter out the SSBS that matches the pair of sites we're interested in
                                   dplyr::filter(SSBS %in% c(s1, s2)) %>%
@@ -1111,194 +1261,104 @@ hib_calc_sim <- function(obj,
                                 
                                 # print(spp_site_data)
                                 
-                                out_df <- data.frame(s1 = s1, 
-                                                     s2 = s2)
+                                ss <- spp_data %>%
+                                  # filter out the SSBS that matches the pair of sites we're interested in
+                                  dplyr::filter(SSBS %in% c(s1, s2)) %>%
+                                  pull(SS) %>%
+                                  unique()
                                 
-                                # print(paste0(s1, s2, sep = "_"))
+                                out_df <- data.frame(SSBS1 = s1, 
+                                                     SSBS2 = s2,
+                                                     SS    = ss)
+                                # TODO: add contrast!
                                 
                                 # Depending on sim_metric values, calc metrics of comp-sim
-                                out_met <- purrr::map_dfc(.x = metric_vec,
-                                                          .f = function(metric = .x,
-                                                                        spp_data){
-                                                            hib_calc_sim_(spp_data, metric,
-                                                                          use_relative_abundance,
-                                                                          rescale_hypervolume)
-                                                          },
-                                                          spp_data = spp_site_data)
+                                # out_met <- purrr::map_dfc(.x = metric_vec,
+                                #                           .f = function(metric = .x,
+                                #                                         spp_data){
+                                #                             hib_calc_nonveg(spp_data, 
+                                #                                           metric,
+                                #                                           use_relative_abundance,
+                                #                                           rescale_hypervolume)
+                                #                             # TODO: add other flags
+                                #                             # binary, rel_abund, rescale
+                                #                           },
+                                #                           spp_data = spp_site_data)
+                                
+                                # non_veg_metrics_df
+                                out_met <- purrr::pmap(.l = non_veg_metrics_df,
+                                                          .f = function(metric,
+                                                                        binary,
+                                                                        rel_abund,
+                                                                        rescale,
+                                                                        spp_data = spp_site_data){
+                                                            hib_calc_nonveg(spp_data, 
+                                                                            metric,
+                                                                            binary,
+                                                                            rel_abund,
+                                                                            rescale)
+                                                          }) %>%
+                                  dplyr::bind_cols()
+                                
                                 out_df <- out_df %>% bind_cols(out_met)
                                 
+                                empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
+                                                           SSBS1_is_empty = (rowSums(spp_site_data) == 0))
+                                empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
+                                                           SSBS2_is_empty = (rowSums(spp_site_data) == 0))
+                                
+                                out_df <- out_df %>%
+                                  left_join(empty_sites1) %>%
+                                  left_join(empty_sites2)
                                 return(out_df)
                               }
     )
   }
   
-  # TODO:
-  # Note: for euclidean distance, can just take subset of all site combs per study...
-  # Use relative abundance, rescale - add as flags for euclidean distance...
-  # But need to know which are prim_min... and only keep those... makes sense to just incl in above
-  # But v inefficient...
-  # Better to calc all distance within study, add  site idx to long version
+  # combine veg and non_veg
+  # s1, s2, ...
+  if ((!is.null(veg_df)) & (!is.null(non_veg_df))){
+    veg_df <- left_join(veg_df, non_veg_df) 
+  }
+  if (is.null(veg_df) & (!is.null(non_veg_df))){
+    veg_df <- non_veg_df
+  }
   
-  euc_metr <- sim_metric[sim_metric %in% c("euclidean", "chord", "hellinger")]
-  
-  euc_sim_df <- NULL
-  
-  if (length(euc_metr) > 0){
-  # if ("euclidean" %in% sim_metric){
-    message(crayon::green("Calculating euclidean-based similarity metrics..."))
-    # if (use_relative_abundance){
-    #   spp_tmp_euc <- spp_tmp %>%
-    #     group_by(SS, SSBS) %>%
-    #     mutate(Measurement = Measurement/sum(Measurement)) %>%
-    #     dplyr::ungroup()
-    #   }
+  # convert to long tibble...
+  # add processing flags per metric - 
+  metrics_out <- colnames(veg_df)
+  metrics_out <- metrics_out[!metrics_out %in% c("SSBS1", "SSBS2", "SS",
+                                                 "SSBS1_is_empty", "SSBS2_is_empty")] 
 
-    euc_sim_df <- purrr::map_dfr(.x = studies,
-                                 .f = function(ss = .x, 
-                                               spp_data = spp_tmp,
-                                               comp_df = site_comp_df,
-                                               metric_vec = euc_metr){
-                                   spp_site_data <- spp_data %>%
-                                     # filter out the SS that matches the SS we're interested in
-                                     dplyr::filter(SS == ss) %>%
-                                     # pull out the site name, species name and abundance information
-                                     dplyr::select(SSBS, Taxon_name_entered, Measurement) %>%
-                                     # pivot so that each column is a species and each row is a site
-                                     tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
-                                                        values_fill = 0) %>%
-                                     # set the rownames to the SSBS and then remove that column
-                                     tibble::column_to_rownames("SSBS")
-                                   
-                                   # if (use_relative_abund == T){
-                                   #   spp_site_data <- spp_site_data/rowSums(spp_site_data)
-                                   # }
-                                   
-                                   # print(head(spp_site_data))
-                                   
-                                   # Depending on sim_metric values, calc metrics of comp-sim
-                                   out_df <- purrr::map_dfr(.x = metric_vec,
-                                                             .f = function(metric = .x,
-                                                                           spp_data = spp_site_data,
-                                                                           comp_df = comp_df){
-                                                               hib_calc_sim_euc(spp_data, metric,
-                                                                                comp_df,
-                                                                                use_relative_abundance)
-                                                             })
-                                   out_df <- out_df %>%
-                                     dplyr::filter(contrast %in% comp_df$contrast)
-                                   out_df <- tidyr::pivot_wider(out_df,
-                                                                names_from = metric_nm, 
-                                                                values_from = Distance)
-                                   # print(head(out_df))
-                                   # out_df <- out_df %>% bind_cols(out_met)
-                                   # %%%%
-                                   # 
-                                   # dist_matr <- as.matrix(dist(spp_site_data))
-                                   # 
-                                   # rownames(dist_matr) <- rownames(spp_site_data)
-                                   # colnames(dist_matr) <- rownames(spp_site_data)
-                                   # 
-                                   # # print(head(dist_matr))
-                                   # 
-                                   # dist_df <- as.data.frame(dist_matr)
-                                   # dist_df$s1 <- rownames(dist_df)
-                                   # dist_df <- tidyr::pivot_longer(dist_df, cols = !s1, 
-                                   #                                names_to = "s2", 
-                                   #                                values_to = "Euclidean_distance")
-                                   # 
-                                   # dist_df <- dist_df %>%
-                                   #   dplyr::filter(s1 != s2) %>% 
-                                   #   dplyr::mutate(contrast = paste(s1, s2, sep = "_")) %>%
-                                   #   dplyr::filter(contrast %in% comp_df$contrast)
-                                   # # print(head(dist_df))
-                                   # # dist_df$SS <- ss
-                                   # # Subset to comps of interest
-                                   # # dist_df <- dplyr::filter(dist_df,
-                                   # #                          contrast %in% comp_df$contrast)
-                                   # 
-                                   # 
-                                   # if (rescale_euclidean_distance == T){
-                                   #   dist_df$Euclidean_distance <- dist_df$Euclidean_distance / sqrt(2)
-                                   # }
-                                   # 
-                                   return(out_df)
-                                 })
-    
-    # print(head(euc_sim_df))
-    if ((rescale_euclidean_distance) & ("Euclidean" %in% colnames(euc_sim_df))){
-      euc_sim_df$Euclidean <- euc_sim_df$Euclidean / sqrt(2)
-    }
-    # drop contrast column
-    euc_sim_df <- euc_sim_df %>% 
-      dplyr::select(-contrast)
-    # print(head(euc_sim_df))
-  }
-  
-  # Combine metrics into single df
-  if ((!is.null(sim_df)) & (!is.null(euc_sim_df))){
-    sim_df <- left_join(sim_df, euc_sim_df) 
-  }
-  if (is.null(sim_df) & (!is.null(euc_sim_df))){
-    sim_df <- euc_sim_df
-  }
-  
-  
-  # %%%
-  # calc metrics of interest...
-  # can be v slow....
-  # need to multithread...
-  
-  # TODO: other options to add...
-  
-  
-  # Need to make output longer...
-  # row in obj$diversity per metric
-  metrics_out <- colnames(sim_df)
-  metrics_out <- metrics_out[!metrics_out %in% c("s1", "s2", 
-                                                 "ChaoJaccard_se", 
-                                                 "ChaoJaccard_lo95", "ChaoJaccard_hi95",
-                                                 "ChaoSorensen_se", 
-                                                 "ChaoSorensen_lo95", "ChaoSorensen_hi95",
-                                                 "Horn_se", 
-                                                 "Horn_lo95", "Horn_hi95",
-                                                 "MoristaHorn_se", 
-                                                 "MoristaHorn_lo95", "MoristaHorn_hi95")]
-  
   metrics_out_ls <- purrr::map(metrics_out,
                                function(x,
-                                        df = sim_df){
-                                 if (x %in% c("ChaoJaccard", "ChaoSorensen",
-                                              "Horn", "MoristaHorn")){
-                                   return(df[,c("s1", "s2", x,
-                                                paste0(x, "_se"),
-                                                paste0(x, "_lo95"),
-                                                paste0(x, "_hi95"))])
-                                 }
-                                 return(df[,c("s1", "s2", x)])
+                                        df = veg_df){
+                                 return(df[,c("SSBS1", "SSBS2", "SS", x,
+                                              "SSBS1_is_empty", "SSBS2_is_empty")])
                                })
   
   out_tib <- dplyr::tibble(Metric = metrics_out,
                            Data = metrics_out_ls,
-                           N_species_total = n_spp,
-                           Flag = paste0("Primary minimal baseline: ", primary_minimal_baseline,
-                                         "; Using relative abundance: ", use_relative_abundance,
-                                         "; Rescaling hypervolumes: ", rescale_hypervolume,
-                                         "; Rescaling euclidean distance: ", rescale_euclidean_distance))
+                           N_species_total = n_spp
+                           )
+  # Add Flag based on metric and specific flags...
+  # need to match sentence-case metric names to lower-case metric names...
+  metrics_spec_df <- metrics_spec_df %>%
+    dplyr::mutate(Metric = tools::toTitleCase(metric))
   
-  # diversity$Metric[x] as <metric>
-  # diversity$Data[[x]] should be [s1, s2, <metric>]
-  # ....
+  out_tib <- out_tib %>%
+    dplyr::left_join(metrics_spec_df[,c("Metric", "binary", "rel_abund", "rescale")])
   
-  div_empty <- is.null(obj$diversity)
+  
+  div_empty <- is.null(obj$diversity_between)
   
   if (!div_empty){
-    obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
+    obj$diversity_between <- dplyr::bind_rows(obj$diversity_between, out_tib)
   }  
   if (div_empty){
-    obj$diversity <- out_tib
+    obj$diversity_between <- out_tib
   }
   
   return(obj)
 }
-
 

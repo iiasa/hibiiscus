@@ -48,7 +48,8 @@ hib_fit_inla <- function(obj,
     assertthat::assert_that(attr(random_covar, "class") == "formula"),
     is.character(family), # family is character
     is.logical(incl_spatial_term),
-    inherits(input_mesh,'inla.mesh') || is.null(input_mesh)
+    inherits(input_mesh,'inla.mesh') || is.null(input_mesh),
+    is.list(mesh_settings)
   )
   # TODO:
   # Checks on supplied formulas - rhs only for ranefs
@@ -159,6 +160,9 @@ hib_fit_inla <- function(obj,
   if (incl_spatial_term){
     if (is.null(input_mesh)){
       message(crayon::green("Building mesh...\n"))
+      
+      coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
+      
       # Create a mesh
       # check that mesh_dim, max.edge, cutoff and offset are all in mesh_settings
       # if any not, print out a message telling user that default settings (x..)
@@ -169,32 +173,33 @@ hib_fit_inla <- function(obj,
         mesh_settings$mesh_dim <- "2d"
       }
       
-      # TODO: currently, other settings are not needed if mash_dim == "3d"
-      
-      if ("max.edge" %in% missing_mesh_specs){
-        # TODO: better default - link to location distances...
-        if (mesh_settings$mesh_dim == "2d"){
-          message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
-          mesh_settings$max.edge <- c(75,100)
-        }
-        # else if (mesh_settings$mesh_dim == "3d"){
-        #   message(crayon::yellow("Mesh max.edge not provided, using default values: 75 \n"))
-        #   mesh_settings$max.edge <- c(75)
-        # }
-        
+      # TODO: better defaults - link to location distances...
+      if ( ("max.edge" %in% missing_mesh_specs) &
+          (mesh_settings$mesh_dim == "2d") ){
+        message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
+        mesh_settings$max.edge <- c(75,100)
+        # From ibis:
+        # A good guess here is usally a max.edge of between 1/3 to 1/5 of the spatial range.
+        # c(diff(range(coords[,1], na.rm = T))/(3*5) , diff(range(coords[,1], na.rm = T))/(3*5) * 2)
       }
-      if ("cutoff" %in% missing_mesh_specs){
+      if ( ("cutoff" %in% missing_mesh_specs) &
+           (mesh_settings$mesh_dim == "2d") ){
         message(crayon::yellow("Mesh cutoff not provided, using default value: 1e-12 \n"))
         mesh_settings$cutoff <- 1e-12
+        # From ibis:
+        # Specify as minimum distance between y coordinates
+        # val <- min(abs(diff(coords[,2])), na.rm = T)
+        # cutoff <- ifelse(val == 0, 1e-12, val)
       }
-      if ("offset" %in% missing_mesh_specs){
+      if ( ("offset" %in% missing_mesh_specs) &
+           (mesh_settings$mesh_dim == "2d") ){
         message(crayon::yellow("Mesh offset not provided, using default values: c(10,20) \n"))
         mesh_settings$offset <- c(10,20)
+        # From ibis:
+        # Specify offset as 1/100 of the boundary distance
       }
       
       # TODO: move this to a function - hib_build_inla_mesh <- function(coords, mesh_settings)??
-      coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
-      
       
       if (mesh_settings$mesh_dim == "3d"){
         coords <- inla.mesh.map(coords, projection = "longlat")

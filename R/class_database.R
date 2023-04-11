@@ -16,7 +16,9 @@ Database <- R6Class("Database",
                     paths = NULL,
                     sites = NULL,
                     species = NULL,
-                    diversity = NULL,
+                    # diversity = NULL,
+                    diversity_within = NULL,
+                    diversity_between = NULL,
                     processing_flags = NULL,
                     # Executed when created
                     initialize = function(version, paths){
@@ -330,16 +332,33 @@ Database <- R6Class("Database",
                                     number_lui = length(unique(self$sites$Use_intensity)),
                                     number_species = length( unique(self$species$Best_guess_binomial) ),
                                     filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
-                                    div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
+                                    # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
+                                    
+                                    div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
+                                    div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ") 
+                                    )  
+                      # TODO: check both within and between site metrics/diversity data
+                      
                       # Neaten diversity metrics formatting
-                      if (is.null(self$diversity)){
-                        stats$div_metrics = "NA"
+                      if (is.null(self$diversity_within)){
+                        stats$div_within_metrics = "NA"
                       }
-                      if (!is.null(self$diversity)){
-                        stats$div_metrics <- gsub("_", " ", stats$div_metrics)
-                        stats$div_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
-                                                  stats$div_metrics)
+                      if (!is.null(self$diversity_within)){
+                        stats$div_within_metrics <- gsub("_", " ", stats$div_within_metrics)
+                        stats$div_within_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
+                                                         stats$div_within_metrics)
                       }
+                      
+                      if (is.null(self$diversity_between)){
+                        stats$div_between_metrics = "NA"
+                      }
+                      if (!is.null(self$diversity_between)){
+                        stats$div_between_metrics <- gsub("_", " ", stats$div_between_metrics)
+                        # stats$div_between_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
+                        #                           stats$div_between_metrics)
+                      }
+                      
+                      
                       # Neaten filtering formatting
                       if (length(self$processing_flags$filtering_steps) == 0){
                         stats$filters_applied = "NA"
@@ -359,7 +378,8 @@ Database <- R6Class("Database",
                                "\t Filtering conducted:           ", crayon::green(gsub("; ", 
                                                                                         ";\n\t                                ",
                                                                                         stats$filters_applied)), "\n",
-                               "\t Diversity metrics calculated:  ", crayon::green(stats$div_metrics)
+                               "\t Within-site diversity metrics calculated:  ", crayon::green(stats$div_within_metrics), "\n",
+                               "\t Between-site diversity metrics calculated:  ", crayon::green(stats$div_between_metrics), "\n"
                                )
                         )
                       
