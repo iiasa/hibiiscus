@@ -77,11 +77,10 @@ hib_fit_lme4 <- function(obj,
   
   
   
-  # TODO: consider diversity_within and diversity_between
+  # consider diversity_within and diversity_between
   # check where response variable is - diversity_within v diversity_between
   # if response is in diversity_within, need to use sites df for covars
   # if response is in diversity_between, need to use site_contrasts df for covars
-  
   
   within_site_resp <- purrr::map(obj$diversity_within$Data,
                                  colnames) %>%
@@ -92,10 +91,8 @@ hib_fit_lme4 <- function(obj,
     unlist() %>%
     unique() 
   
-  print(mod_resp)
-  print(within_site_resp)
   if (mod_resp %in% within_site_resp){
-    print("getting model data")
+    # print("getting model data")
     mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
     # find relevant obj$diversity$Data[[]] - which one contains the response...
     div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,

@@ -330,6 +330,10 @@ Database <- R6Class("Database",
                     # Base printout function
                     print = function() {
                       # Compute some stats
+                      
+                      # unique(colnames(self$site_contrasts)) 
+                      # Get rid of basic details, check for columns related to metrics...
+                      
                       stats <- list(number_sites = nrow(self$sites),
                                     number_lu = length( unique(self$sites$Predominant_land_use) ),
                                     number_lui = length(unique(self$sites$Use_intensity)),
@@ -340,7 +344,7 @@ Database <- R6Class("Database",
                                     div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
                                     div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ")
                                     # TODO: site contrast info
-                                    # site_contrast_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ") 
+                                    # site_contrast_metrics = unique(colnames(self$site_contrasts))
                                     )  
                       # TODO: check both within and between site metrics/diversity data
                       
@@ -392,11 +396,11 @@ Database <- R6Class("Database",
                     # Save object
                     save_hib = function(output_path = NULL){
                       assertthat::assert_that(
-                        is.null(output_path) || is.character(output_path)
+                        is.character(output_path)
                       )
-                      if (is.null(output_path)){
-                        output_path <- self$paths$path_output
-                      }
+                      # if (is.null(output_path)){
+                      #   output_path <- self$paths$path_output
+                      # }
                       
                       if(!assertthat::has_extension(output_path, "rds")){
                         output_path <- paste0(output_path, ".rds")

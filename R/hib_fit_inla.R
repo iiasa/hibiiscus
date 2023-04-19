@@ -52,10 +52,7 @@ hib_fit_inla <- function(obj,
     is.list(mesh_settings)
   )
   # TODO:
-  # Checks on supplied formulas - rhs only for ranefs
-  
-  # TODO:
-  # and maybe rename random_covar to random_form?
+  # maybe rename random_covar to random_form?
   
   # Add progress messages
   message(crayon::green("Collating data for model fitting...\n"))
@@ -70,83 +67,105 @@ hib_fit_inla <- function(obj,
   # all_covars <- unique(c(all.vars(fixed_covar),
   #                        all.vars(random_covar)))
   
-  # NOTE, not all covars are in sites, (Intercept)
-  covars_sub <- all_covars[all_covars %in% colnames(obj$sites)]
   
-  # Only need lon/lat if incl_spatial_term is TRUE
-  if (incl_spatial_term){
-    mod_df <- obj$sites[,unique(c(covars_sub, c("SS", "SSB", "SSBS", "Longitude", "Latitude")))]
+  # %%%%%
+  # consider diversity_within and diversity_between
+  # check where response variable is - diversity_within v diversity_between
+  # if response is in diversity_within, need to use sites df for covars
+  # if response is in diversity_between, need to use site_contrasts df for covars
+  
+  within_site_resp <- purrr::map(obj$diversity_within$Data,
+                                 colnames) %>%
+    unlist() %>%
+    unique() 
+  between_site_resp <- purrr::map(obj$diversity_between$Data,
+                                  colnames) %>%
+    unlist() %>%
+    unique() 
+  
+  if (mod_resp %in% within_site_resp){
+
+    # NOTE, not all covars are in sites, (Intercept)
+    covars_sub <- all_covars[all_covars %in% colnames(obj$sites)]
+    
+    # Only need lon/lat if incl_spatial_term is TRUE
+    if (incl_spatial_term){
+      mod_df <- obj$sites[,unique(c(covars_sub, c("SS", "SSB", "SSBS", "Longitude", "Latitude")))]
+    } else {
+      mod_df <- obj$sites[,unique(c(covars_sub, c("SS", "SSB", "SSBS")))]
+    }
+    
+    # find relevant obj$diversity$Data[[]] - which one contains the response...
+    div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,
+                                        function(x, resp){
+                                          tmp <- colnames(x)
+                                          any(grepl(resp, tmp))
+                                        },
+                                        resp = mod_resp)))
+    assertthat::assert_that(
+      length(div_data_idx) == 1
+    )
+    
+    mod_df <- mod_df %>%
+      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
+    
+    mod_df <- na.omit(mod_df)
+    
+    n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
+    
+  } else if (mod_resp %in% between_site_resp){
+    
+    # NOTE, not all covars are in sites, (Intercept)
+    covars_sub <- all_covars[all_covars %in% colnames(obj$site_contrasts)]
+    
+    # Only need lon/lat if incl_spatial_term is TRUE
+    if (incl_spatial_term){
+      if (("Latitude_midpoint" %in% colnames(obj$site_contrasts)) &
+          ("Longitude_midpoint" %in% colnames(obj$site_contrasts))){
+        mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB", 
+                                                             "Longitude_midpoint", 
+                                                             "Latitude_midpoint")))]
+      } else {
+        message(crayon::yellow("Warning: coordinate inforamtion unavailable, spatial random effect cannot be fitted.\n"))
+        mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB")))]
+        incl_spatial_term <- F
+      }
+
+    } else {
+      mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB")))]
+    }
+    
+    # find relevant obj$diversity$Data[[]] - which one contains the response...
+    div_data_idx <- which(unlist(lapply(obj$diversity_between$Data,
+                                        function(x, resp){
+                                          tmp <- colnames(x)
+                                          any(grepl(resp, tmp))
+                                        },
+                                        resp = mod_resp)))
+    assertthat::assert_that(
+      length(div_data_idx) == 1
+    )
+    
+    mod_df <- mod_df %>%
+      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
+    
+    mod_df <- na.omit(mod_df)
+    
+    # print(head(mod_df))
+    
+    n_spp <- obj$diversity_between$N_species_total[[div_data_idx]]
+    
   } else {
-    mod_df <- obj$sites[,unique(c(covars_sub, c("SS", "SSB", "SSBS")))]
+    message(crayon::magenta("Error: response variable specified is not available.\n"))
+    stop()
   }
-  
-  # find relevant obj$diversity$Data[[]] - which one contains the response...
-  div_data_idx <- which(unlist(lapply(obj$diversity$Data,
-                                      function(x, resp){
-                                        tmp <- colnames(x)
-                                        any(grepl(resp, tmp))
-                                      },
-                                      resp = mod_resp)))
-  assertthat::assert_that(
-    length(div_data_idx) == 1
-  )
-  
-  mod_df <- mod_df %>%
-    dplyr::left_join(obj$diversity$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
-  
-  mod_df <- na.omit(mod_df)
+  # %%%%%
+
   
   # Add an intercept... 
   if ("Intercept" %in% all_covars){
     mod_df$Intercept <- 1
   }
-  
-  
-  
-  # But need to drop "baseline" level... - only if -1 in fixed_covar
-  # all.vars(fixed_covar)
-  fixed_covar_form <- formula(delete.response(terms(response_fixed_form)))
-  
-  # Convert categorical fixed-effects to multiple dummy vars...
-  X <- model.matrix(fixed_covar_form, data = mod_df)
-  
-  drop_baseline_level <- function(model_matr, model_df, fixed_covar_form){
-    # Loop through fixed eff covars (other than Intercept)
-    # Check length of unique cats and compare to N assoc cols in model matrix
-    # If the same, drop the first level of the factors
-    covars <- all.vars(fixed_covar_form)
-    
-    for (t in covars){
-      if (t != "Intercept"){
-        # Find N cols in model matrix
-        cats <- unique(as.character(model_df[[t]]))
-        cat_terms <- paste0(t, cats)
-        n_matr_terms <- sum(cat_terms %in% colnames(model_matr))
-        # Calc n levels in model df
-        n_cats <- length(cats)
-        if (n_matr_terms == n_cats){
-          # Drop first term 
-          base_idx <- min(which(colnames(model_matr) %in% cat_terms))
-          model_matr <- model_matr[,-base_idx]
-        }
-      }
-    }
-    return(model_matr)
-  }
-  
-  if (any(grepl("-1", fixed_covars))){
-    X <- drop_baseline_level(X, mod_df, fixed_covar_form)
-  }
-  
-  # Make model matrix a df..
-  X <- as.data.frame(X)
-  # NOTE: inla can't handle spaces of colons in covar names!!
-  colnames(X) <- gsub(" ", ".", colnames(X))
-  colnames(X) <- gsub(":", "..", colnames(X))
-  
-
-  # Add in random effects...
-  X <- cbind(X, mod_df[,all.vars(random_covar)])
   
   
   # if response var is not just a column, need to make response var (e.g., log(x))
@@ -156,12 +175,22 @@ hib_fit_inla <- function(obj,
     dplyr::mutate(y = !!response_fixed_form[[2]] )
     # dplyr::mutate(y = !!as.formula(paste0(response, "~ 1"))[[2]] )
   
+  X <- mod_df %>%
+    dplyr::select(all_covars)
+  
   # build mesh- if desired...
   if (incl_spatial_term){
     if (is.null(input_mesh)){
       message(crayon::green("Building mesh...\n"))
       
-      coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
+      if (("Longitude" %in% colnames(mod_df)) &
+          ("Latitude" %in% colnames(mod_df)) ){
+        coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
+      }
+      if (("Longitude_midpoint" %in% colnames(mod_df)) &
+          ("Latitude_midpoint" %in% colnames(mod_df)) ){
+        coords <- as.matrix(mod_df[,c("Longitude_midpoint", "Latitude_midpoint")])
+      }
       
       # Create a mesh
       # check that mesh_dim, max.edge, cutoff and offset are all in mesh_settings
@@ -217,13 +246,8 @@ hib_fit_inla <- function(obj,
                                    offset = mesh_settings$offset)
       }
       
-      # input_mesh <- inla.mesh.2d(loc = coords,
-      #                            max.edge = c(75, 100))
     } 
-    # else {
-    #   # or use provided mesh
-    #   mesh <- input_mesh
-    # }
+
     
     # Set up spde model
     site.spde <- inla.spde2.matern(input_mesh, alpha = 2)
@@ -257,46 +281,13 @@ hib_fit_inla <- function(obj,
   # build formula 
   resp_chr <- "y ~ "
   
-  # Get subset of covars that aren't factors, keep in fixed_covar - conv to char
-  fixed_covar_terms_chr <- all.vars(fixed_covar_form)
-  factor_fixed_terms_chr <- fixed_covar_terms_chr[lapply(fixed_covar_terms_chr,
-                                                 function(x, df){
-                                                   is.factor(df[[x]]) | is.character(df[[x]])
-                                                 },
-                                                 df = mod_df) %>% unlist()]
-  # as.character(fixed_covar)[2]
-  # gsub each factor_fixed_terms for ""
-  # tidy character version of form to ensure no extra "+"
-  if (length(factor_fixed_terms_chr)> 0){
-    # fixed_chr <- paste(as.character(fixed_covar)[2],
-    #                    paste(factor_fixed_terms_chr, collapse = " - "),
-    #                    sep = " - ")
-    # Above is not correct!!!
-    
-    terms_to_drop_idx <- which(attr(terms(fixed_covar_form), "term.labels") %in% factor_fixed_terms_chr)
-    
-    fixed_chr <- as.character(formula(drop.terms(terms(fixed_covar_form), dropx = terms_to_drop_idx)))[2]
-    
-    # as.character(drop.terms(terms(fixed_covar), dropx = terms_to_drop_idx))
-    
-    # Get colnames from X, and drop those cols that are already in fixed_covar/random covar terms 
-    fact_covars_to_add <- colnames(X)[!colnames(X) %in% all_covars]
-    
-    if (length(fact_covars_to_add)>0){
-      # Paste remaining colnames to add to continuous covars...
-      fact_covars_to_add <- paste(fact_covars_to_add, collapse = " + ")
-      fixed_chr <- paste(fixed_chr,
-                          fact_covars_to_add, 
-                          sep = " + ")
-    }
-  } else {
-    fixed_chr <- as.character(fixed_covar_form)[2]
-  }
+  fixed_covar_form <- formula(delete.response(terms(response_fixed_form)))
+  fixed_chr <- as.character(fixed_covar_form)[2]
+  
+  inla_form <- paste0(resp_chr, fixed_chr)
   
   # Paste on random eff specification
   ranef_chr <- as.character(random_covar)[2]
-  
-  inla_form <- paste0(resp_chr, fixed_chr)
   inla_form <- paste(inla_form, ranef_chr, sep = " + ")
   
   if (incl_spatial_term){
@@ -305,26 +296,23 @@ hib_fit_inla <- function(obj,
     inla_form <- paste(inla_form, spat_chr, sep = " + ")
   }
 
-  inla_form <- formula(inla_form)
   
+  inla_form <- formula(inla_form)
+
   message(crayon::green("Fitting model (this may take a while)...\n"))
   # fit model
   m0 <- inla(formula = inla_form,
-                 family = "gaussian",
-                 data=inla.stack.data(stk),
-                 # control.fixed = 
-                 control.compute = list(dic = TRUE, waic = TRUE),
-                 control.predictor = list(A = inla.stack.A(stk)),
-                 verbose = T)
-  # summary(m_inla)
-  # return(m_inla)
-  # TODO:
-  # create inla_mod class
+             family = "gaussian",
+             data=inla.stack.data(stk),
+             control.fixed = list(expand.factor.strategy='inla'),
+             control.compute = list(dic = TRUE, waic = TRUE),
+             control.predictor = list(A = inla.stack.A(stk)),
+             verbose = T)
+
+
   message(crayon::green("Collating model details ..."))
   
-  n_spp <- obj$diversity$N_species_total[[div_data_idx]]
-
-  # instantiate an inla__mod class
+  # instantiate an inla_mod class
   mod_obj <- hib_inla_model$new(
     db_obj = obj,
     mod_df = mod_df,
@@ -345,10 +333,8 @@ hib_fit_inla <- function(obj,
   #   metr_vec = metr_vec,
     n_spp = n_spp
   # TODO:
-
   # family = "gaussian",
   # fit_settings,
-  # mesh_settings,
   # prior_list
   )
   
@@ -376,33 +362,4 @@ hib_fit_inla <- function(obj,
   
   # %%%%%
 }
-
-
-# %%%%%%%%
-# TESTING
-# tmp <- log(Total_abundance) ~ -1 + Intercept + pa + man1 + man2 + use1 + 
-#   use2 + f(s, model = spde) + f(Binomial, model = "iid") + 
-#   f(Sys_realm, model = "iid")
-# tmp1 <- Total_abundance ~ x + y + f(s, model = spde)
-# 
-# raw_resp <- tmp[[2]]
-# raw_resp1 <- tmp1[[2]]
-# 
-# resp_var <- all.vars(tmp[[2]])
-# resp_var1 <- all.vars(tmp1[[2]])
-# 
-# all(as.character(raw_resp) == resp_var)
-# all(as.character(raw_resp1) == resp_var1)
-# 
-
-# Need to expand mod_df to include factor expansion...
-# Using model.matrix
-# But only for fixef in covar...
-
-# Random slope in INLA
-# f(region, covariate, model ="iid")
-# where first var is grouping var, second is covar...
-# equiv to (covar | region) in lmer
-
-# %%%%%%%%
 

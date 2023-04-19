@@ -34,7 +34,8 @@ hib_calc_site_contrasts <- function(obj,
   # check metrics are valid options
   metrics <- match.arg(metrics,
                        c("lui_contrast", 
-                         "geogr_dist_hav", "geogr_dist_geod"),
+                         "geogr_dist_hav", "geogr_dist_geod",
+                         "geogr_midpoint"),
                        # , "env_distance"
                        several.ok = T)
   
@@ -45,7 +46,7 @@ hib_calc_site_contrasts <- function(obj,
   if ("lui_contrast" %in% metrics){
     cols_of_interest <- c(cols_of_interest, "LUI")
   }
-  if (any(c("geogr_dist_hav", "geogr_dist_geod") %in% metrics)){
+  if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
     cols_of_interest <- c(cols_of_interest, "Latitude", "Longitude")
   }
   
@@ -177,15 +178,21 @@ hib_calc_site_contrasts <- function(obj,
     
     if ("geogr_dist_hav" %in% metrics){
       site_comp_df <- site_comp_df %>%
-        # calculate the geographic distances between s1 and s2 sites
+        # calculate the geographic distances between s1 and s2 
         dplyr::mutate(geogr_dist_hav = geosphere::distHaversine(cbind(SSBS1_longitude, SSBS1_latitude), 
                                                                 cbind(SSBS2_longitude, SSBS2_latitude)))
     }
     if ("geogr_dist_geod" %in% metrics){
       site_comp_df <- site_comp_df %>%
-        # calculate the geographic distances between s1 and s2 sites
+        # calculate the geographic distances between s1 and s2 
         dplyr::mutate(geogr_dist_geod = geosphere::distGeo(cbind(SSBS1_longitude, SSBS1_latitude), 
                                                            cbind(SSBS2_longitude, SSBS2_latitude)))
+    }
+    if ("geogr_midpoint" %in% metrics){
+      site_comp_df <- site_comp_df %>%
+        # calculate the geographic midpoint between s1 and s2 
+        dplyr::mutate(Latitude_midpoint = (SSBS1_latitude + SSBS2_latitude) / 2,
+                      Longitude_midpoint = (SSBS1_longitude + SSBS2_longitude) / 2)
     }
       
   }

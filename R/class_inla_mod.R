@@ -106,9 +106,14 @@ hib_inla_model <- R6Class("hib_inla_model",
                               self$processing_flags <- db_obj$processing_flags
                               
                               # Calc n sites/species used in  model - need to calc spp with div metrics!!
-                              N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                              
+                              # N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                              # 
                               self$processing_flags$N_spp <- n_spp
+                              if ("SSBS" %in% colnames(mod_df)){
+                                self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                              } else if ("SSBS1" %in% colnames(mod_df)){
+                                self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                              }
                               
                               self$version <- db_obj$version
                               self$last_update <- lubridate::today()
@@ -120,7 +125,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                             
                             # Base printout function
                             print = function(){
-                              stats <- list(number_sites = dplyr::n_distinct(self$data$SSBS),
+                              stats <- list(number_sites = self$processing_flags$N_sites,
                                             # number_lu = length( unique(self$data$Predominant_land_use) ),
                                             # number_lui = length(unique(self$data$Use_intensity)),
                                             number_species = self$processing_flags$N_spp ) #,
