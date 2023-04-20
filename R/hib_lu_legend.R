@@ -24,7 +24,7 @@ create_lu_legend <- function(input){
   }
   
   # ------ #
-  message("Creating land-use legend...")
+  message("Creating land-use legend...\n")
   
   leg <- lu_legend$new(input = input)
   
@@ -68,7 +68,7 @@ load_lu_legend <- function(path_input){
     assertthat::has_extension(path_input, "rds")
   )
   # Try and read in the database
-  message(crayon::green(paste0("Loading land-use legend from: '", path_input, "...")))
+  message(crayon::green(paste0("Loading land-use legend from: '", path_input, "...\n")))
   
   leg <- readr::read_rds(path_input)
   
@@ -84,9 +84,6 @@ load_lu_legend <- function(path_input){
 # Need to incl function to add legend...
 # Add to a list in database?
 
-# Need to incl function to set the legend too...
-# I.e, join legend LUs to site info - removing any previous columns with the same
-# names
 
 #' Set a loaded lu legend as the LU legend within a hibiiscus database
 #'
@@ -111,7 +108,6 @@ set_lu_legend <- function(obj, leg){
   # Try and read in the database
   message(crayon::green("Setting land-use legend for hib database...\n"))
   
-  
   # Make some sensitivity checks that the inputs are okay
   obj$checkself()
   leg$checkself()
@@ -120,11 +116,10 @@ set_lu_legend <- function(obj, leg){
   cols_to_drop <- colnames(obj$sites)[colnames(obj$sites) %in% c("Predominant_land_use", "Use_intensity", "LUI")]
   # Drop cols from sites
   obj$sites <- obj$sites %>%
-    # left join new legend info
     select(!all_of(cols_to_drop)) %>%
+    # left join new legend info
     dplyr::left_join(leg$lu_df)
   
-  # return object
   return(obj)
   
 }

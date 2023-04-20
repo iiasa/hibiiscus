@@ -15,14 +15,11 @@
 # package (in fact i would propose to store them externally).
 
 
-#' Template objects for land-use legend 
+#' Template object for land-use legend 
 #' 
 #' @description 
 #' This is the template object for a land-use legend that can be linked to a database
 #' object - contains info on unique land-use and management/intensity types
-#' It contains all the functions inherent to the database. Any functions in the package that is 
-#' operating or interacting with the data (preparation, linking, modelling) need to be coded in here 
-#' or provided separately.
 #' @keywords internal
 #' @import R6
 #' @noRd
@@ -248,10 +245,14 @@ lu_legend <- R6Class("lu_legend",
                             ggplot() +
                             geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            geom_point(aes(x = Predominant_land_use, y = N),
-                                       colour = "#009E73",
-                                       alpha = 0.7,
-                                       size = 2.5) +
+                            geom_bar(aes(x = Predominant_land_use, y = N),
+                                     stat = "identity",
+                                     fill = "#009E73",
+                                     alpha = 0.7) +
+                            # geom_point(aes(x = Predominant_land_use, y = N),
+                            #            colour = "#009E73",
+                            #            alpha = 0.7,
+                            #            size = 2.5) +
                             labs(x = "Land use",
                                  y = "Count") +
                             theme_bw() +
@@ -280,10 +281,14 @@ lu_legend <- R6Class("lu_legend",
                             ggplot() +
                             geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            geom_point(aes(x = Use_intensity, y = N),
-                                       colour = "#009E73",
-                                       alpha = 0.7,
-                                       size = 2.5) +
+                            geom_bar(aes(x = Use_intensity, y = N),
+                                     stat = "identity",
+                                     fill = "#009E73",
+                                     alpha = 0.7) +
+                            # geom_point(aes(x = Use_intensity, y = N),
+                            #            colour = "#009E73",
+                            #            alpha = 0.7,
+                            #            size = 2.5) +
                             labs(x = "Use intensity",
                                  y = "Count") +
                             theme_bw() +
@@ -317,16 +322,24 @@ lu_legend <- R6Class("lu_legend",
                             ggplot() +
                             geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            geom_point(aes(x = Predominant_land_use, y = N,
-                                           group = Use_intensity,
-                                           shape = Use_intensity),
-                                       position = position_dodge(0.4),
-                                       colour = "#009E73",
-                                       alpha = 0.7,
-                                       size = 2.5) +
+                            geom_bar(aes(x = Predominant_land_use, y = N,
+                                         group = Use_intensity,
+                                         fill = Use_intensity),
+                                     position = position_dodge(),
+                                     stat = "identity",
+                                     # fill = "#009E73",
+                                     alpha = 0.7) +
+                            # geom_point(aes(x = Predominant_land_use, y = N,
+                            #                group = Use_intensity,
+                            #                shape = Use_intensity),
+                            #            position = position_dodge(0.4),
+                            #            colour = "#009E73",
+                            #            alpha = 0.7,
+                            #            size = 2.5) +
                             labs(x = "Land-use",
                                  y = "Count",
-                                 shape = "Use intensity") +
+                                 # shape = "Use intensity"
+                                 fill = "Use intensity") +
                             theme_bw() +
                             basic_thm + 
                             theme(axis.text.x = element_text(angle = 50,
@@ -390,6 +403,6 @@ lu_legend <- R6Class("lu_legend",
                     # Private entries to be created
                     private = list(
                       siteids = list(),
-                      length = function() base::length(self$sites$SS)
+                      length = list()
                     )
 )
