@@ -10,7 +10,10 @@
 #' @param primin_baseline A [`logical`] value, determines whether 
 #' dissimilarity is calculated for all site combinations per study, or
 #' only relative to a primary minimal baseline - should match the value used when
-#' caclulating compositional dis/similarity (hib_calc_div_between)
+#' calculating compositional dis/similarity (hib_calc_div_between)
+#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
+#' which compositional dis/similarity is calculated per study - should match the 
+#' value used when calculating compositional dis/similarity (hib_calc_div_between)
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -21,14 +24,19 @@
 #' @export
 hib_calc_site_contrasts <- function(obj,
                                     metrics,
-                                    primin_baseline = T){
+                                    # primin_baseline = T
+                                    baseline_lui = "Primary vegetation_Minimal use"){
   
   # TODO:
-  # convert primin_baseline to baseline_lui
+  # convert primin_baseline to baseline_lui, and lui_colname
+  # lui_colname may be unnecessary, - lui_legend assumes LUI...
+  
   # Assertion checks
   assertthat::assert_that(
+    inherits(obj, "Database"),
     is.character(metrics),
-    is.logical(primin_baseline) 
+    # is.logical(primin_baseline) 
+    is.character(baseline_lui) || is.null(baseline_lui)
   )
   
   # check metrics are valid options
@@ -67,31 +75,45 @@ hib_calc_site_contrasts <- function(obj,
     filter(n_sample_effort == 1 &
              n_species > 1)
   
-  if (primin_baseline == T){
-    # TODO: should this be ammended to primary forest...
-    spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
-                                      grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
+  # if (primin_baseline == T){
+  #   # TODO: should this be ammended to primary forest...
+  #   spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
+  #                                     grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
+  #   spp_tmp <- spp_tmp %>%
+  #     dplyr::group_by(SS) %>%
+  #     dplyr::mutate(n_primin_records = sum(prim_min)) %>%
+  #     dplyr::filter(n_primin_records > 0) %>%
+  #     dplyr::ungroup()
+  #   
+  #   site_tmp <- obj$sites %>%
+  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
+  #     left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
+  #     droplevels()
+  #   
+  # } else if (primin_baseline == F){
+  #   site_tmp <- obj$sites %>%
+  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
+  #     droplevels()
+  # }
+  if (!is.null(baseline_lui)){
+    spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
+    
     spp_tmp <- spp_tmp %>%
       dplyr::group_by(SS) %>%
-      dplyr::mutate(n_primin_records = sum(prim_min)) %>%
-      dplyr::filter(n_primin_records > 0) %>%
+      dplyr::mutate(n_base_lui = sum(base_lui)) %>%
+      dplyr::filter(n_base_lui > 0) %>%
       dplyr::ungroup()
     
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-      left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
+      left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
       droplevels()
     
-  } else if (primin_baseline == F){
+  } else if (is.null(baseline_lui)){
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
       droplevels()
   }
-  
-  
-  # n_spp <- spp_tmp %>%
-  #   dplyr::select(Best_guess_binomial) %>%
-  #   dplyr::n_distinct()
   
   # Need to get combinations of data... - s1, s2, ...
   # %%%
@@ -103,15 +125,29 @@ hib_calc_site_contrasts <- function(obj,
   site_comp_df <- purrr::map_dfr(.x = studies, .f = function(x){
     
     # pull out the sites that are Primary minimal (we only want to use comparisons with the baseline)
-    if (primin_baseline == T){
+    # if (primin_baseline == T){
+    #   site_data <- dplyr::filter(site_tmp, SS == x) %>%
+    #     # pull out the SSBS and LandUse information
+    #     dplyr::select(SSBS, prim_min)
+    #   
+    #   baseline_sites <- site_data %>%
+    #     dplyr::filter(prim_min == 1) %>%
+    #     dplyr::pull(SSBS)
+    # } else if (primin_baseline == F){
+    #   site_data <- dplyr::filter(site_tmp, SS == x)
+    #   
+    #   baseline_sites <- site_data %>%
+    #     dplyr::pull(SSBS)
+    # }
+    if (!is.null(baseline_lui)){
       site_data <- dplyr::filter(site_tmp, SS == x) %>%
         # pull out the SSBS and LandUse information
-        dplyr::select(SSBS, prim_min)
+        dplyr::select(SSBS, base_lui)
       
       baseline_sites <- site_data %>%
-        dplyr::filter(prim_min == 1) %>%
+        dplyr::filter(base_lui == 1) %>%
         dplyr::pull(SSBS)
-    } else if (primin_baseline == F){
+    } else if (is.null(baseline_lui)){
       site_data <- dplyr::filter(site_tmp, SS == x)
       
       baseline_sites <- site_data %>%
@@ -159,7 +195,12 @@ hib_calc_site_contrasts <- function(obj,
                        by = c("SSBS2" = "SSBS")) %>%
       dplyr::rename(SSBS2_LUI = LUI) %>%
       # create an lu_contrast column (what we'll use for modelling)
-      dplyr::mutate(LUI_contrast = paste(SSBS1_LUI, SSBS2_LUI, sep = "_vs_"))
+      dplyr::mutate(LUI_contrast = paste(SSBS1_LUI, SSBS2_LUI, sep = "_vs_"),
+                    Baseline_LUI = baseline_lui)
+    if (is.null(baseline_lui)){
+      site_comp_df <- site_comp_df %>%
+        dplyr::mutate(Baseline_LUI = NA)
+    }
   }
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
   if (any(c("geogr_dist_hav", "geogr_dist_geod") %in% metrics)){

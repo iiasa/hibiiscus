@@ -4,6 +4,7 @@
 #' This function fits an lme4 model using the supplied database, formula and other
 #' function arguments tuning the model fitting process
 #' @details 
+#' Expects a database object...
 #' @param obj A [`Database`] object.
 #' @param form A [`formula`] in the style of lme4 - including fixed and random 
 #' effects.

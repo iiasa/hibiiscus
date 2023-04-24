@@ -113,10 +113,17 @@ set_lu_legend <- function(obj, leg){
   leg$checkself()
   
   # check for column names already in sites (Predominant_land_use, Use_intensity, LUI)
-  cols_to_drop <- colnames(obj$sites)[colnames(obj$sites) %in% c("Predominant_land_use", "Use_intensity", "LUI")]
+  cols_to_drop_sites <- colnames(obj$sites)[colnames(obj$sites) %in% c("Predominant_land_use", "Use_intensity", "LUI")]
   # Drop cols from sites
   obj$sites <- obj$sites %>%
-    select(!all_of(cols_to_drop)) %>%
+    select(!all_of(cols_to_drop_sites)) %>%
+    # left join new legend info
+    dplyr::left_join(leg$lu_df)
+  
+  cols_to_drop_spp <- colnames(obj$species)[colnames(obj$species) %in% c("Predominant_land_use", "Use_intensity", "LUI")]
+  # Drop cols from species
+  obj$species <- obj$species %>%
+    select(!all_of(cols_to_drop_spp)) %>%
     # left join new legend info
     dplyr::left_join(leg$lu_df)
   

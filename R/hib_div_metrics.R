@@ -759,8 +759,7 @@ hib_calc_veg <- function(spp_site_data,
 }
 
 
-# TODO:
-# %%%%%%%%%%%%%
+
 # ' Calculate non-vegan-based dissimilarity metrics
 #' 
 #' @description 
@@ -961,9 +960,8 @@ hib_calc_nonveg <- function(spp_site_data,
 #' @param rescale A [`logical`] vector determining if dissimilarity measure should 
 #' be rescaled relative to its maximum value - applies to metrics that are not 
 #' on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), chord, hellinger
-#' @param primin_baseline A [`logical`] value, determines whether 
-#' compositional dis/similarity is calculated for all site combinations per study, or
-#' only relative to a primary minimal baseline
+#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
+#' which compositional dis/similarity is calculated per study
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -972,7 +970,7 @@ hib_calc_nonveg <- function(spp_site_data,
 #'                               c(F, T),
 #'                               c(T, F),
 #'                               c(F, F),
-#'                               T)
+#'                               "Primary vegetation_Minimal use")
 #' } 
 #' @export
 hib_calc_div_between <- function(obj, 
@@ -980,16 +978,29 @@ hib_calc_div_between <- function(obj,
                                  binary = F,
                                  rel_abund = T,
                                  rescale = T,
-                                 primin_baseline = T){
+                                 # primin_baseline = T
+                                 baseline_lui = "Primary vegetation_Minimal use"
+                                 ){
+
   # Assertions
   assertthat::assert_that(
+    
+    inherits(obj, "Database"),
+    # input checks
+    is.character(metrics),
+    is.logical(binary),
+    is.logical(rel_abund),
+    is.logical(rescale),
+    is.character(baseline_lui) || is.null(baseline_lui),
+    
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement"),
     assertthat::has_name(obj$species, "Diversity_metric_type"),
-    is.character(metrics),
     
     assertthat::has_name(obj$species, "Predominant_land_use"),
+    assertthat::has_name(obj$species, "Use_intensity"),
+    assertthat::has_name(obj$species, "LUI"),
     assertthat::has_name(obj$species, "Taxon_name_entered"),
     
     assertthat::has_name(obj$sites, "SSBS"),
@@ -1018,16 +1029,13 @@ hib_calc_div_between <- function(obj,
                                 binary    = binary,
                                 rel_abund = rel_abund,
                                 rescale   = rescale)
-  # print(metrics_spec_df)
   
   matchable_metrics_idx <- !is.na(pmatch(metrics_spec_df$metric,
                                          metrics))
   
-  # print(matchable_metrics_idx)
-  
   # subset to matchable metrics
   metrics_spec_df <- metrics_spec_df[matchable_metrics_idx,]
-  # print(head(metrics_spec_df))
+  
   # run match.arg on matchable metrics
   metrics_spec_df$metric <- match.arg(metrics_spec_df$metric, 
                                        metrics_,
@@ -1039,8 +1047,6 @@ hib_calc_div_between <- function(obj,
   non_veg_metrics_df <- subset(metrics_spec_df,
                                metric %in% non_veg_metrics)
   
-  # print(veg_metrics_df)
-  # print(non_veg_metrics_df)
   # Get site comparisons
   spp_tmp <- obj$species
   
@@ -1055,27 +1061,45 @@ hib_calc_div_between <- function(obj,
     filter(n_sample_effort == 1 &
              n_species > 1)
   
-  if (primin_baseline == T){
-    # TODO: should this be ammended to primary forest...
-    spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
-                                      grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
+  # if (primin_baseline == T){
+  #   # TODO: should this be ammended to primary forest...
+  #   spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
+  #                                     grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
+  #   spp_tmp <- spp_tmp %>%
+  #     dplyr::group_by(SS) %>%
+  #     dplyr::mutate(n_primin_records = sum(prim_min)) %>%
+  #     dplyr::filter(n_primin_records > 0) %>%
+  #     dplyr::ungroup()
+  #   
+  #   site_tmp <- obj$sites %>%
+  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
+  #     left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
+  #     droplevels()
+  #   
+  # } else if (primin_baseline == F){
+  #   site_tmp <- obj$sites %>%
+  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
+  #     droplevels()
+  # }
+  if (!is.null(baseline_lui)){
+    spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
+    
     spp_tmp <- spp_tmp %>%
       dplyr::group_by(SS) %>%
-      dplyr::mutate(n_primin_records = sum(prim_min)) %>%
-      dplyr::filter(n_primin_records > 0) %>%
+      dplyr::mutate(n_base_lui = sum(base_lui)) %>%
+      dplyr::filter(n_base_lui > 0) %>%
       dplyr::ungroup()
     
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-      left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
+      left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
       droplevels()
     
-  } else if (primin_baseline == F){
+  } else if (is.null(baseline_lui)){
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
       droplevels()
   }
-  
   
   n_spp <- spp_tmp %>%
     dplyr::select(Best_guess_binomial) %>%
@@ -1090,16 +1114,16 @@ hib_calc_div_between <- function(obj,
   
   site_comp_df <- purrr::map_dfr(.x = studies, .f = function(x){
     
-    # pull out the sites that are Primary minimal (we only want to use comparisons with the baseline)
-    if (primin_baseline == T){
+    # pull out the sites that are the baseline lui (we only want to use comparisons with the baseline)
+    if (!is.null(baseline_lui)){
       site_data <- dplyr::filter(site_tmp, SS == x) %>%
         # pull out the SSBS and LandUse information
-        dplyr::select(SSBS, prim_min)
+        dplyr::select(SSBS, base_lui)
       
       baseline_sites <- site_data %>%
-        dplyr::filter(prim_min == 1) %>%
+        dplyr::filter(base_lui == 1) %>%
         dplyr::pull(SSBS)
-    } else if (primin_baseline == F){
+    } else if (is.null(baseline_lui)){
       site_data <- dplyr::filter(site_tmp, SS == x)
       
       baseline_sites <- site_data %>%
@@ -1159,20 +1183,7 @@ hib_calc_div_between <- function(obj,
                                      # set the rownames to the SSBS and then remove that column
                                      tibble::column_to_rownames("SSBS")
                                    
-                                   # print(head(spp_site_data))
-                                   
                                    # Depending on metric_vec values, calc metrics of interest
-                                   # out_df <- purrr::map_dfr(.x = metric_vec,
-                                   #                          .f = function(metric = .x,
-                                   #                                        spp_data = spp_site_data){
-                                   #                            hib_calc_veg(spp_data, 
-                                   #                                         metric,
-                                   #                                         binary,
-                                   #                                         rel_abund,
-                                   #                                         rescale)
-                                   #                          })
-                                   # print(spp_site_data)
-                                   # print(metric_df)
                                    # %%%
                                    out_df <- purrr::pmap(.l = metric_df,
                                                             .f = function(metric,
@@ -1198,37 +1209,9 @@ hib_calc_div_between <- function(obj,
                                                                 values_from = Distance)
                                    out_df$SS <- ss
                                    
-                                   # Should add a flag to indicate if one or both sites
-                                   # are empty
-                                   # empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
-                                   #                           SSBS1_is_empty = (rowSums(spp_site_data) == 0))
-                                   # empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
-                                   #                            SSBS2_is_empty = (rowSums(spp_site_data) == 0))
-                                   # 
-                                   # out_df <- out_df %>%
-                                   #   left_join(empty_sites1) %>%
-                                   #   left_join(empty_sites2)
-                                   # 
-                                   # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
-                                   #   # then the similarity between sites should be 0
-                                   #   out[1,] <- 0
-                                   #   # if both sites have no individuals/species
-                                   # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
-                                   #   # then class the similarity as NA
-                                   #   out[1,] <- NA
-                                   # }
-                                   
                                    return(out_df)
                                  })
     
-    # # print(head(euc_sim_df))
-    # if ((rescale_euclidean_distance) & ("Euclidean" %in% colnames(euc_sim_df))){
-    #   euc_sim_df$Euclidean <- euc_sim_df$Euclidean / sqrt(2)
-    # }
-    # # drop contrast column
-    # euc_sim_df <- euc_sim_df %>% 
-    #   dplyr::select(-contrast)
-    # # print(head(euc_sim_df))
     veg_df <- veg_df %>%
       dplyr::select(-contrast)
   }
@@ -1259,8 +1242,6 @@ hib_calc_div_between <- function(obj,
                                   # set the rownames to the SSBS and then remove that column
                                   tibble::column_to_rownames("SSBS")
                                 
-                                # print(spp_site_data)
-                                
                                 ss <- spp_data %>%
                                   # filter out the SSBS that matches the pair of sites we're interested in
                                   dplyr::filter(SSBS %in% c(s1, s2)) %>%
@@ -1272,18 +1253,6 @@ hib_calc_div_between <- function(obj,
                                                      SS    = ss)
                                 
                                 # Depending on sim_metric values, calc metrics of comp-sim
-                                # out_met <- purrr::map_dfc(.x = metric_vec,
-                                #                           .f = function(metric = .x,
-                                #                                         spp_data){
-                                #                             hib_calc_nonveg(spp_data, 
-                                #                                           metric,
-                                #                                           use_relative_abundance,
-                                #                                           rescale_hypervolume)
-                                #                             # TODO: add other flags
-                                #                             # binary, rel_abund, rescale
-                                #                           },
-                                #                           spp_data = spp_site_data)
-                                
                                 # non_veg_metrics_df
                                 out_met <- purrr::pmap(.l = non_veg_metrics_df,
                                                           .f = function(metric,
@@ -1300,15 +1269,6 @@ hib_calc_div_between <- function(obj,
                                   dplyr::bind_cols()
                                 
                                 out_df <- out_df %>% bind_cols(out_met)
-                                
-                                # empty_sites1 <- data.frame(SSBS1 = rownames(spp_site_data),
-                                #                            SSBS1_is_empty = (rowSums(spp_site_data) == 0))
-                                # empty_sites2 <- data.frame(SSBS2 = rownames(spp_site_data),
-                                #                            SSBS2_is_empty = (rowSums(spp_site_data) == 0))
-                                # 
-                                # out_df <- out_df %>%
-                                #   left_join(empty_sites1) %>%
-                                #   left_join(empty_sites2)
                                 return(out_df)
                               }
     )
@@ -1367,8 +1327,20 @@ hib_calc_div_between <- function(obj,
   metrics_spec_df <- metrics_spec_df %>%
     dplyr::mutate(Metric = tools::toTitleCase(metric))
   
+  metrics_spec_df <- metrics_spec_df %>%
+    dplyr::mutate(baseline_lui = baseline_lui)
+  if (is.null(baseline_lui)){
+    metrics_spec_df <- metrics_spec_df %>%
+      dplyr::mutate(baseline_lui = NA)
+  }
+  
+  # Improve column names...
+  metrics_spec_df_ <- metrics_spec_df[,c("Metric", "binary", "rel_abund", "rescale",
+                                         "baseline_lui")]
+  colnames(metrics_spec_df_) <- c("Metric", "Binary", "Relative_abundance", "Rescale",
+                                  "Baseline_LUI")
   out_tib <- out_tib %>%
-    dplyr::left_join(metrics_spec_df[,c("Metric", "binary", "rel_abund", "rescale")])
+    dplyr::left_join(metrics_spec_df_)
   
   
   div_empty <- is.null(obj$diversity_between)

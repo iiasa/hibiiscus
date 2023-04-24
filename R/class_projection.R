@@ -35,7 +35,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          # Or dataframe/tibble
                          assertthat::assert_that(
                            inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model"), # obj is a hib model
-                           is.data.frame(proj) || inherits(proj, "SpatRaster"), # or a list of SpatRasters
+                           is.data.frame(proj) || inherits(proj, "SpatRaster") || (is.list(proj) & !is.data.frame(proj)), # or a list of SpatRasters
                            is.function(backtransform) || is.null(backtransform),
                            is.logical(rescale_pred)
                          )
@@ -121,12 +121,85 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                        # TODO:
                        # summary plots - distr of luis... - either lu, i, or lui
                        plot = function(){
-                         stop("Plotting functionality in development")
+                         # stop("Plotting functionality in development")
                          
                          # Get projection info - self$projection
-                         # Check for self$projection$predicted_rescaled
+                         proj <- self$projection
+                         
+                         # Check for self$projection_specs$Rescaled_prediction
+                         resp_var <- "prediction"
+                         resp_lab <- "Prediction"
+                         if (self$projection_specs$Rescaled_prediction){
+                           resp_var <- "prediction_rescaled"
+                           resp_lab <- "Rescaled\nprediction"
+                           
+                         }
+                         # If not rescaled..., just use a basic colour gradient
                          
                          # Initially, basic ggplot
+                         # if (is.data.frame(proj)){
+                         #   # if (!"Year" %in% colnames(proj)){
+                         #   #   proj$Year <- NA
+                         #   # }
+                         # }
+                         if (inherits(proj, "SpatRaster") ){
+                           # terra::plot(proj$`2010`[[resp_var]])
+                           proj <- terra::as.data.frame(proj[[resp_var]], xy = T)
+                         }
+                         if ((is.list(proj) & !is.data.frame(proj))){
+                           proj <- purrr::map(proj,
+                                              function(z){terra::as.data.frame(z[[resp_var]], xy = T)}) %>%
+                             bind_rows(.id = "Year")
+                         }
+
+                         plt <- ggplot(proj) +
+                           geom_tile(aes(x = x, y = y,
+                                         fill = !!sym(resp_var),
+                                         colour = !!sym(resp_var))) +
+                           labs(fill = resp_lab,
+                                colour = resp_lab) +
+                           theme_bw() +
+                           theme(axis.text = element_text(size = 16),
+                                 axis.title = element_text(size = 20),
+                                 plot.title = element_text(size = 20),
+                                 plot.subtitle = element_text(size = 18),
+                                 strip.text.x = element_text(size = 18),
+                                 strip.text.y = element_text(size = 18),
+                                 strip.background = element_blank(),
+                                 legend.text = element_text(size = 16),
+                                 legend.title = element_text(size = 18),
+                                 legend.text.align = 0)
+                         
+                         # If rescaled, can also improve colour scheme 
+                         # 1 as midpoint, lower "bad" (0), higher "better" (max)
+                         if (self$projection_specs$Rescaled_prediction){
+                           max_resp <- max(proj$prediction_rescaled)
+                           
+                           plt <- plt +
+                             scale_fill_gradient2(low = "firebrick3",
+                                                 mid = "gainsboro",
+                                                 high = "dodgerblue3",
+                                                 midpoint = 1) +
+                             scale_colour_gradient2(low = "firebrick3",
+                                                    mid = "gainsboro",
+                                                    high = "dodgerblue3",
+                                                    midpoint = 1)
+                             
+                         } else if (self$projection_specs$Rescaled_prediction == F){
+                           plt <- plt +
+                             scale_fill_gradient(low = "gainsboro",
+                                                  high = "dodgerblue3") +
+                             scale_colour_gradient(low = "gainsboro",
+                                                    high = "dodgerblue3")
+                         }
+                         
+                         if ("Year" %in% colnames(proj)){
+                           plt <- plt +
+                             facet_wrap(~Year)
+                         }
+                         
+                         plot(plt)
+                         
                        }
                        
                      ),
