@@ -104,7 +104,10 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                       number_species = self$processing_flags$N_spp ) #,
                                       # filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
                                       # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
-                        
+                        # TODO:
+                        # replicate INLA style printing!!
+                        # summarise fixedeff coefs table
+                        # display random effects types...
                         
                         message(
                           paste0("Hibiiscus fitted lme4 model\n",
@@ -144,9 +147,110 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         invisible()
                       },
                       # TODO: plot function - just use sjplot?
-                      plot = function(){
-                        sjPlot::plot_model(self$model, 
-                                           show.intercept = T)
+                      plot = function(type = "fixed-effects"){
+                        # sjPlot::plot_model(self$model, 
+                        #                    show.intercept = T)
+                        
+                        assertthat::assert_that(is.character(type))
+                        # stop("Function in progress...")
+                        # Plot options
+                        type = match.arg(type,
+                                         c("fixed-effects",
+                                           "random-effects"))
+                        
+                        basic_thm <- theme(axis.text = element_text(size = 16),
+                                           axis.title = element_text(size = 20),
+                                           plot.title = element_text(size = 20),
+                                           plot.subtitle = element_text(size = 18),
+                                           strip.text.x = element_text(size = 18),
+                                           strip.text.y = element_text(size = 18),
+                                           strip.background = element_blank(),
+                                           legend.text = element_text(size = 16),
+                                           legend.title = element_text(size = 18),
+                                           legend.text.align = 0) 
+                        
+                        # 1. fixed effects - summary
+                        if (type == "fixed-effects"){
+                          fixef_df <- self$fixedef_coefficients
+                          
+                          # Set a baseline- Intercept
+                          fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name)
+                          if ("(Intercept)" %in% fixef_df$Coefficient_name){
+                            fixef_df$Coefficient <- relevel(fixef_df$Coefficient_name,
+                                                            ref = "(Intercept)")
+                          }
+                          
+                          # %%%
+                          plt <- ggplot(fixef_df) +
+                            geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
+                            geom_errorbar(aes(x = Coefficient_name, 
+                                              ymin = loCI,
+                                              ymax = hiCI),
+                                          width = 0) +
+                            geom_point(aes(x = Coefficient_name,
+                                           y = Coefficient_value)) +
+                            
+                            labs(y = "Estimate",
+                                 x = element_blank(),
+                                 title = "Fixed effect estimates") +
+                            theme_bw() +
+                            basic_thm +
+                            coord_flip()
+                          
+                          plot(plt)
+                          
+                        }
+                        #    fixed effects - posteriors
+                        # 2. random iid
+                        if (type == "random-effects"){
+                          # if (is.null(self$user_formula$random)){
+                          #   
+                          # }
+                          # Get random vars from random form
+                          rand_vars <- all.vars(self$user_formula$random)
+                          
+                          rand_df <- as.data.frame(lme4::ranef(self$model)) %>%
+                            dplyr::mutate(lwr = condval - 1.96*condsd, 
+                                          upr = condval + 1.96*condsd) %>%
+                            # order from small to large?
+                            dplyr::group_by(grpvar) %>%
+                            dplyr::arrange(condval, .by_group = T) %>%
+                            dplyr::mutate(ID_ord = 1:n()) %>%
+                            dplyr::ungroup() %>%
+                            dplyr::mutate(sig_col = case_when(lwr > 0 ~ "+ve",
+                                                              upr < 0 ~ "-ve",
+                                                              T ~ "n.s."))
+                          
+                          # colour as +ve or -ve 
+                          # plot - no names...
+                          plt <- ggplot(rand_df) +
+                            geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
+                            geom_errorbar(aes(x = ID_ord, 
+                                              ymin = lwr,
+                                              ymax = upr,
+                                              colour = sig_col),
+                                          show.legend = F,
+                                          alpha = 0.5,
+                                          width = 0) +
+                            geom_point(aes(x = ID_ord,
+                                           y = condval,
+                                           colour = sig_col),
+                                       show.legend = F,
+                                       alpha = 0.7) +
+                            labs(y = "Estimate",
+                                 x = element_blank(),
+                                 title = "Random effect estimates") +
+                            scale_color_manual(values = c("+ve" = "dodgerblue3",
+                                                          "-ve" = "firebrick3",
+                                                          "n.s."= "grey30")) +
+                            facet_wrap(~grpvar, scales = "free_x") +
+                            theme_bw() +
+                            basic_thm +
+                            theme(axis.text.x = element_blank(),
+                                  aspect.ratio = 1)
+                          
+                          plot(plt)
+                        }
                       }
                     ),
                     private = list()

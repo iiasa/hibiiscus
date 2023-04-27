@@ -130,18 +130,21 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          resp_var <- "prediction"
                          resp_lab <- "Prediction"
                          if (self$projection_specs$Rescaled_prediction){
-                           resp_var <- "prediction_rescaled"
+                           resp_var <- "rescaled_prediction"
                            resp_lab <- "Rescaled\nprediction"
                            
                          }
                          # If not rescaled..., just use a basic colour gradient
                          
                          # Initially, basic ggplot
-                         # if (is.data.frame(proj)){
-                         #   # if (!"Year" %in% colnames(proj)){
-                         #   #   proj$Year <- NA
-                         #   # }
-                         # }
+                        
+                         # TODO: add other plotting options...
+                         
+                         # TODO: inla projections have _mean etc...
+                         print(inherits(self$model, "hib_inla_model"))
+                         if (inherits(self$model, "hib_inla_model")){
+                           resp_var <- paste(resp_var, "mean", sep = "_")
+                         }
                          if (inherits(proj, "SpatRaster") ){
                            # terra::plot(proj$`2010`[[resp_var]])
                            proj <- terra::as.data.frame(proj[[resp_var]], xy = T)
@@ -151,6 +154,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                               function(z){terra::as.data.frame(z[[resp_var]], xy = T)}) %>%
                              bind_rows(.id = "Year")
                          }
+                         # TODO: make use of tidyterra??
 
                          plt <- ggplot(proj) +
                            geom_tile(aes(x = x, y = y,
@@ -173,17 +177,19 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          # If rescaled, can also improve colour scheme 
                          # 1 as midpoint, lower "bad" (0), higher "better" (max)
                          if (self$projection_specs$Rescaled_prediction){
-                           max_resp <- max(proj$prediction_rescaled)
+                           max_resp <- max(proj[,resp_var])
                            
                            plt <- plt +
                              scale_fill_gradient2(low = "firebrick3",
                                                  mid = "gainsboro",
                                                  high = "dodgerblue3",
-                                                 midpoint = 1) +
+                                                 midpoint = 1,
+                                                 limits = c(0,max_resp)) +
                              scale_colour_gradient2(low = "firebrick3",
                                                     mid = "gainsboro",
                                                     high = "dodgerblue3",
-                                                    midpoint = 1)
+                                                    midpoint = 1,
+                                                    limits = c(0,max_resp))
                              
                          } else if (self$projection_specs$Rescaled_prediction == F){
                            plt <- plt +

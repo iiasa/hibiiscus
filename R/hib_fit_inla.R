@@ -6,7 +6,6 @@
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
-#' @param form A [`formula`] in the style of inla(bru) - including fixed and random effects.
 #' @param response_fixed_form A [`formula`] with the response and fixed effects
 #' @param random_covar  A [`formula`] with random, non-spatial, iid effects specified
 #' @param family A [`character`] indicating the model family, e.g., "gaussian"
@@ -14,7 +13,7 @@
 #' @param incl_spatial_term A [`logical`], whether or not to include a spatial 
 #' random effect
 #' @param input_mesh Optionally provide an inla mesh object
-#' @param mesh_settings Optionally specify inal mash settings, e.g., max.edge
+#' @param mesh_settings Optionally specify inla mash settings, e.g., max.edge
 #' @param prior_list In development
 #' @keywords model, fitting
 #' @examples 
@@ -45,7 +44,7 @@ hib_fit_inla <- function(obj,
     # is.character(response),
     # assertthat::assert_that(attr(fixed_covar, "class") == "formula"),
     assertthat::assert_that(attr(response_fixed_form, "class") == "formula"),
-    assertthat::assert_that(attr(random_covar, "class") == "formula"),
+    assertthat::assert_that(attr(random_covar, "class") == "formula"), # could be null??
     is.character(family), # family is character
     is.logical(incl_spatial_term),
     inherits(input_mesh,'inla.mesh') || is.null(input_mesh),
@@ -59,8 +58,14 @@ hib_fit_inla <- function(obj,
   
   mod_resp <- all.vars(response_fixed_form[[2]])
   fixed_covars <- all.vars(response_fixed_form[[3]])
+  # Could fix_vars be empty...- need at least global intercept...
   all_covars <- unique(c(fixed_covars,
                          all.vars(random_covar)))
+  
+  
+  # TODO
+  # have single form input, resp ~ fixed + random   --- ignoring spatial
+  
   
   # mod_resp <- all.vars(as.formula(paste0(response, " ~ 1")))
   # 
@@ -253,6 +258,7 @@ hib_fit_inla <- function(obj,
     site.spde <- inla.spde2.matern(input_mesh, alpha = 2)
     
     # TODO: add prior specs...
+    # TODO: pcmatern ??
     
     # Hosts.spde = inla.spde2.pcmatern(mesh = Mesh, prior.range = c(10, 0.5), prior.sigma = c(.5, .5)) # Making SPDE
     # w.Host <- inla.spde.make.index('w', n.spde = site.spde$n.spde) # making the w
@@ -264,7 +270,7 @@ hib_fit_inla <- function(obj,
     
     # collate model fitting data
     # stack data
-    stk <- inla.stack(tag = "tr",
+    stk <- inla.stack(tag = "fit",
                       data = list(y = mod_df$y),
                       A = list(1, A),
                       effects = list(X = X,
@@ -272,7 +278,7 @@ hib_fit_inla <- function(obj,
                                      s = s.site))
   } else {
     # Just use model df
-    stk <- inla.stack(tag = "tr",
+    stk <- inla.stack(tag = "fit",
                       data = list(y = mod_df$y),
                       A = list(1),
                       effects = list(X = X))
@@ -300,15 +306,35 @@ hib_fit_inla <- function(obj,
   inla_form <- formula(inla_form)
 
   message(crayon::green("Fitting model (this may take a while)...\n"))
+  
+  # TODO: if fixed effects, incl a while to ensure fixed effects are fitted...
+  # %%%%%
   # fit model
-  m0 <- inla(formula = inla_form,
-             family = "gaussian",
-             data=inla.stack.data(stk),
-             control.fixed = list(expand.factor.strategy='inla'),
-             control.compute = list(dic = TRUE, waic = TRUE),
-             control.predictor = list(A = inla.stack.A(stk)),
-             verbose = T)
+  
+  if (length(fixed_covars) > 0){
+    check_flag <- 0
+    while(check_flag == 0){
+      m0 <- inla(formula = inla_form,
+                 family = "gaussian",
+                 data=inla.stack.data(stk),
+                 control.fixed = list(expand.factor.strategy='inla'),
+                 # control.inla = list(strategy = "", int.strategy = ""), 
+                 control.compute = list(dic = TRUE, waic = TRUE),
+                 control.predictor = list(A = inla.stack.A(stk)),
+                 verbose = F)
 
+      check_flag <- nrow(m0$summary.fixed)
+    }
+  } else {
+    m0 <- inla(formula = inla_form,
+               family = "gaussian",
+               data=inla.stack.data(stk),
+               control.fixed = list(expand.factor.strategy='inla'),
+               # control.inla = list(strategy = "", int.strategy = ""), 
+               control.compute = list(dic = TRUE, waic = TRUE),
+               control.predictor = list(A = inla.stack.A(stk)),
+               verbose = F)
+  }
 
   message(crayon::green("Collating model details ..."))
   
@@ -318,11 +344,14 @@ hib_fit_inla <- function(obj,
     mod_df = mod_df,
     inla_obj = m0,
     # TODO:
-    user_formula = formula(paste(as.character(response_fixed_form)[2],
+    user_formula = list(full = formula(paste(as.character(response_fixed_form)[2],
                                  as.character(response_fixed_form)[1],
                                  as.character(response_fixed_form)[3],
                                  "+",
                                  as.character(random_covar)[2], sep = " ")),
+                        response_fixed = response_fixed_form,
+                        random = random_covar
+                        ),
     inla_fitted_formula = inla_form,
     inla_incl_spatial_term = incl_spatial_term,
     inla_stack = stk,
@@ -362,4 +391,5 @@ hib_fit_inla <- function(obj,
   
   # %%%%%
 }
+
 
