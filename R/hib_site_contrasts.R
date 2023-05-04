@@ -7,10 +7,6 @@
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
 #' @param metrics A [`character`] vector of dissimilarity metrics...
-#' @param primin_baseline A [`logical`] value, determines whether 
-#' dissimilarity is calculated for all site combinations per study, or
-#' only relative to a primary minimal baseline - should match the value used when
-#' calculating compositional dis/similarity (hib_calc_div_between)
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
 #' which compositional dis/similarity is calculated per study - should match the 
 #' value used when calculating compositional dis/similarity (hib_calc_div_between)
@@ -67,12 +63,12 @@ hib_calc_site_contrasts <- function(obj,
   spp_tmp <- spp_tmp %>%
     dplyr::filter(!is.na(Predominant_land_use) &
                     Diversity_metric_type == "Abundance") %>%
-    group_by(SS) %>%
-    mutate(n_sample_effort = n_distinct(Sampling_effort),
+    dplyr::group_by(SS) %>%
+    dplyr::mutate(n_sample_effort = n_distinct(Sampling_effort),
            # Taxon_name_entered v best_guess_binomial ??
-           n_species = n_distinct(Taxon_name_entered)) %>%
-    ungroup() %>%
-    filter(n_sample_effort == 1 &
+           n_species = dplyr::n_distinct(Taxon_name_entered)) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(n_sample_effort == 1 &
              n_species > 1)
   
   # if (primin_baseline == T){
@@ -106,7 +102,7 @@ hib_calc_site_contrasts <- function(obj,
     
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-      left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
+      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
       droplevels()
     
   } else if (is.null(baseline_lui)){

@@ -4,7 +4,16 @@
 \alias{hib_fit_lme4}
 \title{Fit an lme4 style mixed-effects model}
 \usage{
-hib_fit_lme4(obj, form, family = gaussian, REML = T, calc_CIs = NULL)
+hib_fit_lme4(
+  obj,
+  form,
+  family = gaussian,
+  REML = T,
+  calc_CIs = NULL,
+  optimise_ranefs = F,
+  model_dredge = F,
+  model_average = F
+)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}
@@ -29,6 +38,9 @@ should be calculated or not, and if so how - one of NULL, "Wald", "profile", "bo
 \description{
 This function fits an lme4 model using the supplied database, formula and other
 function arguments tuning the model fitting process
+}
+\details{
+Expects a database object...
 }
 \examples{
 \dontrun{

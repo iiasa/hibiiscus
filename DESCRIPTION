@@ -14,24 +14,30 @@ Language: en-GB
 RoxygenNote: 7.2.3
 Encoding: UTF-8
 Imports:
-  assertthat (>= 0.2.0),
-  R6,
-  sf (>= 0.9),
-  dplyr (>= 1.0.10),
-  forcats,
-  lubridate,
-  crayon,
-  readr,
-  purrr,
-  tidyr,
-  tibble,
-  SpadeR
+    assertthat (>= 0.2.0),
+    R6,
+    sf (>= 0.9),
+    dplyr (>= 1.0.10),
+    forcats,
+    lubridate,
+    crayon,
+    readr,
+    purrr,
+    tidyr,
+    tibble,
+    betapart,
+    geometry,
+    geosphere,
+    rlang,
+    terra,
+    vegan,
+    lme4,
+    MuMIn,
+    INLA,
+    magrittr
 Depends:
   R(>= 4.0.0)
 Suggests:
-  lme4,
-  MuMIn,
-  INLA,
   brms,
   posterior,
   testthat (>= 3.0.0)

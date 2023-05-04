@@ -68,7 +68,7 @@ Database <- R6Class("Database",
                         sites$version <- version
                         
                         if ("N_samples" %in% colnames(sites)){
-                          if (class(sites$N_samples) == "table"){
+                          if (inherits(sites$N_samples, "table")){
                             sites$N_samples <- as.vector(sites$N_samples)
                           }  
                         }

@@ -760,7 +760,7 @@ hib_calc_veg <- function(spp_site_data,
 
 
 
-# ' Calculate non-vegan-based dissimilarity metrics
+#' Calculate non-vegan-based dissimilarity metrics
 #' 
 #' @description 
 #' This function calculates non-vegan-based dissimilarity metrics between sites
@@ -782,7 +782,7 @@ hib_calc_veg <- function(spp_site_data,
 #' @export
 hib_calc_nonveg <- function(spp_site_data, 
                             metric,
-                            binary, # Not needed
+                            binary,
                             rel_abund,
                             rescale
                             ){
@@ -1053,12 +1053,12 @@ hib_calc_div_between <- function(obj,
   spp_tmp <- spp_tmp %>%
     dplyr::filter(!is.na(Predominant_land_use) &
                     Diversity_metric_type == "Abundance") %>%
-    group_by(SS) %>%
-    mutate(n_sample_effort = n_distinct(Sampling_effort),
+    dplyr::group_by(SS) %>%
+    dplyr::mutate(n_sample_effort = n_distinct(Sampling_effort),
            # Taxon_name_entered v best_guess_binomial ??
-           n_species = n_distinct(Taxon_name_entered)) %>%
-    ungroup() %>%
-    filter(n_sample_effort == 1 &
+           n_species = dplyr::n_distinct(Taxon_name_entered)) %>%
+    dplyr::ungroup() %>%
+    dplyr::filter(n_sample_effort == 1 &
              n_species > 1)
   
   # if (primin_baseline == T){
@@ -1092,7 +1092,7 @@ hib_calc_div_between <- function(obj,
     
     site_tmp <- obj$sites %>%
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-      left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
+      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
       droplevels()
     
   } else if (is.null(baseline_lui)){
@@ -1245,7 +1245,7 @@ hib_calc_div_between <- function(obj,
                                 ss <- spp_data %>%
                                   # filter out the SSBS that matches the pair of sites we're interested in
                                   dplyr::filter(SSBS %in% c(s1, s2)) %>%
-                                  pull(SS) %>%
+                                  dplyr::pull(SS) %>%
                                   unique()
                                 
                                 out_df <- data.frame(SSBS1 = s1, 
@@ -1304,8 +1304,8 @@ hib_calc_div_between <- function(obj,
   
     
   veg_df <- veg_df %>%
-    left_join(empty_sites1) %>%
-    left_join(empty_sites2)
+    dplyr::left_join(empty_sites1) %>%
+    dplyr::left_join(empty_sites2)
   # 
   metrics_out <- colnames(veg_df)
   metrics_out <- metrics_out[!metrics_out %in% c("SSBS1", "SSBS2", "SS",

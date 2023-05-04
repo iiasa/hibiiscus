@@ -236,8 +236,8 @@ hib_fit_inla <- function(obj,
       # TODO: move this to a function - hib_build_inla_mesh <- function(coords, mesh_settings)??
       
       if (mesh_settings$mesh_dim == "3d"){
-        coords <- inla.mesh.map(coords, projection = "longlat")
-        input_mesh <- inla.mesh.create(loc = coords,
+        coords <- INLA::inla.mesh.map(coords, projection = "longlat")
+        input_mesh <- INLA::inla.mesh.create(loc = coords,
                                        globe = 8)
         # globe = T,
         # refine = list(max.edge = mesh_settings$max.edge)
@@ -245,7 +245,7 @@ hib_fit_inla <- function(obj,
       
       if (mesh_settings$mesh_dim == "2d"){
         # Try and set some sensible baseline mesh params if not provided
-        input_mesh <- inla.mesh.2d(loc = coords,
+        input_mesh <- INLA::inla.mesh.2d(loc = coords,
                                    max.edge = mesh_settings$max.edge,
                                    cutoff = mesh_settings$cutoff,
                                    offset = mesh_settings$offset)
@@ -255,7 +255,7 @@ hib_fit_inla <- function(obj,
 
     
     # Set up spde model
-    site.spde <- inla.spde2.matern(input_mesh, alpha = 2)
+    site.spde <- INLA::inla.spde2.matern(input_mesh, alpha = 2)
     
     # TODO: add prior specs...
     # TODO: pcmatern ??
@@ -264,13 +264,13 @@ hib_fit_inla <- function(obj,
     # w.Host <- inla.spde.make.index('w', n.spde = site.spde$n.spde) # making the w
     
     # Create weights (A) matrix
-    A <- inla.spde.make.A(input_mesh, 
+    A <- INLA::inla.spde.make.A(input_mesh, 
                           loc = coords)
-    s.site <- inla.spde.make.index('s', n.spde = site.spde$n.spde)
+    s.site <- INLA::inla.spde.make.index('s', n.spde = site.spde$n.spde)
     
     # collate model fitting data
     # stack data
-    stk <- inla.stack(tag = "fit",
+    stk <- INLA::inla.stack(tag = "fit",
                       data = list(y = mod_df$y),
                       A = list(1, A),
                       effects = list(X = X,
@@ -278,7 +278,7 @@ hib_fit_inla <- function(obj,
                                      s = s.site))
   } else {
     # Just use model df
-    stk <- inla.stack(tag = "fit",
+    stk <- INLA::inla.stack(tag = "fit",
                       data = list(y = mod_df$y),
                       A = list(1),
                       effects = list(X = X))
@@ -314,7 +314,7 @@ hib_fit_inla <- function(obj,
   if (length(fixed_covars) > 0){
     check_flag <- 0
     while(check_flag == 0){
-      m0 <- inla(formula = inla_form,
+      m0 <- INLA::inla(formula = inla_form,
                  family = "gaussian",
                  data=inla.stack.data(stk),
                  control.fixed = list(expand.factor.strategy='inla'),
@@ -326,7 +326,7 @@ hib_fit_inla <- function(obj,
       check_flag <- nrow(m0$summary.fixed)
     }
   } else {
-    m0 <- inla(formula = inla_form,
+    m0 <- INLA::inla(formula = inla_form,
                family = "gaussian",
                data=inla.stack.data(stk),
                control.fixed = list(expand.factor.strategy='inla'),

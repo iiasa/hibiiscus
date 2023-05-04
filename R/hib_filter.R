@@ -5,13 +5,14 @@
 #' are retained
 #' @param obj A [`hib_database`] object.
 #' @param condition A [`conditional`] statement identifying how to filter the sites dataframe
-#' @keywords database, filtering
-#' #' @examples
+#' @keywords database filtering
+#' @examples
 #' \dontrun{
 #'   hib_filter_species(hib_obj, UN_region == "Europe")
 #' }
+#' @export
 hib_filter_sites <- function(obj, condition){
-  str_cond <- deparse(rlang:::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
+  str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
   str_cond <- gsub("\"", "'", str_cond)
   
   message(crayon::green(paste("Filtering database using:", 
@@ -60,9 +61,10 @@ hib_filter_sites <- function(obj, condition){
 #' \dontrun{
 #'   hib_filter_species(hib_obj, Class == "Insecta")
 #' }
+#' @export
 hib_filter_species <- function(obj, condition){
   # e.g. by taxa: "Kingdom", "Phylum",  "Class", "Order", "Family", "Genus"
-  str_cond <- deparse(rlang:::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
+  str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
   str_cond <- gsub("\"", "'", str_cond)
   
   message(crayon::green(paste("Filtering database using:", 

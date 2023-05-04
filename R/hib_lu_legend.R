@@ -53,7 +53,7 @@ save_legend <- function(leg, output_path) leg$save_legend(output_path)
 #' @description 
 #' This function loads a previously created [`R6`] object containing a land-use legend class. 
 #' 
-#' @param input A [`character`] pointing to a saved RDS file.
+#' @param path_input A [`character`] pointing to a saved RDS file.
 #' @keywords database, land-use, legend
 #' @examples
 #' \dontrun{
@@ -116,14 +116,14 @@ set_lu_legend <- function(obj, leg){
   cols_to_drop_sites <- colnames(obj$sites)[colnames(obj$sites) %in% c("Predominant_land_use", "Use_intensity", "LUI")]
   # Drop cols from sites
   obj$sites <- obj$sites %>%
-    select(!all_of(cols_to_drop_sites)) %>%
+    dplyr::select(!dplyr::all_of(cols_to_drop_sites)) %>%
     # left join new legend info
     dplyr::left_join(leg$lu_df)
   
   cols_to_drop_spp <- colnames(obj$species)[colnames(obj$species) %in% c("Predominant_land_use", "Use_intensity", "LUI")]
   # Drop cols from species
   obj$species <- obj$species %>%
-    select(!all_of(cols_to_drop_spp)) %>%
+    dplyr::select(!dplyr::all_of(cols_to_drop_spp)) %>%
     # left join new legend info
     dplyr::left_join(leg$lu_df)
   

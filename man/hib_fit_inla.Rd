@@ -33,11 +33,9 @@ random effect}
 
 \item{input_mesh}{Optionally provide an inla mesh object}
 
-\item{mesh_settings}{Optionally specify inal mash settings, e.g., max.edge}
+\item{mesh_settings}{Optionally specify inla mash settings, e.g., max.edge}
 
 \item{prior_list}{In development}
-
-\item{form}{A [`formula`] in the style of inla(bru) - including fixed and random effects.}
 }
 \description{
 This function fits an inla(bru) model using the supplied database, formula and other

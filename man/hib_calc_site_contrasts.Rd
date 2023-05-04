@@ -4,17 +4,20 @@
 \alias{hib_calc_site_contrasts}
 \title{Calculate measures of dissimilarity (wrapper) between sites}
 \usage{
-hib_calc_site_contrasts(obj, metrics, primin_baseline = T)
+hib_calc_site_contrasts(
+  obj,
+  metrics,
+  baseline_lui = "Primary vegetation_Minimal use"
+)
 }
 \arguments{
 \item{obj}{A [`Database`] object.}
 
 \item{metrics}{A [`character`] vector of dissimilarity metrics...}
 
-\item{primin_baseline}{A [`logical`] value, determines whether 
-dissimilarity is calculated for all site combinations per study, or
-only relative to a primary minimal baseline - should match the value used when
-caclulating compositional dis/similarity (hib_calc_div_between)}
+\item{baseline_lui}{A [`character`] or NULL, indicating the baseline LUI against
+which compositional dis/similarity is calculated per study - should match the 
+value used when calculating compositional dis/similarity (hib_calc_div_between)}
 }
 \description{
 This function calculates dissimilarity measures between sites within a study,

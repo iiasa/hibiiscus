@@ -10,7 +10,7 @@ hib_calc_div_between(
   binary = F,
   rel_abund = T,
   rescale = T,
-  primin_baseline = T
+  baseline_lui = "Primary vegetation_Minimal use"
 )
 }
 \arguments{
@@ -30,9 +30,8 @@ as part of the calculation}
 be rescaled relative to its maximum value - applies to metrics that are not 
 on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), chord, hellinger}
 
-\item{primin_baseline}{A [`logical`] value, determines whether 
-compositional dis/similarity is calculated for all site combinations per study, or
-only relative to a primary minimal baseline}
+\item{baseline_lui}{A [`character`] or NULL, indicating the baseline LUI against
+which compositional dis/similarity is calculated per study}
 }
 \description{
 This function calculates compositional dissimilarity between sites within a study
@@ -47,7 +46,7 @@ Expects a [`Database`] object.
                               c(F, T),
                               c(T, F),
                               c(F, F),
-                              T)
+                              "Primary vegetation_Minimal use")
 } 
 }
 \keyword{database,}

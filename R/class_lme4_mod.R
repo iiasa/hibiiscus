@@ -96,6 +96,31 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       
                       # Base printout function
                       print = function(){
+                        # Padding numbers function, from:
+                        # https://github.com/jthomasmock/gtExtras/blob/HEAD/R/pad_fn.R
+                        pad_fn <- function(x, nsmall = 2, pad0) {
+                          # round and format values as text with specific number of decimals
+                          round_x <- round(x, digits = nsmall)
+                          fmt_x <- format(round_x, nsmall = nsmall)
+                          
+                          # calc number of trailing zeros
+                          zero_len <- nchar(fmt_x) - nchar(sub("0*$", "", fmt_x))
+                          
+                          # create string of zero
+                          if (pad0) {
+                            rep_zero <- strrep(0, zero_len)
+                          } else {
+                            rep_zero <- ""
+                          }
+                          
+                          # remove trailing zeros by position
+                          fmt_out <- substr(fmt_x, 1, nchar(fmt_x) - zero_len)
+                          
+                          # add the non-breaking spaces to the formatted values
+                          filled_out <- paste0(fmt_out, rep_zero)
+                          
+                          filled_out
+                        }
                         # N spp/sites...
                         # print(summary(self$model))
                         stats <- list(number_sites = self$processing_flags$N_sites,
@@ -108,6 +133,9 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         # replicate INLA style printing!!
                         # summarise fixedeff coefs table
                         # display random effects types...
+                        # names(summary(test_lmer$model))
+                        # summary(test_lmer$model)$coefficients
+                        # summary(test_lmer$model)$AICtab
                         
                         message(
                           paste0("Hibiiscus fitted lme4 model\n",
@@ -118,10 +146,27 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                  # crayon::green(stats$number_lui), "\n",
                                  "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                  "\n\n",
-                                 "Summary of fitted model:\n"
+                                 "--------------------\n\n",
+                                 "Summary of fitted model:"
+                                 # "Fixed effects:"
                           )
                         )
+                        # print(self$fixedef_coefficients)
                         print(summary(self$model))
+                        metr <- pad_fn(self$metrics, 3, F)
+                        names(metr) <- names(self$metrics)
+                        
+                        message(paste0("\n\n",
+                                       # "--------------------\n",
+                                       # "Random effects:\n",
+                                       # ranef_chr, "\n\n",
+                                       "Performance metrics:\n",
+                                       "\tR-squared (marg.) \t ", metr["R2m"], "\n",
+                                       "\tR-squared (cond.) \t ", metr["R2c"], "\n",
+                                       "\tAIC               \t ", metr["AIC"], "\n",
+                                       "\tAICc              \t ", metr["AICc"], "\n",
+                                       "\tBIC               \t ", metr["BIC"], "\n"))
+                        
                       },
                       # Save object
                       save_hib = function(output_path = NULL){

@@ -26,10 +26,10 @@ hib_fit_lme4 <- function(obj,
                          form,
                          family = gaussian,
                          REML = T,
-                         calc_CIs = NULL #,
-                         # optimise_ranefs = F,
-                         # model_dredge = F,
-                         # model_average = F
+                         calc_CIs = NULL, #,
+                         optimise_ranefs = F,
+                         model_dredge = F,
+                         model_average = F
                          ){
   
   # TODO:

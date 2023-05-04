@@ -62,10 +62,10 @@ update_hib <- function(obj, path_species, path_sites = "", version = "2022", ...
     }
     
     # Add species/sites to original object
-    obj$species <- bind_rows(obj$species,
+    obj$species <- dplyr::bind_rows(obj$species,
                              new_obj$species)    
     
-    obj$sites <- bind_rows(obj$sites,
+    obj$sites <- dplyr::bind_rows(obj$sites,
                            new_obj$sites)    
     
     # Update version info and update info

@@ -21,7 +21,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                        projection = NULL ,
                        projection_specs = NULL,
                        # Other things to add
-                       # aoa, metric of dissimlarity
+                       # aoa, metric of dissimilarity
                        
                        
                        # processing_flags = NULL,
@@ -73,25 +73,123 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                        },
                        # Base printout function
                        print = function() {
-                         stop("Print functionality in progress...")
-                         # Compute some stats
-                         # stats <- list(number_sites = length( unique(self$lu_df$SSBS) ),
-                         #               number_lu = length( self$land_use ),
-                         #               number_i = length( self$management ),
-                         #               number_lui = length( self$land_use_management )
-                         # )  
-                         # 
-                         # message(
-                         #   paste0("Hibiiscus projection \n",
-                         #          "(Last updated: ", crayon::green( self$last_update ), ")",
-                         #          "\n",
-                         #          "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
-                         #          "\t N land use types:              ", crayon::green(stats$number_lu), "\n",
-                         #          "\t N management types:            ", crayon::green(stats$number_i), "\n",
-                         #          "\t N land use x management types: ", crayon::green(stats$number_lui), "\n",
-                         #          "\n"
-                         #   )
-                         # )
+                         # stop("Print functionality in progress...")
+                         # Compute some stats/get some info
+                         
+                         mod_type <- ""
+                         pred_vars <- ""
+                         n_pred_vars <- NA
+                         if (inherits(self$model, "hib_lme4_model")){
+                           mod_type <- "lme4"
+                           
+                           all_covars <- all.vars(formula(delete.response(terms(formula(self$model$model)))))
+                           rand_vars <- names(lme4::ranef(self$model$model))
+                           fix_vars <- all_covars[!all_covars %in% rand_vars]
+                         }
+                         
+                         if (inherits(self$model, "hib_inla_model")){
+                           mod_type <- "INLA"
+                           
+                           fix_vars <- all.vars(formula(delete.response(terms(self$model$user_formula$response_fixed))))
+                           fix_vars <- fix_vars[!fix_vars == "Intercept"]
+                           fix_vars <- fix_vars[!fix_vars == "(Intercept)"]
+                           
+                           if (self$model$inla_incl_spatial_term){
+                             fix_vars <- c(fix_vars, "spatial-random-effect")
+                           }
+                         }
+                         
+                         n_pred_vars <- length(fix_vars)
+                         if (length(fix_vars) > 3){
+                           pred_vars <- paste(paste(fix_vars[1:3], collapse = ", ", ", ...", sep = ""))
+                           pred_vars <- paste0(pred_vars, " (", n_pred_vars, " in total)")
+                         } else {
+                           pred_vars <- paste(fix_vars, collapse = ", ")
+                         }
+                         
+                     
+                         # spatial extent
+                         # temporal extent
+                         time_rng <- c(NA, NA)
+                         # n_yrs <- NA
+                         if (is.data.frame(self$projection)){
+                           coords <- data.frame(x = NA, y = NA)
+                           if (("Longitude" %in% colnames(self$projection)) &
+                               ("Latitude" %in% colnames(self$projection)) ){
+                             coords <- self$projection[,c("Longitude", "Latitude")]
+                           }
+                           if (("Longitude_midpoint" %in% colnames(self$projection)) &
+                               ("Latitude_midpoint" %in% colnames(self$projection)) ){
+                             coords <- self$projection[,c("Longitude_midpoint", "Latitude_midpoint")]
+                           }
+                           if (("x" %in% colnames(self$projection)) &
+                               ("y" %in% colnames(self$projection)) ){
+                             coords <- self$projection[,c("x", "y")]
+                           }
+                           if (("X" %in% colnames(self$projection)) &
+                               ("Y" %in% colnames(self$projection)) ){
+                             coords <- self$projection[,c("X", "Y")]
+                           }
+                           
+                           x_rng <- range(coords[,1])
+                           y_rng <- range(coords[,2])
+                           
+                           
+                           if ("Year" %in% colnames(self$projection)){
+                             time_rng <- range(self$projection$Year)
+                           }
+                           
+                         }
+                         if (inherits(self$projection, "SpatRaster")){
+                           xy_rng <- terra::ext(self$projection)
+                           x_rng <- xy_rng[1:2]
+                           y_rng <- xy_rng[3:4]
+                         }
+                         if ((is.list(self$projection) & !is.data.frame(self$projection))){
+
+                           xy_rng_df <- purrr::map_dfr(.x = self$projection,
+                                          .f = function(.x){
+                                            xy_rng <- terra::ext(.x)
+                                            data.frame(xmin = xy_rng[1],
+                                                       xmax = xy_rng[2],
+                                                       ymin = xy_rng[3],
+                                                       ymax = xy_rng[4])
+                                          })
+                           x_rng <- c(min(xy_rng_df$xmin), max(xy_rng_df$xmax))
+                           y_rng <- c(min(xy_rng_df$ymin), max(xy_rng_df$ymax))
+                           
+                           time_rng <- range(as.integer(names(self$projection)))
+                         }
+                         
+                         # n yrs
+                         time_rng <- unique(time_rng)
+                         if (length(time_rng) > 1){
+                           n_yrs <- diff(time_rng) 
+                         } else {
+                           n_yrs <- 1
+                         }
+                         if (all(is.na(time_rng))){
+                           n_yrs <- NA
+                         }
+
+                         # prnt_info <- list(mod_type = mod_type,
+                         #                    )
+                         message(
+                           paste0("Hibiiscus projection \n",
+                                  "(Last updated: ", crayon::green( self$last_update ), ")\n",
+                                  "\n",
+                                  "Model type:        ", mod_type, "\n",
+                                  "\n",
+                                  "Spatial extent:\n",
+                                  "\t Longitude:      ", paste(x_rng, collapse = ", "), "\n",
+                                  "\t Latitude:       ", paste(y_rng, collapse = ", "), "\n",
+                                  "\n",
+                                  "Temporal extent: \t ", paste(time_rng, collapse = "--"), " (", n_yrs, " year/s)", "\n",
+                                  "\n",
+                                  "Predictors:      \t ", pred_vars, "\n",
+                                  "\n"
+                           )
+                         )
                          
                        },
                        # Save object
@@ -118,8 +216,6 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          invisible()
                        },
                        
-                       # TODO:
-                       # summary plots - distr of luis... - either lu, i, or lui
                        plot = function(){
                          # stop("Plotting functionality in development")
                          
@@ -139,9 +235,10 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          # Initially, basic ggplot
                         
                          # TODO: add other plotting options...
+                         # such as...
                          
                          # TODO: inla projections have _mean etc...
-                         print(inherits(self$model, "hib_inla_model"))
+                         # print(inherits(self$model, "hib_inla_model"))
                          if (inherits(self$model, "hib_inla_model")){
                            resp_var <- paste(resp_var, "mean", sep = "_")
                          }

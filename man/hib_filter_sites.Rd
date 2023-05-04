@@ -15,13 +15,10 @@ hib_filter_sites(obj, condition)
 This function returns a database object containing only sites whose characteristics 
 are retained
 }
-\keyword{"Europe")}
-\keyword{#'}
-\keyword{==}
-\keyword{@examples}
-\keyword{UN_region}
-\keyword{\dontrun{}
-\keyword{database,}
+\examples{
+\dontrun{
+  hib_filter_species(hib_obj, UN_region == "Europe")
+}
+}
+\keyword{database}
 \keyword{filtering}
-\keyword{hib_filter_species(hib_obj,}
-\keyword{}}

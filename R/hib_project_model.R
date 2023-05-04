@@ -62,6 +62,10 @@ hib_mod_project <- function(obj,
       data$prediction <- lme4:::predict.merMod(obj$model,
                                                data,
                                                re.form = NA)
+      # TODO
+      # data$prediction <- predict(obj$model,
+      #                                          data,
+      #                                          re.form = NA)
       # What if we want to include  random effect??
       
       if (!is.null(backtransform)){
@@ -149,6 +153,7 @@ hib_mod_project <- function(obj,
                                terra_to_df_inla,
                                obj = obj, 
                                fix_vars = fix_vars) %>%
+      # TODO: is ".," needed?
         dplyr::bind_rows(., .id = "Year")
     }
     
@@ -166,11 +171,11 @@ hib_mod_project <- function(obj,
     if (obj$inla_incl_spatial_term){
       # Need s.spde from original model!!
       # or just recreate!
-      site.spde <- inla.spde2.matern(obj$inla_mesh, alpha = 2)
+      site.spde <- INLA::inla.spde2.matern(obj$inla_mesh, alpha = 2)
       
       # A <- inla.spde.make.A(input_mesh, 
       #                       loc = coords)
-      s.site <- inla.spde.make.index('s', n.spde = site.spde$n.spde)
+      s.site <- INLA::inla.spde.make.index('s', n.spde = site.spde$n.spde)
       # Create A, X, stk for prediction of dropped pop - using same mesh and spde?
       if (("Longitude" %in% colnames(data_df)) &
           ("Latitude" %in% colnames(data_df)) ){
@@ -190,14 +195,14 @@ hib_mod_project <- function(obj,
       }
       
       if (obj$inla_mesh_settings$mesh_dim == "3d"){
-        coords <- inla.mesh.map(coords,  
+        coords <- INLA::inla.mesh.map(coords,  
                                 projection = "longlat")
       }
       # if (obj$inla_mesh_settings$mesh_dim == "2d"){
       #   
       # }
         
-      pred_A <- inla.spde.make.A(obj$inla_mesh,
+      pred_A <- INLA::inla.spde.make.A(obj$inla_mesh,
                                  loc = coords)
     
     } 
@@ -227,24 +232,24 @@ hib_mod_project <- function(obj,
     # print(head(pred_X))
     # Combine data etc into stack
     if (obj$inla_incl_spatial_term){
-      pred_stk <- inla.stack(tag = "pred",
+      pred_stk <- INLA::inla.stack(tag = "pred",
                              data = list(y = rep(NA, nrow(pred_X))),
                              A = list(pred_A, 1),
                              effects = list(s = s.site,
                                             X = pred_X))
     } else {
-      pred_stk <- inla.stack(tag = "pred",
+      pred_stk <- INLA::inla.stack(tag = "pred",
                              data = list(y = rep(NA, nrow(pred_X))),
                              A = list(1),
                              effects = list(X = pred_X))
     }
     # Get original model fitting stack..
     # And combine with pred for refitting
-    comb_stk <- inla.stack(obj$inla_stack,
+    comb_stk <- INLA::inla.stack(obj$inla_stack,
                            pred_stk)
     message(crayon::green("Re-fitting INLA model to make projection (this may take a while)...\n"))
     # re-fit/ Project
-    m0 <- inla(formula = obj$inla_fitted_formula,
+    m0 <- INLA::inla(formula = obj$inla_fitted_formula,
                family = obj$model$.args$family,
                data=inla.stack.data(comb_stk),
                control.fixed = list(expand.factor.strategy='inla'),
@@ -254,7 +259,7 @@ hib_mod_project <- function(obj,
                verbose = F)
     
     # Get pred_stack index
-    pred_idx <- inla.stack.index(comb_stk, tag = "pred")$data
+    pred_idx <- INLA::inla.stack.index(comb_stk, tag = "pred")$data
   
     pred_df <- m0$summary.fitted.values[pred_idx, ]
     rownames(pred_df) <- NULL
@@ -274,12 +279,12 @@ hib_mod_project <- function(obj,
         if ("Year" %in% colnames(data_df)){
           pred_df <- pred_df %>%
             dplyr::group_by(x, y, Year) %>%
-            dplyr::summarise(across(contains("prediction"), ~ stats::weighted.mean(.x, w = prop_cover)))
+            dplyr::summarise(dplyr::across(dplyr::contains("prediction"), ~ stats::weighted.mean(.x, w = prop_cover)))
         }
         if (!"Year" %in% colnames(data_df)){
           pred_df <- pred_df %>%
             dplyr::group_by(x, y)  %>%
-            dplyr::summarise(across(contains("prediction"), ~ stats::weighted.mean(.x, w = prop_cover)))
+            dplyr::summarise(dplyr::across(dplyr::contains("prediction"), ~ stats::weighted.mean(.x, w = prop_cover)))
           # weighted av of all predictions cols  
         }
       }
@@ -366,6 +371,7 @@ hib_mod_project <- function(obj,
 #'   tmp_proj <- terra_proj_lme4(obj, data, backtransform, rescale_pred, base_val, fix_vars)
 #' } 
 #' @export
+# TODO: edit to also work for brms model...
 terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars){
   # assertions
   assertthat::assert_that(
@@ -431,7 +437,7 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
                       covar_levs_in_rast = covar_levs %in% names(tmp_rast), 
                       covar_nm_levs_in_rast = covar_nm_levs %in% names(tmp_rast),
                       # Add level name in raster
-                      covar_levs_rast = case_when(covar_levs_in_rast == T ~ covar_levs,
+                      covar_levs_rast = dplyr::case_when(covar_levs_in_rast == T ~ covar_levs,
                                                   covar_nm_levs_in_rast == T ~ covar_nm_levs,
                                                   T ~ NA))
       
@@ -439,7 +445,7 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
       is_binary_layer <- purrr::map_dfr(names(tmp_rast),
                                         function(nm){
                                           data.frame(covar_levs_rast = nm,
-                                                     is_binary_layer = all(unique(values(tmp_rast[[nm]])) %in% c(0,1))
+                                                     is_binary_layer = all(unique(terra::values(tmp_rast[[nm]])) %in% c(0,1))
                                           )
                                         })
       
@@ -533,11 +539,11 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
         # Get proportional weighting
         lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
           dplyr::filter(ID == as.vector(unname(unique(values(tmp_prop_rast[[i]])))) ) %>% 
-          pull(category)
+          dplyr::pull(category)
         
         lyr_orig_nm <- non_bin_sub %>%
           dplyr::filter(covar_levs == lyr_nm) %>%
-          pull(covar_levs_rast)
+          dplyr::pull(covar_levs_rast)
         
         # multiply prediction by original raster (correctly matched names)
         tmp_pred_rast_ls[[i]] <- non_bin_r[[lyr_orig_nm]] * tmp_pred_rast_ls[[i]]
@@ -626,7 +632,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   r <- data_rast[[df$covar_levs_rast]]
   
   if (input_type == "binary"){
-    if (max(values(sum(r))) != 1){
+    if (max(terra::values(sum(r))) != 1){
       message(crayon::yellow("Warning: Binary SpatRaster contains cells with >1 category! Layers will be discarded ...\n"))
       return (NULL)
     }  
@@ -644,12 +650,13 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     # in the model df; e.g. primin = 1 in model levels, needs to be 1 here too 
     covar_level <- covar_df %>%
       dplyr::filter(covar_levs_rast == names(lyr)) %>%
-      pull(covar_levs)
+      dplyr::pull(covar_levs)
     
     covar_level_numeric <- lev_df$ID[lev_df$category == covar_level]
     
     values(lyr)[values(lyr) > 0] <- covar_level_numeric
     
+    # TODO: is ".," needed in terra::categories ??
     if (input_type == "non-binary"){
       lyr <- lyr %>%
         terra::as.factor() %>%
@@ -793,7 +800,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                       covar_levs_in_rast = covar_levs %in% names(tmp_rast), 
                       covar_nm_levs_in_rast = covar_nm_levs %in% names(tmp_rast),
                       # Add level name in raster
-                      covar_levs_rast = case_when(covar_levs_in_rast == T ~ covar_levs,
+                      covar_levs_rast = dplyr::case_when(covar_levs_in_rast == T ~ covar_levs,
                                                   covar_nm_levs_in_rast == T ~ covar_nm_levs,
                                                   T ~ NA))
       
@@ -801,7 +808,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
       is_binary_layer <- purrr::map_dfr(names(tmp_rast),
                                         function(nm){
                                           data.frame(covar_levs_rast = nm,
-                                                     is_binary_layer = all(unique(values(tmp_rast[[nm]])) %in% c(0,1))
+                                                     is_binary_layer = all(unique(terra::values(tmp_rast[[nm]])) %in% c(0,1))
                                           )
                                         })
       
@@ -892,11 +899,11 @@ terra_to_df_inla <- function(data, obj, fix_vars){
         # Get proportional weighting
         lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
           dplyr::filter(ID == as.vector(unname(unique(values(tmp_prop_rast[[i]])))) ) %>% 
-          pull(category)
+          dplyr::pull(category)
         
         lyr_orig_nm <- non_bin_sub %>%
           dplyr::filter(covar_levs == lyr_nm) %>%
-          pull(covar_levs_rast)
+          dplyr::pull(covar_levs_rast)
         
         prop_df <- terra::as.data.frame(non_bin_r[[lyr_orig_nm]],
                                         xy = T)
@@ -905,11 +912,11 @@ terra_to_df_inla <- function(data, obj, fix_vars){
         # print(head(prop_df))
         # rename lyr_orig_nm as prop_cover
         # left_join prop_df to tmp_df
-        tmp_pred_df_ls[[i]] <- left_join(tmp_df, prop_df[,c("x", "y", "prop_cover")])
+        tmp_pred_df_ls[[i]] <- dplyr::left_join(tmp_df, prop_df[,c("x", "y", "prop_cover")])
 
       }
       
-      data_df <- bind_rows(tmp_pred_df_ls)
+      data_df <- dplyr::bind_rows(tmp_pred_df_ls)
 
     }
     

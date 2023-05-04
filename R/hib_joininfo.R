@@ -6,6 +6,7 @@
 #' @param obj A [`Database`] object.
 #' @param spp_info A [`dataframe`] or similar of categorical or numeric information to be added to the database.
 #' @keywords database, external
+#' @export
 hib_join_species <- function(obj, spp_info){
 
   # Tests
@@ -22,7 +23,7 @@ hib_join_species <- function(obj, spp_info){
     msg = "Columns in spp_info are not compatible with the current species data."
   )
   
-  obj$species <- left_join(obj$species,
+  obj$species <- dplyr::left_join(obj$species,
                            spp_info)
   
   return(obj)
@@ -36,6 +37,7 @@ hib_join_species <- function(obj, spp_info){
 #' @param obj A [`Database`] object.
 #' @param site_info A [`dataframe`] or similar of categorical or numeric information to be added to the database.
 #' @keywords database, external
+#' @export
 hib_join_sites <- function(obj, site_info){
   # Tests
   # columns in site_info 
@@ -51,7 +53,7 @@ hib_join_sites <- function(obj, site_info){
     msg = "Columns in site_info are not compatible with the current site data."
   )
   
-  obj$sites <- left_join(obj$sites,
+  obj$sites <- dplyr::left_join(obj$sites,
                          site_info)
   
   return(obj)
