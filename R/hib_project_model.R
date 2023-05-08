@@ -25,7 +25,7 @@ hib_mod_project <- function(obj,
   # Assertions 
   # is data a df/tibble/ raster/stack 
   assertthat::assert_that(
-    inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model"), # obj is a hib model
+    inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model") || inherits(obj, "hib_brms_model"), # obj is a hib model
     is.data.frame(data) || inherits(data, "SpatRaster") || (is.list(data) & !is.data.frame(data)),
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred)
@@ -34,13 +34,24 @@ hib_mod_project <- function(obj,
   
   # Check type of model
   # for now, focus on lmer
+  # TODO: brms predictions are equivalent... I think, check raster prediction...
+  
   if (inherits(obj, "hib_lme4_model")){
     message(crayon::green("lme4 model detected! Projection in progress...\n"))
     # TODO: wrap in hib_mod_proj_lme4??
     
     # Get baseline value for optional rescaling
+    
+    # %%%%
     # get model intercept
-    base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
+    if ("(Intercept)" %in% obj$fixedef_coefficients$Coefficient_name){
+      base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
+    } else {
+      base_val <- obj$fixedef_coefficients$Coefficient_value[1]
+    }
+    # %%%%
+    # get model intercept
+    # base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
     # if backtrans - backrans intercept to get baseline val
     if (!is.null(backtransform)){
       base_val <- backtransform(base_val)
@@ -59,40 +70,38 @@ hib_mod_project <- function(obj,
       # Check all fixef vars are in colnames of data
       assertthat::assert_that(all(fix_vars %in% colnames(data)))
       
-      data$prediction <- lme4:::predict.merMod(obj$model,
-                                               data,
-                                               re.form = NA)
-      # TODO
-      # data$prediction <- predict(obj$model,
+      # data$prediction <- lme4:::predict.merMod(obj$model,
       #                                          data,
       #                                          re.form = NA)
+      # Use predict
+      data$prediction <- predict(obj$model,
+                                 data,
+                                 re.form = NA)
       # What if we want to include  random effect??
       
       if (!is.null(backtransform)){
         data$prediction <- backtransform(data$prediction)
       }
       if (rescale_pred){
-        data$prediction_rescaled <- data$prediction / base_val
+        data$rescaled_prediction <- data$prediction / base_val
       }
     }
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
-      data <- terra_proj_lme4(data, obj, backtransform, rescale_pred, base_val, fix_vars)
+      data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars)
     }
     # List of raster objects
     if ((is.list(data) & !is.data.frame(data))){
+      # & inherits(data[[1]], "SpatRaster")
       # Apply individual terra proj to each item of list...
       data <- purrr::map(data,
-                         terra_proj_lme4,
+                         terra_proj,
                          obj = obj, 
                                        backtransform = backtransform, 
                                        rescale_pred = rescale_pred, 
                                        base_val = base_val, 
                                        fix_vars = fix_vars)
-      # print(data)
-      # print(is.list(data))
-      # print(!is.data.frame(data))
     }
     
   } # TODO: add inla support
@@ -251,11 +260,11 @@ hib_mod_project <- function(obj,
     # re-fit/ Project
     m0 <- INLA::inla(formula = obj$inla_fitted_formula,
                family = obj$model$.args$family,
-               data=inla.stack.data(comb_stk),
+               data= INLA::inla.stack.data(comb_stk),
                control.fixed = list(expand.factor.strategy='inla'),
                # control.inla = list(strategy = "", int.strategy = ""), 
                control.compute = list(dic = TRUE, waic = TRUE),
-               control.predictor = list(A = inla.stack.A(comb_stk)),
+               control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
                verbose = F)
     
     # Get pred_stack index
@@ -263,7 +272,21 @@ hib_mod_project <- function(obj,
   
     pred_df <- m0$summary.fitted.values[pred_idx, ]
     rownames(pred_df) <- NULL
+    
     colnames(pred_df) <- paste("prediction", colnames(pred_df), sep = "_")
+    
+    # TODO: need to harmonise prediction colnames
+    
+    # prediction_mean prediction_sd prediction_q2.5
+    # prediction_0.5quant prediction_0.975quant prediction_mode
+    
+    # prediction_mean prediction_sd prediction_0.025quant
+    # prediction_median prediction_q97.5 prediction_mode
+    pred_df <- pred_df %>%
+      dplyr::rename(prediction_q2.5   = prediction_0.025quant,
+                    prediction_median = prediction_0.5quant,
+                    prediction_q97.5  = prediction_0.975quant)
+    
     if (!is.null(backtransform)){
       pred_df <- backtransform(pred_df)
     }
@@ -297,8 +320,8 @@ hib_mod_project <- function(obj,
       pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
       pred_rescaled_df <- pred_df[,pred_cols] / base_val
       colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
-      pred_rescaled_df <- pred_rescaled_df %>%
-        dplyr::select(-rescaled_prediction_sd)
+      # pred_rescaled_df <- pred_rescaled_df %>%
+      #   dplyr::select(-rescaled_prediction_sd)
     }
 
     pred_df <- dplyr::bind_cols(pred_df, pred_rescaled_df)
@@ -337,7 +360,93 @@ hib_mod_project <- function(obj,
     }
     
     # return(data)
+    # %%%%%
+    # BRMS
+    # %%%%%
+  } else if (inherits(obj, "hib_brms_model")){
+    message(crayon::green("brms model detected! Projection in progress...\n"))
+    
+    # Get baseline value for optional rescaling
+    if ("Intercept" %in% obj$fixedef_coefficients$Coefficient_name){
+      base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "Intercept"]
+    } else {
+      base_val <- obj$fixedef_coefficients$Coefficient_value[1]
+    }
+    
+    # if backtrans - backrans intercept to get baseline val
+    if (!is.null(backtransform)){
+      base_val <- backtransform(base_val)
+    }
+    
+    message(crayon::green("Preparing input data for projection...\n"))
+    # Get some basic info on model covars
+    all_covars <- all.vars(formula(delete.response(terms(obj$model$formula$formula))))
+    # all_covars <- all.vars(formula(obj$model)[[3]])
+    # print(all_covars)
+    # But what about random effects... - 
+    rand_vars <- names(brms::ranef(obj$model))
+    fix_vars <- all_covars[!all_covars %in% rand_vars]
+    # print(fix_vars)
+    
+    # Project for possible data types
+    # Dataframe 
+    if (is.data.frame(data)){
+      # Check all fixef vars are in colnames of data
+      assertthat::assert_that(all(fix_vars %in% colnames(data)))
+      
+      # Use predict
+      pred_df <- as.data.frame(predict(obj$model,
+                                        data,
+                                        re_form = NA))
+      # print(head(pred_df))
+      
+      # fix names...
+      pred_df <- pred_df %>%
+        dplyr::rename(prediction       = Estimate,
+                      prediction_error = Est.Error,
+                      prediction_q2.5  = Q2.5,
+                      prediction_q97.5 = Q97.5)
+      # data$prediction <- 
+      # What if we want to include  random effect??
+      
+      if (!is.null(backtransform)){
+        pred_df <- backtransform(pred_df)
+      }
+      # %%%
+      # Optional rescaling
+      pred_rescaled_df <- NULL
+      if (rescale_pred){
+        # divide predictions by baseline val
+        pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
+        pred_rescaled_df <- pred_df[,pred_cols] / base_val
+        colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
+        # pred_rescaled_df <- pred_rescaled_df %>%
+        #   dplyr::select(-rescaled_prediction_error)
+        }
+      
+      data <- dplyr::bind_cols(data, pred_df, pred_rescaled_df)
+    }
+    
+    # Single raster object
+    if (inherits(data, "SpatRaster")){
+      # DO for BRMS
+      data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars)
+    }
+    # List of raster objects
+    if ((is.list(data) & !is.data.frame(data))){
+      # & inherits(data[[1]], "SpatRaster")
+      # Apply individual terra proj to each item of list...
+      data <- purrr::map(data,
+                         terra_proj,
+                         obj = obj,
+                         backtransform = backtransform,
+                         rescale_pred = rescale_pred,
+                         base_val = base_val,
+                         fix_vars = fix_vars)
+    }
+      
   }
+  
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
   # message(crayon::green"Creating projection object...\n"))
@@ -350,7 +459,7 @@ hib_mod_project <- function(obj,
 
 
 #' # A helper function to wrap the preparation of SpatRaster data, and then project 
-#' a hib, mixed-effects model - currently only for lme4 style model..
+#' a hib, mixed-effects model - for lme4 and brms models
 #' 
 #' @description 
 #' This function projects a fitted hib model using the supplied model object and
@@ -368,14 +477,13 @@ hib_mod_project <- function(obj,
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
-#'   tmp_proj <- terra_proj_lme4(obj, data, backtransform, rescale_pred, base_val, fix_vars)
+#'   tmp_proj <- terra_proj(obj, data, backtransform, rescale_pred, base_val, fix_vars)
 #' } 
 #' @export
-# TODO: edit to also work for brms model...
-terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars){
+terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars){
   # assertions
   assertthat::assert_that(
-    inherits(obj, "hib_lme4_model"), # || inherits(obj, "hib_inla_model"),
+    inherits(obj, "hib_lme4_model") || inherits(obj, "hib_brms_model"),
     inherits(data, "SpatRaster"), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
@@ -383,16 +491,24 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
     is.character(fix_vars)
   )
   # Covar checks
-  
+  # print(fix_vars)
+  # print(names(data))
   if (all(fix_vars %in% names(data))){
-    data_pred <- terra::predict(data,
-                                obj$model,
-                                re.form = NA)
-    
-    if (!is.null(backtransform)){
-      data_pred <- backtransform(data_pred)
+    # data_pred <- terra::predict(data,
+    #                             obj$model,
+    #                             re.form = NA)
+    # 
+    # if (!is.null(backtransform)){
+    #   data_pred <- backtransform(data_pred)
+    # }
+    # names(data_pred) <- "prediction"
+    if (inherits(obj, "hib_lme4_model")){
+      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform)
     }
-    names(data_pred) <- "prediction"
+    if (inherits(obj, "hib_brms_model")){
+      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform)
+    }
+    # %%%%
   } else {
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
@@ -532,13 +648,24 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
         # Check all covars in new SpatRaster
         assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast_ls[[i]])))
         
-        tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
-                                                      tmp_pred_rast_ls[[i]], 
-                                                      backtransform)
+        # tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
+        #                                               tmp_pred_rast_ls[[i]], 
+        #                                               backtransform)
+        if (inherits(obj, "hib_lme4_model")){
+          tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
+                                                        tmp_pred_rast_ls[[i]], 
+                                                        backtransform)
+        }
+        if (inherits(obj, "hib_brms_model")){
+          tmp_pred_rast_ls[[i]] <- terra_proj_brms_pred(obj$model, 
+                                                        tmp_pred_rast_ls[[i]], 
+                                                        backtransform)
+        }
+        
         
         # Get proportional weighting
         lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
-          dplyr::filter(ID == as.vector(unname(unique(values(tmp_prop_rast[[i]])))) ) %>% 
+          dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) %>% 
           dplyr::pull(category)
         
         lyr_orig_nm <- non_bin_sub %>%
@@ -546,20 +673,56 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
           dplyr::pull(covar_levs_rast)
         
         # multiply prediction by original raster (correctly matched names)
-        tmp_pred_rast_ls[[i]] <- non_bin_r[[lyr_orig_nm]] * tmp_pred_rast_ls[[i]]
+        tmp_pred_rast_ls[[i]] <- tmp_pred_rast_ls[[i]] * non_bin_r[[lyr_orig_nm]]
         
         names(tmp_pred_rast_ls)[i] <- lyr_nm
         
       }
-      
+      # print(tmp_pred_rast_ls)
+      # print(tmp_pred_rast_ls)
       # then sum all raster in list to get weighted av pred...
-      data_pred <- tmp_pred_rast_ls %>%
-        unlist() %>%
-        c() %>%
-        terra::rast() %>%
-        sum()
-      
-      names(data_pred) <- "prediction"
+      if (inherits(obj, "hib_lme4_model")){
+        data_pred <- tmp_pred_rast_ls %>%
+          unlist() %>%
+          c() %>%
+          terra::rast() %>%
+          sum()
+        
+        names(data_pred) <- "prediction"
+        
+      }
+      # %%%%%
+      # TODO
+      # if brms, need to separately sum prediction, prediction_q2.5, prediction_q97.5
+      if (inherits(obj, "hib_brms_model")){
+        pred_nms <- names(tmp_pred_rast_ls[[1]])
+        
+        tmp_pred_rast_ls <- purrr::map(.x = pred_nms,
+                   function(.x, 
+                            terra_ls = tmp_pred_rast_ls){
+                     lyr_of_interest <- .x
+                     tmp_terra_ls <- purrr::map(.x = terra_ls,
+                                                function(.x, 
+                                                         lyr_nm = lyr_of_interest){
+                                                  return(.x[[lyr_nm]])
+                                                })
+                     tmp_terra <- tmp_terra_ls %>%
+                       unlist() %>%
+                       c() %>%
+                       terra::rast() %>%
+                       sum()
+                                           
+                     names(tmp_terra) <- lyr_of_interest                    
+                     
+                     return(tmp_terra)
+                     })
+        # print(tmp_pred_rast_ls)
+        data_pred <- tmp_pred_rast_ls %>%
+          unlist() %>%
+          c() %>%
+          terra::rast()
+      }
+      # %%%%%
     }
     
     # otherwise, just combine all into one raster stack
@@ -570,9 +733,16 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
       # Check all covars in new SpatRaster
       assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast)))
       # Predict
-      data_pred <- terra_proj_lme4_pred(obj$model, 
-                                        tmp_pred_rast, 
-                                        backtransform)
+      # data_pred <- terra_proj_lme4_pred(obj$model, 
+      #                                   tmp_pred_rast, 
+      #                                   backtransform)
+
+      if (inherits(obj, "hib_lme4_model")){
+        data_pred <- terra_proj_lme4_pred(obj$model, tmp_pred_rast, backtransform)
+      }
+      if (inherits(obj, "hib_brms_model")){
+        data_pred <- terra_proj_brms_pred(obj$model, tmp_pred_rast, backtransform)
+      }
     }
   }
   
@@ -581,7 +751,14 @@ terra_proj_lme4 <- function(data, obj, backtransform, rescale_pred, base_val, fi
   if (rescale_pred){
     # divide predictions by baseline val
     data_pred_rescaled <- data_pred / base_val
-    names(data_pred_rescaled) <- "rescaled_prediction"
+    
+    
+    # Drop some brms estimates of error - doesn't make sens to scale these by baseline...
+    # Or does it??
+    # data_pred_rescaled <- data_pred_rescaled[[names(data_pred_rescaled) != "prediction_error"]]
+    # data_pred_rescaled <- data_pred_rescaled[[names(data_pred_rescaled) != "prediction_Est.error"]]
+    
+    names(data_pred_rescaled) <- paste0("rescaled_", names(data_pred_rescaled))
   }
   
   data <- c(data, data_pred, data_pred_rescaled)
@@ -654,7 +831,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     
     covar_level_numeric <- lev_df$ID[lev_df$category == covar_level]
     
-    values(lyr)[values(lyr) > 0] <- covar_level_numeric
+    terra::values(lyr)[terra::values(lyr) > 0] <- covar_level_numeric
     
     # TODO: is ".," needed in terra::categories ??
     if (input_type == "non-binary"){
@@ -720,6 +897,49 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
   return(data_pred)
 }
  
+
+
+# %%%%
+#' # A helper function to project a model using SpatRaster data
+#' 
+#' @description 
+#' This function projects/predicts the supplied model using the SpatRaster 
+#' @details 
+#' Expects a hib lme4 model and a [`SpatRaster`].
+#' @param mod A fitted hib_brms_mod object 
+#' @param data A [`SpatRaster`], prepared for projection
+#' @param backtransform A [`function`] that can backtransform the response variable
+#' to it original/natual scale.
+#' @keywords model, projection
+#' @examples 
+#' \dontrun{
+#'   pred <- terra_proj_brms_pred(mod, data, backtransform)
+#' } 
+#' @export
+terra_proj_brms_pred <- function(mod, data, backtransform){
+  # Assertions
+  # Check type of inputs
+  # Check all fixef covars are in data 
+  
+  # %%%
+  # Project
+  # TODO: could also incl df.. - more general
+  
+  data_pred <- terra::predict(data,
+                              mod,
+                              re_form = NA)
+  if (!is.null(backtransform)){
+    data_pred <- backtransform(data_pred)
+  }
+
+  names(data_pred)[names(data_pred) == "Estimate"] <- "prediction"
+  names(data_pred)[names(data_pred) == "Est.Error"] <- "prediction_error"
+  names(data_pred)[names(data_pred) == "Q2.5"] <- "prediction_q2.5"
+  names(data_pred)[names(data_pred) == "Q97.5"] <- "prediction_q97.5"
+  
+  # %%% 
+  return(data_pred)
+}
 
 
 # terra_proj_inla_pred <- function(obj, data, backtransform, rescal_pred){
@@ -898,7 +1118,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
         
         # Get proportional weighting
         lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
-          dplyr::filter(ID == as.vector(unname(unique(values(tmp_prop_rast[[i]])))) ) %>% 
+          dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) %>% 
           dplyr::pull(category)
         
         lyr_orig_nm <- non_bin_sub %>%

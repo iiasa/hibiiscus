@@ -34,7 +34,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          # Check that input is either a character filepath
                          # Or dataframe/tibble
                          assertthat::assert_that(
-                           inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model"), # obj is a hib model
+                           inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model") || inherits(obj, "hib_brms_model"), # obj is a hib model
                            is.data.frame(proj) || inherits(proj, "SpatRaster") || (is.list(proj) & !is.data.frame(proj)), # or a list of SpatRasters
                            is.function(backtransform) || is.null(backtransform),
                            is.logical(rescale_pred)
@@ -249,7 +249,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          if ((is.list(proj) & !is.data.frame(proj))){
                            proj <- purrr::map(proj,
                                               function(z){terra::as.data.frame(z[[resp_var]], xy = T)}) %>%
-                             bind_rows(.id = "Year")
+                             dplyr::bind_rows(.id = "Year")
                          }
                          # TODO: make use of tidyterra??
 
@@ -259,6 +259,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                          colour = !!sym(resp_var))) +
                            labs(fill = resp_lab,
                                 colour = resp_lab) +
+                           coord_fixed() +
                            theme_bw() +
                            theme(axis.text = element_text(size = 16),
                                  axis.title = element_text(size = 20),

@@ -147,7 +147,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                  "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                  "\n\n",
                                  "--------------------\n\n",
-                                 "Summary of fitted model:"
+                                 "Summary of fitted model:\n"
                                  # "Fixed effects:"
                           )
                         )
@@ -248,10 +248,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         #    fixed effects - posteriors
                         # 2. random iid
                         if (type == "random-effects"){
-                          # if (is.null(self$user_formula$random)){
-                          #   
-                          # }
-                          # Get random vars from random form
+                         
                           rand_vars <- all.vars(self$user_formula$random)
                           
                           rand_df <- as.data.frame(lme4::ranef(self$model)) %>%
@@ -260,9 +257,9 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                             # order from small to large?
                             dplyr::group_by(grpvar) %>%
                             dplyr::arrange(condval, .by_group = T) %>%
-                            dplyr::mutate(ID_ord = 1:n()) %>%
+                            dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
                             dplyr::ungroup() %>%
-                            dplyr::mutate(sig_col = case_when(lwr > 0 ~ "+ve",
+                            dplyr::mutate(sig_col = dplyr::case_when(lwr > 0 ~ "+ve",
                                                               upr < 0 ~ "-ve",
                                                               T ~ "n.s."))
                           

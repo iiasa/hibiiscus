@@ -154,7 +154,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                                        "\n\n",
                                        "--------------------\n\n",
                                        "Summary of fitted model:\n\n",
-                                       "Fixed effects:"
+                                       "Fixed effects:\n"
                                        )
                                 )
                               print(fixef_df)
@@ -266,9 +266,9 @@ hib_inla_model <- R6Class("hib_inla_model",
                                   # order from small to large?
                                   dplyr::group_by(Covar) %>%
                                   dplyr::arrange(mean, .by_group = T) %>%
-                                  dplyr::mutate(ID_ord = 1:n()) %>%
+                                  dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
                                   dplyr::ungroup() %>%
-                                  dplyr::mutate(sig_col = case_when(`0.025quant` > 0 ~ "+ve",
+                                  dplyr::mutate(sig_col = dplyr::case_when(`0.025quant` > 0 ~ "+ve",
                                                                     `0.975quant` < 0 ~ "-ve",
                                                                     T ~ "n.s."))
                                 

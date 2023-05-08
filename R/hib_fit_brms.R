@@ -9,6 +9,7 @@
 #' @param form A [`formula`] in the style of brms (as in lme4) - including fixed and random 
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by brms
+#' @param ... Any other named arguments that can be passed to brms::brm, e.g. prior, data2
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{
@@ -17,7 +18,8 @@
 #' @export
 hib_fit_brms <- function(obj, 
                          form,
-                         family = gaussian
+                         family = gaussian,
+                         ...
                          # TODO: 
                          # - add a list of model fit tuning params, named as in brms
                          # - data2 - for autocorrelation... - 
@@ -37,6 +39,9 @@ hib_fit_brms <- function(obj,
   
   message(crayon::green("Collating data for model fitting...\n"))
   
+  # TODO: check about brmsformula...
+  # these are different to base formulas, and need to be parsed differently...
+  # Not sure how ...
   
   # Collate data from database - based on columns specified in the formula
   
@@ -114,6 +119,7 @@ hib_fit_brms <- function(obj,
                   data = mod_df,
                   family = family)
   
+  # return(m0)
   # Do some checks - model convergence/model fitted
   # Rhat...
   
