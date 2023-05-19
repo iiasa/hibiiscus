@@ -215,15 +215,15 @@ lu_legend <- R6Class("lu_legend",
                                              "land-use:use-intensity"))
                         # Check var is in colnames(self$lu_df)
                         
-                        basic_thm <- theme(axis.text = element_text(size = 16),
-                                           axis.title = element_text(size = 20),
-                                           plot.title = element_text(size = 20),
-                                           plot.subtitle = element_text(size = 18),
-                                           strip.text.x = element_text(size = 18),
-                                           strip.text.y = element_text(size = 18),
-                                           strip.background = element_blank(),
-                                           legend.text = element_text(size = 16),
-                                           legend.title = element_text(size = 18),
+                        basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
+                                           axis.title = ggplot2::element_text(size = 20),
+                                           plot.title = ggplot2::element_text(size = 20),
+                                           plot.subtitle = ggplot2::element_text(size = 18),
+                                           strip.text.x = ggplot2::element_text(size = 18),
+                                           strip.text.y = ggplot2::element_text(size = 18),
+                                           strip.background = ggplot2::element_blank(),
+                                           legend.text = ggplot2::element_text(size = 16),
+                                           legend.title = ggplot2::element_text(size = 18),
                                            legend.text.align = 0) 
                         
                         # Groupy by var
@@ -241,11 +241,11 @@ lu_legend <- R6Class("lu_legend",
                             dplyr::group_by(Predominant_land_use) %>%
                             dplyr::summarise(N = n_distinct(SSBS))
                           
-                          p <- df %>%
-                            ggplot() +
-                            geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
+                          plt <- df %>%
+                            ggplot2::ggplot() +
+                            ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            geom_bar(aes(x = Predominant_land_use, y = N),
+                            ggplot2::geom_bar(aes(x = Predominant_land_use, y = N),
                                      stat = "identity",
                                      fill = "#009E73",
                                      alpha = 0.7) +
@@ -253,15 +253,15 @@ lu_legend <- R6Class("lu_legend",
                             #            colour = "#009E73",
                             #            alpha = 0.7,
                             #            size = 2.5) +
-                            labs(x = "Land use",
+                            ggplot2::labs(x = "Land use",
                                  y = "Count") +
-                            theme_bw() +
+                            ggplot2::theme_bw() +
                             basic_thm + 
-                            theme(axis.text.x = element_text(angle = 50,
+                            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 50,
                                                              hjust = 1,
                                                              vjust = 1),
                                   aspect.ratio = 0.75)
-                          plot(p)
+                          
                         }
                         
                         if (x_var == "use-intensity"){
@@ -277,11 +277,11 @@ lu_legend <- R6Class("lu_legend",
                             dplyr::group_by(Use_intensity) %>%
                             dplyr::summarise(N = n_distinct(SSBS))
                           
-                          p <- df %>%
-                            ggplot() +
-                            geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
+                          plt <- df %>%
+                            ggplot2::ggplot() +
+                            ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            geom_bar(aes(x = Use_intensity, y = N),
+                            ggplot2::geom_bar(aes(x = Use_intensity, y = N),
                                      stat = "identity",
                                      fill = "#009E73",
                                      alpha = 0.7) +
@@ -289,15 +289,14 @@ lu_legend <- R6Class("lu_legend",
                             #            colour = "#009E73",
                             #            alpha = 0.7,
                             #            size = 2.5) +
-                            labs(x = "Use intensity",
+                            ggplot2::labs(x = "Use intensity",
                                  y = "Count") +
-                            theme_bw() +
+                            ggplot2::theme_bw() +
                             basic_thm + 
-                            theme(axis.text.x = element_text(angle = 50,
+                            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 50,
                                                              hjust = 1,
                                                              vjust = 1),
                                   aspect.ratio = 0.75)
-                          plot(p)
                         }
                         
                         
@@ -318,14 +317,14 @@ lu_legend <- R6Class("lu_legend",
                               dplyr::group_by(Predominant_land_use, Use_intensity) %>%
                               dplyr::summarise(N = n_distinct(SSBS))
                             
-                          p <- df %>%
-                            ggplot() +
-                            geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
+                          plt <- df %>%
+                            ggplot2::ggplot() +
+                            ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            geom_bar(aes(x = Predominant_land_use, y = N,
+                            ggplot2::geom_bar(aes(x = Predominant_land_use, y = N,
                                          group = Use_intensity,
                                          fill = Use_intensity),
-                                     position = position_dodge(),
+                                     position = ggplot2::position_dodge(),
                                      stat = "identity",
                                      # fill = "#009E73",
                                      alpha = 0.7) +
@@ -336,17 +335,17 @@ lu_legend <- R6Class("lu_legend",
                             #            colour = "#009E73",
                             #            alpha = 0.7,
                             #            size = 2.5) +
-                            labs(x = "Land-use",
+                            ggplot2::labs(x = "Land-use",
                                  y = "Count",
                                  # shape = "Use intensity"
                                  fill = "Use intensity") +
-                            theme_bw() +
+                            ggplot2::theme_bw() +
                             basic_thm + 
-                            theme(axis.text.x = element_text(angle = 50,
+                            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 50,
                                                              hjust = 1,
                                                              vjust = 1),
                                   aspect.ratio = 0.75)
-                          plot(p)
+                          
                         }
                         # %%%
                         # lu_col <- c("Predominant_land_use", "Predominant_habitat", "Land_use")
@@ -396,7 +395,7 @@ lu_legend <- R6Class("lu_legend",
                         #         aspect.ratio = 0.75)
                         # # %%%
                         
-                        
+                        (plt)
                       }
                       
                     ),

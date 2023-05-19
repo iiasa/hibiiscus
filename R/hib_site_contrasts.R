@@ -216,13 +216,13 @@ hib_calc_site_contrasts <- function(obj,
     if ("geogr_dist_hav" %in% metrics){
       site_comp_df <- site_comp_df %>%
         # calculate the geographic distances between s1 and s2 
-        dplyr::mutate(geogr_dist_hav = geosphere::distHaversine(cbind(SSBS1_longitude, SSBS1_latitude), 
+        dplyr::mutate(Geogr_dist_hav = geosphere::distHaversine(cbind(SSBS1_longitude, SSBS1_latitude), 
                                                                 cbind(SSBS2_longitude, SSBS2_latitude)))
     }
     if ("geogr_dist_geod" %in% metrics){
       site_comp_df <- site_comp_df %>%
         # calculate the geographic distances between s1 and s2 
-        dplyr::mutate(geogr_dist_geod = geosphere::distGeo(cbind(SSBS1_longitude, SSBS1_latitude), 
+        dplyr::mutate(Geogr_dist_geod = geosphere::distGeo(cbind(SSBS1_longitude, SSBS1_latitude), 
                                                            cbind(SSBS2_longitude, SSBS2_latitude)))
     }
     if ("geogr_midpoint" %in% metrics){

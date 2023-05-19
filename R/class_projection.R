@@ -99,6 +99,15 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                            }
                          }
                          
+                         if (inherits(self$model, "hib_brms_model")){
+                           mod_type <- "brms"
+                           # print(self$model$formula)
+                           all_covars <- all.vars(formula(delete.response(terms(formula(self$model$model$formula)))))
+                           rand_vars <- names(brms::ranef(self$model$model))
+                           fix_vars <- all_covars[!all_covars %in% rand_vars]
+                         }
+                         
+                         
                          n_pred_vars <- length(fix_vars)
                          if (length(fix_vars) > 3){
                            pred_vars <- paste(paste(fix_vars[1:3], collapse = ", ", ", ...", sep = ""))
@@ -216,8 +225,34 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          invisible()
                        },
                        
-                       plot = function(){
-                         # stop("Plotting functionality in development")
+                       plot = function(type = "response-map"){
+                         
+                         type <- match.arg(type,
+                                            c("response-map", "bivariate-map",
+                                              "response-distr", "bivariate-distr"))
+
+                         basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
+                                           axis.title = ggplot2::element_text(size = 20),
+                                           plot.title = ggplot2::element_text(size = 20),
+                                           plot.subtitle = ggplot2::element_text(size = 18),
+                                           strip.text.x = ggplot2::element_text(size = 18),
+                                           strip.text.y = ggplot2::element_text(size = 18),
+                                           strip.background = ggplot2::element_blank(),
+                                           legend.text = ggplot2::element_text(size = 16),
+                                           legend.title = ggplot2::element_text(size = 18),
+                                           legend.text.align = 0) 
+                         # TODO: add arg (type)
+                         # Basic is response_map
+                         # add bivariate_map - only currently works for INLA/BRMS
+                         # add response_distr
+                         # add bivariate_distr - only currently works for INLA/BRMS
+                         
+                         
+                         # TODO: add bivariate plot - mean response v sd of response...
+                         # in scaled space - 
+                         
+                         # INLA - (rescaled_)prediction_sd
+                         # BRMS - (rescaled_)prediction_error
                          
                          # Get projection info - self$projection
                          proj <- self$projection
@@ -228,81 +263,194 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          if (self$projection_specs$Rescaled_prediction){
                            resp_var <- "rescaled_prediction"
                            resp_lab <- "Rescaled\nprediction"
+                         }
+                         if (inherits(self$model, "hib_inla_model")){
+                           resp_var <- paste(resp_var, "mean", sep = "_")
+                         }
+                         
+                         vars_ <- c(resp_var)
+                         
+                         if (type %in% c("bivariate-map", "bivariate-distr")){
+
+                           if (inherits(self$model, "hib_lme4_model")){
+                             message(crayon::red("\nBivariate plots not yet supported for projections from lme4-type models ...\n")) 
+                             stop() 
+                           }
+                           if (inherits(self$model, "hib_inla_model")){
+                             sd_var <- "prediction_sd"
+                           }
+                           if (inherits(self$model, "hib_brms_model")){
+                             sd_var <- "prediction_error"
+                           }
+                           
+                           if (self$projection_specs$Rescaled_prediction){
+                             sd_var <- paste0("rescaled_", sd_var)
+                           }
+                           
+                           if (type == "bivariate-map"){
+                             resp_lab <- "Bivariate plot"  
+                           }
+                           if (type == "bivariate-distr"){
+                             resp_lab <- gsub("\n", " ", resp_lab)
+                             sd_lab <- "Uncertainty"
+                           }
+                           
+                           
+                           vars_ <- c(vars_, sd_var)
                            
                          }
-                         # If not rescaled..., just use a basic colour gradient
                          
+                         
+                         # If not rescaled..., just use a basic colour gradient
                          # Initially, basic ggplot
                         
                          # TODO: add other plotting options...
                          # such as...
                          
-                         # TODO: inla projections have _mean etc...
-                         # print(inherits(self$model, "hib_inla_model"))
-                         if (inherits(self$model, "hib_inla_model")){
-                           resp_var <- paste(resp_var, "mean", sep = "_")
+                         if (is.data.frame(proj) ){
+                           # terra::plot(proj$`2010`[[resp_var]])
+                           vars__ <- c("x", "y", "Year", vars_)
+                           vars__ <- vars__[vars__ %in% colnames(proj)]
+                           proj <- proj[vars__]
                          }
                          if (inherits(proj, "SpatRaster") ){
                            # terra::plot(proj$`2010`[[resp_var]])
-                           proj <- terra::as.data.frame(proj[[resp_var]], xy = T)
+                           proj <- terra::as.data.frame(proj[[vars_]], xy = T)
                          }
                          if ((is.list(proj) & !is.data.frame(proj))){
                            proj <- purrr::map(proj,
-                                              function(z){terra::as.data.frame(z[[resp_var]], xy = T)}) %>%
+                                              function(z){terra::as.data.frame(z[[vars_]], xy = T)}) %>%
                              dplyr::bind_rows(.id = "Year")
                          }
                          # TODO: make use of tidyterra??
+                         # print(head(proj))
 
-                         plt <- ggplot(proj) +
-                           geom_tile(aes(x = x, y = y,
-                                         fill = !!sym(resp_var),
-                                         colour = !!sym(resp_var))) +
-                           labs(fill = resp_lab,
-                                colour = resp_lab) +
-                           coord_fixed() +
-                           theme_bw() +
-                           theme(axis.text = element_text(size = 16),
-                                 axis.title = element_text(size = 20),
-                                 plot.title = element_text(size = 20),
-                                 plot.subtitle = element_text(size = 18),
-                                 strip.text.x = element_text(size = 18),
-                                 strip.text.y = element_text(size = 18),
-                                 strip.background = element_blank(),
-                                 legend.text = element_text(size = 16),
-                                 legend.title = element_text(size = 18),
-                                 legend.text.align = 0)
                          
-                         # If rescaled, can also improve colour scheme 
-                         # 1 as midpoint, lower "bad" (0), higher "better" (max)
-                         if (self$projection_specs$Rescaled_prediction){
-                           max_resp <- max(proj[,resp_var])
+                         if (type == "response-map"){
+                           plt <- ggplot2::ggplot(proj) +
+                             ggplot2::geom_tile(aes(x = x, y = y,
+                                                    fill = !!sym(resp_var),
+                                                    colour = !!sym(resp_var))) +
+                             ggplot2::labs(fill = resp_lab,
+                                           colour = resp_lab) +
+                             ggplot2::coord_fixed() +
+                             ggplot2::theme_bw() +
+                             basic_thm
                            
-                           plt <- plt +
-                             scale_fill_gradient2(low = "firebrick3",
-                                                 mid = "gainsboro",
-                                                 high = "dodgerblue3",
-                                                 midpoint = 1,
-                                                 limits = c(0,max_resp)) +
-                             scale_colour_gradient2(low = "firebrick3",
-                                                    mid = "gainsboro",
-                                                    high = "dodgerblue3",
-                                                    midpoint = 1,
-                                                    limits = c(0,max_resp))
+                           # If rescaled, can also improve colour scheme 
+                           # 1 as midpoint, lower "bad" (0), higher "better" (max)
+                           if (self$projection_specs$Rescaled_prediction){
+                             max_resp <- max(proj[,resp_var])
                              
-                         } else if (self$projection_specs$Rescaled_prediction == F){
-                           plt <- plt +
-                             scale_fill_gradient(low = "gainsboro",
-                                                  high = "dodgerblue3") +
-                             scale_colour_gradient(low = "gainsboro",
-                                                    high = "dodgerblue3")
+                             plt <- plt +
+                               ggplot2::scale_fill_gradient2(low = "firebrick3",
+                                                             mid = "gainsboro",
+                                                             high = "dodgerblue3",
+                                                             midpoint = 1,
+                                                             limits = c(0,max_resp)) +
+                               ggplot2::scale_colour_gradient2(low = "firebrick3",
+                                                               mid = "gainsboro",
+                                                               high = "dodgerblue3",
+                                                               midpoint = 1,
+                                                               limits = c(0,max_resp))
+                             
+                           } else if (self$projection_specs$Rescaled_prediction == F){
+                             plt <- plt +
+                               ggplot2::scale_fill_gradient(low = "gainsboro",
+                                                            high = "dodgerblue3") +
+                               ggplot2::scale_colour_gradient(low = "gainsboro",
+                                                              high = "dodgerblue3")
+                           }
+                           
+                           if ("Year" %in% colnames(proj)){
+                             plt <- plt +
+                               ggplot2::facet_wrap(~Year)
+                           }
                          }
                          
-                         if ("Year" %in% colnames(proj)){
-                           plt <- plt +
-                             facet_wrap(~Year)
+                         if (type == "bivariate-map"){
+                           
+                           # TODO: add colour scale options...
+                           # c("Bluegill", "BlueGold", "BlueOr", "BlueYl", "Brown",
+                           #   "Brown2", "DkBlue","DkBlue2", "DkCyan","DkCyan2", "DkViolet",
+                           #   "DkViolet2", "GrPink","GrPink2", "PinkGrn", "PurpleGrn", "PurpleOr")
+                           legend <- biscale::bi_legend(pal = "GrPink2",
+                                                        dim = 3,
+                                                        xlab = "Larger response",
+                                                        ylab = "Larger uncert.",
+                                                        size = 16)
+                           
+                           # Normalise response and sd...??
+                           
+                           proj$var1 <- proj[[resp_var]]
+                           proj$var2 <- proj[[sd_var]]
+                           
+                           suppressWarnings(
+                             proj <- biscale::bi_class(proj, x = var1, y = var2, dim = 3, style = "quantile")
+                           )
+                           
+                           plt <- ggplot2::ggplot() +
+                             ggplot2::geom_tile(ggplot2::aes(x = x, y = y, fill = bi_class),
+                                                data = proj) +
+                             biscale::bi_theme(base_size = 16) +
+                             biscale::bi_scale_fill(pal = "GrPink2", na.value = "transparent") +
+                             # coord_quickmap() +
+                             ggplot2::labs(
+                               title = resp_lab,
+                               x = "",
+                               y = ""
+                             ) +
+                             ggplot2::theme_bw() +
+                             basic_thm +
+                             ggplot2::theme(legend.position = "none")
+                           
+                           if ("Year" %in% colnames(proj)){
+                             plt <- plt +
+                               ggplot2::facet_wrap(~Year)
+                           }
+                           
+                           plt <- cowplot::ggdraw() +
+                             cowplot::draw_plot(plt, 0, 0, 0.75, 1) +
+                             cowplot::draw_plot(legend, 0.75, .45, 0.2, 0.2)
                          }
                          
-                         plot(plt)
+                         # distribution of response... - histogram
+                         if (type == "response-distr"){
+                           plt <- ggplot2::ggplot(proj) +
+                             ggplot2::geom_histogram(aes(x = !!sym(resp_var))) +
+                             ggplot2::labs(x = resp_lab,
+                                           y = "Count") +
+                             ggplot2::theme_bw() +
+                             basic_thm
+                           
+                           if ("Year" %in% colnames(proj)){
+                             plt <- plt +
+                               ggplot2::facet_wrap(~Year)
+                           }
+                         }
+                         
+                         # distribution of response x sd... - heatmap
+                         if (type == "bivariate-distr"){
+                           plt <- ggplot2::ggplot(proj) +
+                             ggplot2::geom_hex(aes(x = !!sym(resp_var),
+                                                   y = !!sym(sd_var))) +
+                             ggplot2::labs(x = resp_lab,
+                                           y = sd_lab,
+                                           fill = "Count") +
+                             ggplot2::scale_fill_gradient(low = "gainsboro",
+                                                          high = "dodgerblue3") +
+                             # ggplot2::scale_colour_gradient(low = "gainsboro",
+                             #                                high = "dodgerblue3")
+                             ggplot2::theme_bw() +
+                             basic_thm
+                           
+                           if ("Year" %in% colnames(proj)){
+                             plt <- plt +
+                               ggplot2::facet_wrap(~Year)
+                           }
+                         }
+                         
+                         (plt)
                          
                        }
                        

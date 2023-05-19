@@ -40,9 +40,6 @@ hib_fit_inla <- function(obj,
   # Assertions
   assertthat::assert_that(
     inherits(obj, "Database"), # obj is a hib database
-    # form can be a formula,
-    # is.character(response),
-    # assertthat::assert_that(attr(fixed_covar, "class") == "formula"),
     assertthat::assert_that(attr(response_fixed_form, "class") == "formula"),
     assertthat::assert_that(attr(random_covar, "class") == "formula"), # could be null??
     is.character(family), # family is character
@@ -116,7 +113,7 @@ hib_fit_inla <- function(obj,
     
     mod_df <- na.omit(mod_df)
     
-    n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
+    # n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
     
   } else if (mod_resp %in% between_site_resp){
     
@@ -158,13 +155,15 @@ hib_fit_inla <- function(obj,
     
     # print(head(mod_df))
     
-    n_spp <- obj$diversity_between$N_species_total[[div_data_idx]]
+    # n_spp <- obj$diversity_between$N_species_total[[div_data_idx]]
     
   } else {
     message(crayon::magenta("Error: response variable specified is not available.\n"))
     stop()
   }
   # %%%%%
+  
+  n_spp <- calc_N_spp(obj, mod_df, mod_resp)
 
   
   # Add an intercept... 
@@ -274,7 +273,6 @@ hib_fit_inla <- function(obj,
                       data = list(y = mod_df$y),
                       A = list(1, A),
                       effects = list(X = X,
-                                     # Intercept = rep(1, nrow(mod_df)),
                                      s = s.site))
   } else {
     # Just use model df
@@ -301,13 +299,11 @@ hib_fit_inla <- function(obj,
     spat_chr <- "f(s, model = site.spde)"
     inla_form <- paste(inla_form, spat_chr, sep = " + ")
   }
-
   
   inla_form <- formula(inla_form)
 
   message(crayon::green("Fitting model (this may take a while)...\n"))
-  
-  # TODO: if fixed effects, incl a while to ensure fixed effects are fitted...
+
   # %%%%%
   # fit model
   
@@ -357,39 +353,14 @@ hib_fit_inla <- function(obj,
     inla_stack = stk,
     inla_mesh = input_mesh,
     inla_mesh_settings = mesh_settings,
-    
-  # fixef_df = fixef_df,
-  #   metr_vec = metr_vec,
     n_spp = n_spp
   # TODO:
-  # family = "gaussian",
   # fit_settings,
   # prior_list
   )
   
   return(mod_obj)
   
-  # %%%%%
-  # lmer example
-
-  # fixef_df <- as.data.frame(lme4::fixef(m0))
-  # colnames(fixef_df) <- "Coefficient_value"
-  # fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
-  # # print(calc_CIs)
-  # if (!is.null(calc_CIs)){
-  #   message(crayon::green("Getting confidence intervals ..."))
-  #   confint_df <- lme4::confint.merMod(m0, parm = "beta_", method = calc_CIs)
-  #   confint_df <- as.data.frame(confint_df)
-  #   colnames(confint_df) <- c("loCI", "hiCI")
-  #   confint_df$Coefficient_name <- rownames(confint_df)
-  #   fixef_df <- dplyr::left_join(fixef_df,
-  #                                confint_df)
-  # }
-  # 
-  # metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], AIC(m0), BIC(m0), MuMIn::AICc(m0))
-  # names(metr_vec) <- c("R2m", "R2c", "AIC", "BIC", "AICc")
-  
-  # %%%%%
 }
 
 

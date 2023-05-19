@@ -198,18 +198,18 @@ hib_inla_model <- R6Class("hib_inla_model",
                               type = match.arg(type,
                                                c("fixed-effects",
                                                  # "fixed-effects posteriors",
-                                                 "random",
+                                                 "random-effects",
                                                  "spatial-random-field"))
                                               
-                              basic_thm <- theme(axis.text = element_text(size = 16),
-                                                 axis.title = element_text(size = 20),
-                                                 plot.title = element_text(size = 20),
-                                                 plot.subtitle = element_text(size = 18),
-                                                 strip.text.x = element_text(size = 18),
-                                                 strip.text.y = element_text(size = 18),
-                                                 strip.background = element_blank(),
-                                                 legend.text = element_text(size = 16),
-                                                 legend.title = element_text(size = 18),
+                              basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
+                                                 axis.title = ggplot2::element_text(size = 20),
+                                                 plot.title = ggplot2::element_text(size = 20),
+                                                 plot.subtitle = ggplot2::element_text(size = 18),
+                                                 strip.text.x = ggplot2::element_text(size = 18),
+                                                 strip.text.y = ggplot2::element_text(size = 18),
+                                                 strip.background = ggplot2::element_blank(),
+                                                 legend.text = ggplot2::element_text(size = 16),
+                                                 legend.title = ggplot2::element_text(size = 18),
                                                  legend.text.align = 0) 
                               
                               # 1. fixed effects - summary
@@ -233,28 +233,26 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 fixef_df$Coefficient <- relevel(fixef_df$Coefficient,
                                                                 ref = as.character(fixef_df$Coefficient[int_id]))
                                 # %%%
-                                plt <- ggplot(fixef_df) +
-                                  geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  geom_errorbar(aes(x = Coefficient, 
+                                plt <- ggplot2::ggplot(fixef_df) +
+                                  ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
+                                  ggplot2::geom_errorbar(aes(x = Coefficient, 
                                                     ymin = `0.025quant`,
                                                     ymax = `0.975quant`),
                                                 width = 0) +
-                                  geom_point(aes(x = Coefficient,
+                                  ggplot2::geom_point(aes(x = Coefficient,
                                                  y = mean)) +
                                   
-                                  labs(y = "Estimate",
-                                       x = element_blank(),
+                                  ggplot2::labs(y = "Estimate",
+                                       x = ggplot2::element_blank(),
                                        title = "Fixed effect estimates") +
-                                  theme_bw() +
+                                  ggplot2::theme_bw() +
                                   basic_thm +
-                                  coord_flip()
-                                
-                                plot(plt)
+                                  ggplot2::coord_flip()
                                 
                               }
                               #    fixed effects - posteriors
                               # 2. random iid
-                              if (type == "random"){
+                              if (type == "random-effects"){
                                 # if (is.null(self$user_formula$random)){
                                 #   
                                 # }
@@ -274,33 +272,32 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 
                                 # colour as +ve or -ve 
                                 # plot - no names...
-                                plt <- ggplot(rand_df) +
-                                  geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  geom_errorbar(aes(x = ID_ord, 
+                                plt <- ggplot2::ggplot(rand_df) +
+                                  ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
+                                  ggplot2::geom_errorbar(aes(x = ID_ord, 
                                                     ymin = `0.025quant`,
                                                     ymax = `0.975quant`,
                                                     colour = sig_col),
                                                 show.legend = F,
                                                 alpha = 0.5,
                                                 width = 0) +
-                                  geom_point(aes(x = ID_ord,
+                                  ggplot2::geom_point(aes(x = ID_ord,
                                                  y = mean,
                                                  colour = sig_col),
                                              show.legend = F,
                                              alpha = 0.7) +
-                                  labs(y = "Estimate",
-                                       x = element_blank(),
+                                  ggplot2::labs(y = "Estimate",
+                                       x = ggplot2::element_blank(),
                                        title = "Random effect estimates") +
-                                  scale_color_manual(values = c("+ve" = "dodgerblue3",
+                                  ggplot2::scale_color_manual(values = c("+ve" = "dodgerblue3",
                                                                 "-ve" = "firebrick3",
                                                                 "n.s."= "grey30")) +
-                                  facet_wrap(~Covar, scales = "free_x") +
-                                  theme_bw() +
+                                  ggplot2::facet_wrap(~Covar, scales = "free_x") +
+                                  ggplot2::theme_bw() +
                                   basic_thm +
-                                  theme(axis.text.x = element_blank(),
+                                  ggplot2::theme(axis.text.x = ggplot2::element_blank(),
                                         aspect.ratio = 1)
                                 
-                                plot(plt)
                               }
                               # 3. spatial field
                               if (type == "spatial-random-field"){
@@ -310,26 +307,26 @@ hib_inla_model <- R6Class("hib_inla_model",
                                   stop()
                                 }
                                 pix <- inlabru::pixels(self$inla_mesh)
-                                proj <- inla.mesh.projector(self$inla_mesh, coordinates(pix))
-                                pix$z <- inla.mesh.project(proj, self$model$summary.random$s$mean)
+                                proj <- INLA::inla.mesh.projector(self$inla_mesh, coordinates(pix))
+                                pix$z <- INLA::inla.mesh.project(proj, self$model$summary.random$s$mean)
                                 
-                                plt <- ggplot() + 
+                                plt <- ggplot2::ggplot() + 
                                   inlabru::gg(self$inla_mesh) +
                                   inlabru::gg(pix, aes(fill = z),
                                               alpha = 0.9) +
-                                  scale_fill_gradient2(low = "firebrick3",
+                                  ggplot2::scale_fill_gradient2(low = "firebrick3",
                                                        mid = "gainsboro",
                                                        high = "dodgerblue3",
                                                        midpoint = 0) + 
-                                  labs(fill = "Spatial\nrandom\neffect") +
-                                  coord_fixed() +
-                                  theme_bw()
-                                plot(plt)
+                                  ggplot2::labs(fill = "Spatial\nrandom\neffect") +
+                                  ggplot2::coord_fixed() +
+                                  ggplot2::theme_bw()
+                                
                               }
                               # 4. priors
                               # 5. partial effects
                               
-                              
+                              (plt)
                             }
                           ),
                           private = list()

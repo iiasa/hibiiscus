@@ -12,8 +12,17 @@
 #' }
 #' @export
 hib_filter_sites <- function(obj, condition){
-  str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
+  # str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
+  # str_cond <- gsub("\"", "'", str_cond)
+  
+  str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] %>%
+    rlang::quo_get_expr() %>%
+    deparse() %>%
+    trimws() %>%
+    paste(., collapse = " ")
+  
   str_cond <- gsub("\"", "'", str_cond)
+  str_cond <- gsub("  ", "", str_cond)
   
   message(crayon::green(paste("Filtering database using:", 
                               str_cond,
@@ -64,8 +73,16 @@ hib_filter_sites <- function(obj, condition){
 #' @export
 hib_filter_species <- function(obj, condition){
   # e.g. by taxa: "Kingdom", "Phylum",  "Class", "Order", "Family", "Genus"
-  str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
+  # str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
+  # str_cond <- gsub("\"", "'", str_cond)
+  str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] %>%
+    rlang::quo_get_expr() %>%
+    deparse() %>%
+    trimws() %>%
+    paste(., collapse = " ")
+  
   str_cond <- gsub("\"", "'", str_cond)
+  str_cond <- gsub("  ", "", str_cond)
   
   message(crayon::green(paste("Filtering database using:", 
                               str_cond,

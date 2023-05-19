@@ -157,6 +157,7 @@ Database <- R6Class("Database",
                       
                       
                       # Add LUI column - 
+                      # TODO: Only if no LUI already??
                       sites <- sites %>%
                         mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
@@ -334,6 +335,10 @@ Database <- R6Class("Database",
                       # unique(colnames(self$site_contrasts)) 
                       # Get rid of basic details, check for columns related to metrics...
                       
+                      site_contrasts_poss <- c("LUI_contrast", 
+                                               "Geogr_dist_hav", "Geogr_dist_geod",
+                                               "Latitude_midpoint", "Longitude_midpoint")
+                      
                       stats <- list(number_sites = nrow(self$sites),
                                     number_lu = length( unique(self$sites$Predominant_land_use) ),
                                     number_lui = length(unique(self$sites$Use_intensity)),
@@ -342,15 +347,16 @@ Database <- R6Class("Database",
                                     # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
                                     
                                     div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
-                                    div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", ")
+                                    div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", "),
                                     # TODO: site contrast info
-                                    # site_contrast_metrics = unique(colnames(self$site_contrasts))
+                                    site_contrast_metrics = paste(sort(unique(colnames(self$site_contrasts)[colnames(self$site_contrasts) %in% site_contrasts_poss])), 
+                                                                  collapse = ", ")
                                     )  
-                      # TODO: check both within and between site metrics/diversity data
+                      
                       
                       # Neaten diversity metrics formatting
                       if (is.null(self$diversity_within)){
-                        stats$div_within_metrics = "NA"
+                        stats$div_within_metrics <- "NA"
                       }
                       if (!is.null(self$diversity_within)){
                         stats$div_within_metrics <- gsub("_", " ", stats$div_within_metrics)
@@ -359,7 +365,7 @@ Database <- R6Class("Database",
                       }
                       
                       if (is.null(self$diversity_between)){
-                        stats$div_between_metrics = "NA"
+                        stats$div_between_metrics <- "NA"
                       }
                       if (!is.null(self$diversity_between)){
                         stats$div_between_metrics <- gsub("_", " ", stats$div_between_metrics)
@@ -367,10 +373,23 @@ Database <- R6Class("Database",
                         #                           stats$div_between_metrics)
                       }
                       
+                      if (is.null(self$site_contrasts)){
+                        stats$site_contrast_metrics <- "NA"
+                      }
+                      if (!is.null(self$site_contrasts)){
+                        # stats$site_contrast_metrics <- gsub("lui_contrast", "LUI contrast",
+                        #                                  stats$site_contrast_metrics)
+                        stats$site_contrast_metrics <- gsub("Geogr_dist_hav", "Geographic dist. (haversine)",
+                                                            stats$site_contrast_metrics)
+                        stats$site_contrast_metrics <- gsub("Geogr_dist_geod", "Geographic dist. (geodesic)",
+                                                            stats$site_contrast_metrics)
+                        stats$site_contrast_metrics <- gsub("_", " ",
+                                                            stats$site_contrast_metrics)
+                      }
                       
                       # Neaten filtering formatting
                       if (length(self$processing_flags$filtering_steps) == 0){
-                        stats$filters_applied = "NA"
+                        stats$filters_applied <- "NA"
                       }
                       message(
                         paste0("Hibiiscus PREDICTS database (including versions: ", crayon::bold(self$version),")","\n",
@@ -387,8 +406,9 @@ Database <- R6Class("Database",
                                "\t Filtering conducted:           ", crayon::green(gsub("; ", 
                                                                                         ";\n\t                                ",
                                                                                         stats$filters_applied)), "\n",
-                               "\t Within-site diversity metrics calculated:  ", crayon::green(stats$div_within_metrics), "\n",
-                               "\t Between-site diversity metrics calculated:  ", crayon::green(stats$div_between_metrics), "\n"
+                               "\t Within-site diversity metrics calculated:   ", crayon::green(stats$div_within_metrics), "\n",
+                               "\t Between-site diversity metrics calculated:  ", crayon::green(stats$div_between_metrics), "\n",
+                               "\t Site-site contrast metrics calculated:      ", crayon::green(stats$site_contrast_metrics), "\n"
                                )
                         )
                       
@@ -444,7 +464,195 @@ Database <- R6Class("Database",
                       self$processing_flags$measures_effort_corrected <- T
                       self$last_update <- lubridate::today()
                       invisible(self)
-                    } #,
+                    } ,
+                    
+                    plot = function(type = "map-sites"){
+                      # Figure options
+                      # - site map (map-sites)
+                      # - study map (map-studies)
+                      # - country heatmap - N sites (heatmap-sites-countries)
+                      # - country heatmap - N studies (heatmap-studies-countries)
+                      # - biome N (biome-N)
+                      # - ecoregion N (ecoregion-N)
+                      # - continent N - map/bar? (continent-N) ??
+                      # - realm N (realm-N)
+                      # - class N (class-N)
+                      
+                      # Assert that type arg matches one of...
+                      type <- match.arg(type,
+                                        c("map-sites", "map-studies", 
+                                          "biome-N", "ecoregion-N", "realm-N",
+                                          "class-N"),
+                                        several.ok = F)
+                      # Clr blind friendly...
+                      # black, orange, sky blue, bluish green, yellow, blue, vermillion, reddish purple
+                      # pal <- c("#000000", "#e69f00", "#56b4e9", "#009e73",
+                      #                   "#f0e442", "#0072b2", "#d55e00", "#cc79a7")
+                                        
+                      basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
+                                         axis.title = ggplot2::element_text(size = 20),
+                                         plot.title = ggplot2::element_text(size = 20),
+                                         plot.subtitle = ggplot2::element_text(size = 18),
+                                         strip.text.x = ggplot2::element_text(size = 18),
+                                         strip.text.y = ggplot2::element_text(size = 18),
+                                         strip.background = ggplot2::element_blank(),
+                                         legend.text = ggplot2::element_text(size = 16),
+                                         legend.title = ggplot2::element_text(size = 18),
+                                         legend.text.align = 0) 
+                      
+                      # TODO: combine similar plot types into one call
+                      # %%%%%
+                      if (type %in% c("map-sites", "map-studies")){
+
+                        # Assert that Lat and long are in sites
+                        assertthat::assert_that(
+                          assertthat::has_name(self$sites, "Latitude"),
+                          assertthat::has_name(self$sites, "Longitude")
+                          )
+                        # Just get a coarse-ish world map...
+                        tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
+                        
+                        if (type == "map-sites"){
+                          plt_df <- self$sites
+                        }
+                        if (type == "map-studies"){
+                          plt_df <- self$sites %>%
+                            dplyr::group_by(SS, version) %>%
+                            dplyr::summarise(N_sites = dplyr::n(),
+                                             Longitude = mean(Longitude, na.rm = T),
+                                             Latitude = mean(Latitude, na.rm = T))
+                        }
+                        # Get x/y limits for sites...
+                        x_rng <- range(plt_df$Longitude, na.rm = T)
+                        y_rng <- range(plt_df$Latitude, na.rm = T)
+                        
+                        # buffer by 5 degrees?
+                        x_rng[1] <- round(x_rng[1] - 5, 2)
+                        x_rng[2] <- round(x_rng[2] + 5, 2)
+                        
+                        y_rng[1] <- round(y_rng[1] - 5, 2)
+                        y_rng[2] <- round(y_rng[2] + 5, 2)
+                        
+                        x_rng[1] <- max(c(-180, x_rng[1]))
+                        x_rng[2] <- min(c(180, x_rng[2]))
+                        
+                        y_rng[1] <- max(c(-90, y_rng[1]))
+                        y_rng[2] <- min(c(90, y_rng[2]))
+                        
+                        plt <- ggplot2::ggplot() +
+                          ggplot2::geom_sf(data = tmp,
+                                  fill = "lightgrey",
+                                  show.legend = F) +
+                          ggplot2::xlim(x_rng) +
+                          ggplot2::ylim(y_rng) +
+                          ggplot2::labs(colour = "PREDICTS\nversion",
+                               x = ggplot2::element_blank(),
+                               y = ggplot2::element_blank()) +
+                          ggplot2::guides(colour = ggplot2::guide_legend(
+                            override.aes=list(size = 3,
+                                              alpha = 0.9))) +
+                          ggplot2::theme_bw() +
+                          basic_thm 
+                        
+                        if (type == "map-sites"){
+                          plt <- plt +
+                            ggplot2::geom_point(aes(x = Longitude, y  = Latitude, 
+                                           colour = version),
+                                       size = 0.15,
+                                       alpha = 0.25,
+                                       data = plt_df)
+                          
+                        }
+                        if (type == "map-studies"){
+                          plt <- plt +
+                            ggplot2::geom_point(aes(x = Longitude, y  = Latitude,
+                                           size = N_sites,
+                                           colour = version),
+                                       alpha = 0.25,
+                                       data = plt_df) +
+                            ggplot2::labs(size = "No. studies")
+                        }
+                      }
+                      # %%%%%
+                                            
+                      # Issue with country-level heatmap - names in predicts data
+                      # might not match those in natural earth data (admin/sovereignt)
+                      # - country heatmap - N sites (heatmap-sites-countries)
+                      # - country heatmap - N studies (heatmap-studies-countries)
+                      
+                      # %%%%%
+                      if (type %in% c("biome-N", "ecoregion-N", "realm-N")){
+                        var_ <- tools::toTitleCase(type) %>% gsub("-N", "", .)
+
+                        # Assert that Lat and long are in sites
+                        assertthat::assert_that(
+                          assertthat::has_name(self$sites, var_)
+                          )
+                        
+                        count_df <- self$sites %>%
+                          dplyr::group_by(!!sym(var_), version) %>%
+                          dplyr::summarise(Sites = dplyr::n_distinct(SS),
+                                           Studies = dplyr::n_distinct(SSBS)) %>%
+                          tidyr::pivot_longer(c(Sites, Studies),
+                                              names_to = "dat_type",
+                                              values_to = "N")
+                        
+                        plt <- ggplot2::ggplot(count_df) +
+                          ggplot2::geom_bar(aes(x = !!sym(var_), y = N,
+                                       fill = version),
+                                   # fill = "#009E73",
+                                   stat = "identity") +
+                          ggplot2::labs(x = var_,
+                               y = "N",
+                               fill = "PREDICTS\nversion") +
+                          ggplot2::facet_wrap(~dat_type,
+                                     scales = "free_y") +
+                          ggplot2::theme_bw() +
+                          basic_thm +
+                          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 
+                                                           hjust = 1, 
+                                                           vjust = 1))
+                        
+                        if (length(unique(count_df[[var_]])) > 20){
+                          plt <- plt +
+                            ggplot2::theme(axis.text.x = ggplot2::element_blank())
+                        }
+                      }
+                      # %%%%%
+                      
+                      # - class N (class-N)
+                      if (type == "class-N"){
+                        # Assert that Lat and long are in sites
+                        assertthat::assert_that(
+                          assertthat::has_name(self$sites, "Class")
+                          )
+                        class_df <- self$species %>%
+                          dplyr::group_by(Class, version) %>%
+                          dplyr::summarise(N_ = dplyr::n()) %>%
+                          # dplyr::filter(N_ > 0) %>%
+                          dplyr::filter(Class != "")
+                        
+                        plt <- ggplot2::ggplot(class_df) +
+                          ggplot2::geom_bar(aes(x = Class, y = N_,
+                                       fill = version),
+                                   # fill = "#E69F00",
+                                   stat = "identity") +
+                          ggplot2::labs(x = "Class",
+                               y = "No. records",
+                               fill = "PREDICTS\nversion") +
+                          ggplot2::theme_bw() +
+                          basic_thm +
+                          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 
+                                                           hjust = 1, 
+                                                           vjust = 1))
+                        
+                        if (length(unique(class_df$Class)) > 20){
+                          plt <- plt +
+                            ggplot2::theme(axis.text.x = ggplot2::element_blank())
+                        }
+                      }
+                      (plt)
+                    }
                     # Filter database
                     # TODO: put filter methods here...
                     # by sites: "Country", "UN_subregion" , "UN_region",  "Ecoregion" , "Biome", "Realm"...

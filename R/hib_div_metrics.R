@@ -46,11 +46,7 @@ hib_calc_ta <- function(obj){
     dplyr::group_by(SS) %>%
     dplyr::mutate(Rescaled_total_abundance = Total_abundance / max(Total_abundance)) %>%
     dplyr::ungroup()
-  # bind to obj$sites
-  # obj$sites <- dplyr::left_join(obj$sites,
-  #                               abund_df,
-  #                               by = "SSBS")
-  
+
   # Get N species used
   n_spp <- obj$species %>%
     dplyr::filter(Diversity_metric_type == "Abundance") %>%
@@ -63,19 +59,7 @@ hib_calc_ta <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  # TODO
   return(out_tib)
-  
-  # div_empty <- is.null(obj$diversity)
-  # 
-  # if (!div_empty){
-  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  # }  
-  # if (div_empty){
-  #   obj$diversity <- out_tib
-  # }
-  # 
-  # return(obj)
 }
 
 
@@ -134,11 +118,6 @@ hib_calc_sr <- function(obj){
     sr_df <- dplyr::bind_rows(sr_df1, sr_df2)
   }
   
-  # bind to obj$sites
-  # obj$sites <- dplyr::left_join(obj$sites,
-  #                               sr_df,
-  #                               by = "SSBS")
-  
   # Get N species used
   n_spp <- obj$species %>%
     dplyr::filter(Diversity_metric_type == "Abundance"  | 
@@ -154,19 +133,7 @@ hib_calc_sr <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  # TODO:
   return(out_tib)
-  
-  # div_empty <- is.null(obj$diversity)
-  # 
-  # if (!div_empty){
-  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  # }  
-  # if (div_empty){
-  #   obj$diversity <- out_tib
-  # }
-  # 
-  # return(obj)
 }
 
 
@@ -210,11 +177,6 @@ hib_calc_simpson <- function(obj){
       dplyr::summarise(Simpson_diversity = 1 - sum( ( Measurement / sum(Measurement) )^2 ))
   }
   
-  # bind to obj$sites
-  # obj$sites <- dplyr::left_join(obj$sites,
-  #                               simp_df,
-  #                               by = "SSBS")
-  
   # Get N species used
   n_spp <- obj$species %>%
     dplyr::filter(Diversity_metric_type == "Abundance") %>%
@@ -226,20 +188,8 @@ hib_calc_simpson <- function(obj){
                            Data = list(simp_df),
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
-  
-  # TODO:
+
   return(out_tib)
-  
-  # div_empty <- is.null(obj$diversity)
-  # 
-  # if (!div_empty){
-  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  # }  
-  # if (div_empty){
-  #   obj$diversity <- out_tib
-  # }
-  # 
-  # return(obj)
 }
 
 # TODO:
@@ -315,7 +265,7 @@ hib_calc_chao1 <- function(obj){
       dplyr::filter(all(floor(Effort_corrected_measurement) == Effort_corrected_measurement)) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(SSBS) %>%
-      dplyr::summarise(Chao1 = sum(Effort_corrected_measurement > 0) + (((sum(Effort_corrected_measurement == 1) * (sum(Effort_corrected_measurement == 1) - 1)) / (2 * (sum(Effort_corrected_measurement == 2) + 1)))) ) 
+      dplyr::summarise(Chao1_diversity = sum(Effort_corrected_measurement > 0) + (((sum(Effort_corrected_measurement == 1) * (sum(Effort_corrected_measurement == 1) - 1)) / (2 * (sum(Effort_corrected_measurement == 2) + 1)))) ) 
     # More efficient to use eqn...
     # unname(vegan::estimateR(Effort_corrected_measurement)["S.chao1"]) 
     # 
@@ -328,7 +278,7 @@ hib_calc_chao1 <- function(obj){
       dplyr::filter(all(floor(Measurement) == Measurement)) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(SSBS) %>%
-      dplyr::summarise(Chao1 = sum(Measurement > 0) + (((sum(Measurement == 1) * (sum(Measurement == 1) - 1)) / (2 * (sum(Measurement == 2) + 1)))) ) 
+      dplyr::summarise(Chao1_diversity = sum(Measurement > 0) + (((sum(Measurement == 1) * (sum(Measurement == 1) - 1)) / (2 * (sum(Measurement == 2) + 1)))) ) 
     # unname(vegan::estimateR(Measurement)["S.chao1"]) )
   }
   
@@ -494,7 +444,7 @@ hib_calc_rsr <- function(obj){
                              },
                              df = rsr_df) %>%
       dplyr::group_by(SSBS) %>%
-      dplyr::summarise(mean_rsr = mean(sr),
+      dplyr::summarise(Rarefied_species_richness = mean(sr),
                        min_abund = min_abund[1])
   }
   
@@ -527,7 +477,7 @@ hib_calc_rsr <- function(obj){
                              },
                              df = rsr_df) %>%
       dplyr::group_by(SSBS) %>%
-      dplyr::summarise(mean_rsr = mean(sr),
+      dplyr::summarise(Rarefied_species_richness = mean(sr),
                        min_abund = min_abund[1])
   }
   
@@ -550,19 +500,7 @@ hib_calc_rsr <- function(obj){
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
   
-  # TODO:
   return(out_tib)
-  
-  # div_empty <- is.null(obj$diversity)
-  # 
-  # if (!div_empty){
-  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  # }  
-  # if (div_empty){
-  #   obj$diversity <- out_tib
-  # }
-  # 
-  # return(obj)
 
 }
 
@@ -1059,7 +997,7 @@ hib_calc_div_between <- function(obj,
            n_species = dplyr::n_distinct(Taxon_name_entered)) %>%
     dplyr::ungroup() %>%
     dplyr::filter(n_sample_effort == 1 &
-             n_species > 1)
+                    n_species > 1)
   
   # if (primin_baseline == T){
   #   # TODO: should this be ammended to primary forest...

@@ -5,11 +5,17 @@
 #' function arguments tuning the model fitting process
 #' @details 
 #' Expects a database object...
-#' @param obj A [`Database`] object.
+#' @param obj A [`Database`] object or a list of them.
 #' @param form A [`formula`] in the style of brms (as in lme4) - including fixed and random 
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by brms
-#' @param ... Any other named arguments that can be passed to brms::brm, e.g. prior, data2
+#' @param dataset_weights A [`numeric`] vector containing the relative weights to
+#' assign to each dataset, should sum to 1. Note: if using this argument, the 
+#' supplied formula should have a response of the form [`y | weights(data_weight) ~`]
+#' The data_weight variable will be generated within the function call so as to 
+#' assign each observation per dataset an equal fraction of that dataset's weight -
+#' total weight sums to the total number of observations across all datasets.
+#' @param ... Any other named arguments that can be passed to brms::brm(), e.g. prior, data2
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{
@@ -19,107 +25,134 @@
 hib_fit_brms <- function(obj, 
                          form,
                          family = gaussian,
+                         dataset_weights = NULL,
                          ...
-                         # TODO: 
-                         # - add a list of model fit tuning params, named as in brms
-                         # - data2 - for autocorrelation... - 
-                         # PASS ALL EXTRA ARGS AS "..."?!
-                         # GATHER IN FUNCTION
                          ){
   
   if(!isNamespaceLoaded("brms")) { attachNamespace("brms");requireNamespace('brms') }
   
   # Add assertions
   assertthat::assert_that(
-    inherits(obj, "Database"), # obj is a hib database
+    inherits(obj, "Database") || is.list(obj), # obj is a hib database
     # form can be a formula,
-    inherits(form, "formula"),
-    is.function(family) || is.character(family) # family is character or function
+    inherits(form, "formula") || inherits(form, "brmsformula") || inherits(form, "mvbrmsformula"),
+    is.function(family) || is.character(family), # family is character or function
+    is.numeric(dataset_weights) || is.null(dataset_weights)
   )
   
   message(crayon::green("Collating data for model fitting...\n"))
   
-  # TODO: check about brmsformula...
-  # these are different to base formulas, and need to be parsed differently...
-  # Not sure how ...
   
   # Collate data from database - based on columns specified in the formula
-  
-  
-  mod_covars <- all.vars(form[[3]])
-  mod_resp <- all.vars(form[[2]])
-  
-
-  # consider diversity_within and diversity_between
-  # check where response variable is - diversity_within v diversity_between
-  # if response is in diversity_within, need to use sites df for covars
-  # if response is in diversity_between, need to use site_contrasts df for covars
-  
-  within_site_resp <- purrr::map(obj$diversity_within$Data,
-                                 colnames) %>%
-    unlist() %>%
-    unique() 
-  between_site_resp <- purrr::map(obj$diversity_between$Data,
-                                  colnames) %>%
-    unlist() %>%
-    unique() 
-  
-  if (mod_resp %in% within_site_resp){
-    # print("getting model data")
-    mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
-    # find relevant obj$diversity$Data[[]] - which one contains the response...
-    div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,
-                                        function(x, resp){
-                                          tmp <- colnames(x)
-                                          any(grepl(resp, tmp))
-                                        },
-                                        resp = mod_resp)))
-    assertthat::assert_that(
-      length(div_data_idx) == 1
-    )
-    
-    mod_df <- mod_df %>%
-      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
-    
-    mod_df <- na.omit(mod_df)
-    
-    n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
-    
-  } else if (mod_resp %in% between_site_resp){
-    mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]
-    
-    # find relevant obj$diversity$Data[[]] - which one contains the response...
-    div_data_idx <- which(unlist(lapply(obj$diversity_between$Data,
-                                        function(x, resp){
-                                          tmp <- colnames(x)
-                                          any(grepl(resp, tmp))
-                                        },
-                                        resp = mod_resp)))
-    assertthat::assert_that(
-      length(div_data_idx) == 1
-    )
-    
-    mod_df <- mod_df %>%
-      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
-    
-    mod_df <- na.omit(mod_df)
-    
-    n_spp <- obj$diversity_between$N_species_total[[div_data_idx]]
-    
-  } else {
-    message(crayon::magenta("Error: response variable specified is not available.\n"))
-    stop()
+  if (inherits(form, "formula")){
+    mod_covars <- all.vars(form[[3]])
+    mod_resp <- all.vars(form[[2]])
   }
   
   
+  if ((inherits(form, "brmsformula") | inherits(form, "mvbrmsformula"))){
+    # stop("use of mv/brmsformulas is in progress!!")
+    # First, try to use brmsterms and allterms output
+    tmp <- try(brms::brmsterms(form, resp_rhs_all = F))
+    # If that breaks, just use the first formula, and get terms as above...
+    if (inherits(tmp, "try-error")){
+      tmp_form <- form$formula
+      message(crayon::yellow("Warning: terms from brmsformula were not peoperly parsed.. \n"))
+    } else {
+      tmp_form <- tmp$allvars
+    }
+    
+    mod_covars <- all.vars(tmp_form[[3]])
+    mod_resp <- all.vars(tmp_form[[2]])
+  }
   
+  # Drop data_weights from response
+  mod_resp <- mod_resp[mod_resp != "data_weight"]
+  
+  # %%%%%
+  # if weights is not null, ensure sum to 1 (just rescale)
+  if (!is.null(dataset_weights)){
+    if (sum(dataset_weights) != 1){
+      dataset_weights <- dataset_weights/sum(dataset_weights)  
+    }
+  }
+  # if obj is a list, and weights is null, set to equal weight per dataset
+  if (is.list(obj) & is.null(dataset_weights)){
+    dataset_weights <- rep(1/length(obj), length(obj)) 
+  }
+  # %%%%%
+  
+  # %%%%%
+  # TODO:
+  # Check for covariance structures in model formula (mod_covars) and data2
+  # if data2 exists, check the names
+  # if names of data2 match something in mod_covars,  drop that value from mod_covars
+  if ("data2" %in% names(list(...))){
+    tmp_dots_ <- list(...)
+    dat2_nms <- names(dots_[["data2"]])
+    mod_covars <- mod_covars[!mod_covars %in% dat2_nms]
+  }
+  # %%%%%
+  
+  # TODO
+  # What if multiple vars in response - e.g weights - currently would have to be in div data...
+
+  
+  # %%%%%
+  if (is.list(obj)){
+    mod_df_ls <- purrr::map(.x = obj,
+                            .f = function(.x, 
+                                          resp = mod_resp,
+                                          covars = mod_covars){
+                              get_model_data(.x, resp, covars)
+                            })
+    
+    # add weights
+    # for (i in 1:length(obj)){
+    #   mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
+    #   # This seems wrong... - 
+    #   # For brms, weight is taken literally, minimum should be 1... maybe
+    #   # 3 (initial) possible approaches to deriving data-point weights
+    #   # - as above, sum to 1 over all datapoints
+    #   # - sum to total number of datapoints, assign p1 * N to data1 and p2 * N to data2
+    #   #   then divide these amounts by N_data_i - THIS SEEMS MOST APPROPRIATE
+    #   # - set baseline weight to 1 for lower weighted dataset..(or higher weighted dataset)
+    #   #   then adjust weights of other dataset/s accordingly...
+    # }
+    
+    # %%%
+    n_df_vec <- lapply(mod_df_ls, nrow) %>% unlist()
+    
+    prop_weight_vec <- dataset_weights * sum(n_df_vec)
+    df_weight_vec <- prop_weight_vec / n_df_vec
+    
+    for (i in 1:length(obj)){
+      mod_df_ls[[i]]$data_weight <- df_weight_vec[i]
+    }
+    # %%%
+    
+    mod_df <- dplyr::bind_rows(mod_df_ls)
+    
+    n_spp <- purrr::map2(.x = obj, 
+                         .y = mod_df_ls, 
+                         .f = function(.x, .y, resp = mod_resp){
+                           calc_N_spp(.x, .y, resp)
+                         }) %>% unlist()
+  }
+  if (inherits(obj, "Database")){
+    mod_df <- get_model_data(obj,
+                             mod_resp,
+                             mod_covars)
+    n_spp <- calc_N_spp(obj, mod_df, mod_resp)
+  }
+
   message(crayon::green("Fitting model (this may take some time) ..."))
   
   m0 <- brms::brm(form, 
                   data = mod_df,
-                  family = family)
+                  family = family,
+                  ...)
   
-  # return(m0)
   # Do some checks - model convergence/model fitted
   # Rhat...
   
@@ -153,14 +186,4 @@ hib_fit_brms <- function(obj,
   )
   
   return(mod_obj)
-  # 
-  
-  # Optional... extra wrappers...
-  # If optimise_ranefs == F, fit m with ML
-  # If optimise_ranefs == T, fit m with REML to first compare ranefs
-  #   Then fit optimal ranef mod with ML
-  
-  # If dredge... dredge and model average
-  
-  
 }

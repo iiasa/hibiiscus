@@ -30,12 +30,13 @@ hib_mod_project <- function(obj,
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred)
   )
-  
+  # TODO: better check of input data - all items in list ar SpatRasters
+  # all(lapply(data, function(x){inherits(x, "SpatRaster")}))
   
   # Check type of model
-  # for now, focus on lmer
-  # TODO: brms predictions are equivalent... I think, check raster prediction...
-  
+  # %%%%%
+  # LME4
+  # %%%%%
   if (inherits(obj, "hib_lme4_model")){
     message(crayon::green("lme4 model detected! Projection in progress...\n"))
     # TODO: wrap in hib_mod_proj_lme4??
@@ -70,21 +71,43 @@ hib_mod_project <- function(obj,
       # Check all fixef vars are in colnames of data
       assertthat::assert_that(all(fix_vars %in% colnames(data)))
       
-      # data$prediction <- lme4:::predict.merMod(obj$model,
-      #                                          data,
-      #                                          re.form = NA)
-      # Use predict
-      data$prediction <- predict(obj$model,
-                                 data,
-                                 re.form = NA)
+      message(crayon::green("Projecting model...\n"))
+      pred_df <- as.data.frame(predict(obj$model,
+                                       data,
+                                       re.form = NA))
+      colnames(pred_df) <- "prediction"
+      
+      # %%%
+      # TODO: incorp uncertainty
+      # Use bootMer - 
+      # or sampling from varCovar...??
+      message(crayon::green("Bootstrapping model predictions...\n"))
+      boot <- lme4::bootMer(obj$model, 
+                            function(mod, df = data){predict(mod, df, re.form = NA)}, 
+                            nsim = 100)
+      
+      pred_df$prediction_sd <- apply(boot$t, 2, sd)
+      pred_df$prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
+      pred_df$prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.975, na.rm = TRUE)))
+      # std.err <- apply(boot_test$t, 2, sd)
+      # CI.lower1 <- pred - std.err*1.96
+      # CI.upper1 <- pred + std.err*1.96
+      # %%%
+      
       # What if we want to include  random effect??
       
       if (!is.null(backtransform)){
-        data$prediction <- backtransform(data$prediction)
+        pred_df <- backtransform(pred_df)
       }
+      pred_rescaled_df <- NULL
       if (rescale_pred){
-        data$rescaled_prediction <- data$prediction / base_val
+        # divide predictions by baseline val
+        pred_rescaled_df <- pred_df / base_val
+        colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
       }
+      
+      data <- dplyr::bind_cols(data, pred_df, pred_rescaled_df)
+      
     }
     
     # Single raster object
@@ -104,7 +127,10 @@ hib_mod_project <- function(obj,
                                        fix_vars = fix_vars)
     }
     
-  } # TODO: add inla support
+  } 
+  # %%%%%
+  # INLA
+  # %%%%%
   else if (inherits(obj, "hib_inla_model")){
     # message(crayon::yellow("Warning: INLA model detected! Projections are not yet supported...\n"))
     message(crayon::green("INLA model detected! Projection in progress...\n"))
@@ -360,6 +386,7 @@ hib_mod_project <- function(obj,
     }
     
     # return(data)
+    
     # %%%%%
     # BRMS
     # %%%%%
@@ -396,8 +423,14 @@ hib_mod_project <- function(obj,
       
       # Use predict
       pred_df <- as.data.frame(predict(obj$model,
-                                        data,
-                                        re_form = NA))
+                                       data,
+                                       re_form = NA))
+      
+      # For brms, should this be fitted() - removes random error
+      # pred_df <- fitted(obj$model,
+      #                                   data,
+      #                                   re_form = NA) %>% as.data.frame()
+      
       # print(head(pred_df))
       
       # fix names...
@@ -429,7 +462,6 @@ hib_mod_project <- function(obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
-      # DO for BRMS
       data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars)
     }
     # List of raster objects
@@ -446,7 +478,6 @@ hib_mod_project <- function(obj,
     }
       
   }
-  
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
   # message(crayon::green"Creating projection object...\n"))
@@ -481,6 +512,7 @@ hib_mod_project <- function(obj,
 #' } 
 #' @export
 terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars){
+  # TODO: maybe change to @NoRd
   # assertions
   assertthat::assert_that(
     inherits(obj, "hib_lme4_model") || inherits(obj, "hib_brms_model"),
@@ -503,9 +535,11 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     # }
     # names(data_pred) <- "prediction"
     if (inherits(obj, "hib_lme4_model")){
+      # TODO: incorp uncertainty
       data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform)
     }
     if (inherits(obj, "hib_brms_model")){
+      # TODO: change to fitted...??
       data_pred <- terra_proj_brms_pred(obj$model, data, backtransform)
     }
     # %%%%
@@ -681,48 +715,77 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # print(tmp_pred_rast_ls)
       # print(tmp_pred_rast_ls)
       # then sum all raster in list to get weighted av pred...
-      if (inherits(obj, "hib_lme4_model")){
-        data_pred <- tmp_pred_rast_ls %>%
-          unlist() %>%
-          c() %>%
-          terra::rast() %>%
-          sum()
-        
-        names(data_pred) <- "prediction"
-        
-      }
+      # if (inherits(obj, "hib_lme4_model")){
+      #   data_pred <- tmp_pred_rast_ls %>%
+      #     unlist() %>%
+      #     c() %>%
+      #     terra::rast() %>%
+      #     sum()
+      #   
+      #   names(data_pred) <- "prediction"
+      #   
+      # }
+      # # %%%%%
+      # # TODO
+      # # if brms, need to separately sum prediction, prediction_q2.5, prediction_q97.5
+      # if (inherits(obj, "hib_brms_model")){
+      #   pred_nms <- names(tmp_pred_rast_ls[[1]])
+      #   
+      #   tmp_pred_rast_ls <- purrr::map(.x = pred_nms,
+      #              function(.x, 
+      #                       terra_ls = tmp_pred_rast_ls){
+      #                lyr_of_interest <- .x
+      #                tmp_terra_ls <- purrr::map(.x = terra_ls,
+      #                                           function(.x, 
+      #                                                    lyr_nm = lyr_of_interest){
+      #                                             return(.x[[lyr_nm]])
+      #                                           })
+      #                tmp_terra <- tmp_terra_ls %>%
+      #                  unlist() %>%
+      #                  c() %>%
+      #                  terra::rast() %>%
+      #                  sum()
+      #                                      
+      #                names(tmp_terra) <- lyr_of_interest                    
+      #                
+      #                return(tmp_terra)
+      #                })
+      #   # print(tmp_pred_rast_ls)
+      #   data_pred <- tmp_pred_rast_ls %>%
+      #     unlist() %>%
+      #     c() %>%
+      #     terra::rast()
+      # }
       # %%%%%
-      # TODO
-      # if brms, need to separately sum prediction, prediction_q2.5, prediction_q97.5
-      if (inherits(obj, "hib_brms_model")){
-        pred_nms <- names(tmp_pred_rast_ls[[1]])
-        
-        tmp_pred_rast_ls <- purrr::map(.x = pred_nms,
-                   function(.x, 
-                            terra_ls = tmp_pred_rast_ls){
-                     lyr_of_interest <- .x
-                     tmp_terra_ls <- purrr::map(.x = terra_ls,
-                                                function(.x, 
-                                                         lyr_nm = lyr_of_interest){
-                                                  return(.x[[lyr_nm]])
-                                                })
-                     tmp_terra <- tmp_terra_ls %>%
-                       unlist() %>%
-                       c() %>%
-                       terra::rast() %>%
-                       sum()
-                                           
-                     names(tmp_terra) <- lyr_of_interest                    
-                     
-                     return(tmp_terra)
-                     })
-        # print(tmp_pred_rast_ls)
-        data_pred <- tmp_pred_rast_ls %>%
-          unlist() %>%
-          c() %>%
-          terra::rast()
-      }
+      # Update - now that lmer predictions include sd, lo, hi, do below for lmer and brms
+      pred_nms <- names(tmp_pred_rast_ls[[1]])
+      
+      tmp_pred_rast_ls <- purrr::map(.x = pred_nms,
+                                     function(.x, 
+                                              terra_ls = tmp_pred_rast_ls){
+                                       lyr_of_interest <- .x
+                                       tmp_terra_ls <- purrr::map(.x = terra_ls,
+                                                                  function(.x, 
+                                                                           lyr_nm = lyr_of_interest){
+                                                                    return(.x[[lyr_nm]])
+                                                                  })
+                                       tmp_terra <- tmp_terra_ls %>%
+                                         unlist() %>%
+                                         c() %>%
+                                         terra::rast() %>%
+                                         sum()
+                                       
+                                       names(tmp_terra) <- lyr_of_interest                    
+                                       
+                                       return(tmp_terra)
+                                     })
+      # print(tmp_pred_rast_ls)
+      data_pred <- tmp_pred_rast_ls %>%
+        unlist() %>%
+        c() %>%
+        terra::rast()
       # %%%%%
+
     }
     
     # otherwise, just combine all into one raster stack
@@ -751,7 +814,6 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
   if (rescale_pred){
     # divide predictions by baseline val
     data_pred_rescaled <- data_pred / base_val
-    
     
     # Drop some brms estimates of error - doesn't make sens to scale these by baseline...
     # Or does it??
@@ -788,6 +850,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 #' } 
 #' @export
 terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type = "binary"){
+  # TODO: maybe change to @NoRd
   # TODO: better term than binary
   
   # Assertions
@@ -878,7 +941,14 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' } 
 #' @export
 terra_proj_lme4_pred <- function(mod, data, backtransform){
+  # TODO: maybe change to @NoRd
+  
   # Assertions
+  assertthat::assert_that(
+    inherits(mod, "merMod"),
+    inherits(data, "SpatRaster"), 
+    is.null(backtransform) || is.function(backtransform)
+  )
   # Check type of inputs
   # Check all fixef covars are in data 
   
@@ -889,10 +959,39 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
   data_pred <- terra::predict(data,
                               mod,
                               re.form = NA)
+  names(data_pred) <- "prediction"
+  
+  # %%%%
+  # TODO: incl bootMer
+  # TODO: check!
+  tmp_rast_df <- terra::as.data.frame(data, xy = T)
+  
+  boot <- lme4::bootMer(mod, 
+                        function(m, rast = data){
+                          tmp <- terra::predict(rast, m, re.form = NA) %>%
+                            terra::as.data.frame()
+                          tmp[,1]
+                        }, 
+                        nsim = 100)
+  
+  prediction_sd <- apply(boot$t, 2, sd)
+  prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
+  prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
+  
+  uncert_df <- data.frame(prediction_sd    = prediction_sd,
+                          prediction_q2.5  = prediction_q2.5,  
+                          prediction_q97.5 = prediction_q97.5)
+  uncert_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], uncert_df)
+  data_pred_uncert <- terra::rast(uncert_df)
+  
+  data_pred <- c(data_pred, data_pred_uncert)
+  # %%%%
+
+  # %%%
   if (!is.null(backtransform)){
     data_pred <- backtransform(data_pred)
   }
-  names(data_pred) <- "prediction"
+  # names(data_pred) <- "prediction"
   # %%% 
   return(data_pred)
 }
@@ -917,7 +1016,14 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
 #' } 
 #' @export
 terra_proj_brms_pred <- function(mod, data, backtransform){
+  # TODO: maybe change to @NoRd
+  
   # Assertions
+  assertthat::assert_that(
+    inherits(mod, "brmsfit"),
+    inherits(data, "SpatRaster"), 
+    is.null(backtransform) || is.function(backtransform)
+  )
   # Check type of inputs
   # Check all fixef covars are in data 
   
@@ -938,6 +1044,23 @@ terra_proj_brms_pred <- function(mod, data, backtransform){
   names(data_pred)[names(data_pred) == "Q97.5"] <- "prediction_q97.5"
   
   # %%% 
+  
+  # %%%%
+  # TODO: if using fitted(), need to convert  raster (data) to df, use fitted, 
+  # and then convert fitted/pred back to raster
+  # tmp_df <- terra::as.data.frame(data, xy = T)
+  # tmp_pred <- fitted(mod, tmp_df, re_form = NA)
+  # if (!is.null(backtransform)){
+  #   tmp_pred <- backtransform(tmp_pred)
+  # }
+  # tmp_pred <- tmp_pred %>%
+  #   dplyr::rename(prediction       = Estimate,
+  #                 prediction_error = Est.Error,
+  #                 prediction_q2.5  = Q2.5,
+  #                 prediction_q97.5 = Q97.5)
+  # tmp_pred <- dplyr::bind_cols(tmp_df[,c("x", "y")], tmp_pred)
+  # data_pred <- terra::rast(tmp_pred)
+  # %%%%
   return(data_pred)
 }
 
@@ -965,6 +1088,9 @@ terra_proj_brms_pred <- function(mod, data, backtransform){
 #' } 
 #' @export
 terra_to_df_inla <- function(data, obj, fix_vars){
+  # TODO: maybe change to @NoRd
+  # TODO: maybe co-opt to use fitted for brms rather then predict - for terra input
+  
   # assertions
   assertthat::assert_that(
     inherits(obj, "hib_inla_model"),
@@ -1155,7 +1281,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
 }
 
 # TODO:
-# uncertainty in predictions - easy for INLA - sampling? for lme4
+# uncertainty in predictions - for lme4
 
 # TODO:
 # Sub functions:

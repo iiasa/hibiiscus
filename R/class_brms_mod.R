@@ -43,7 +43,7 @@ hib_brms_model <- R6Class("hib_brms_model",
                               assertthat::assert_that(
                                 # Check database obj
                                 # db_obj$checkself(),
-                                inherits(db_obj, "Database"),
+                                inherits(db_obj, "Database") || is.list(db_obj),
                                 # Check model data
                                 is.data.frame(mod_df),
                                 # Check model
@@ -84,7 +84,13 @@ hib_brms_model <- R6Class("hib_brms_model",
                               
                               self$processing_flags$N_spp <- n_spp
                               
-                              self$version <- db_obj$version
+                              if (inherits(db_obj, "Database")){
+                                self$version <- db_obj$version
+                              }
+                              if (is.list(db_obj)){
+                                self$version <- lapply(db_obj, function(x){x$version})
+                              }
+                              
                               self$last_update <- lubridate::today()
                               
                               # %%%%%%%%%%%%%%%
@@ -124,16 +130,9 @@ hib_brms_model <- R6Class("hib_brms_model",
                               stats <- list(number_sites = self$processing_flags$N_sites,
                                             # number_lu = length( unique(self$data$Predominant_land_use) ),
                                             # number_lui = length(unique(self$data$Use_intensity)),
-                                            number_species = self$processing_flags$N_spp ) #,
+                                            number_species = paste(self$processing_flags$N_spp, collapse = ", ") ) #,
                               # filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
                               # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
-                              # TODO:
-                              # replicate INLA style printing!!
-                              # summarise fixedeff coefs table
-                              # display random effects types...
-                              # names(summary(test_lmer$model))
-                              # summary(test_lmer$model)$coefficients
-                              # summary(test_lmer$model)$AICtab
                               
                               message(
                                 paste0("Hibiiscus fitted brms model\n",
@@ -149,7 +148,6 @@ hib_brms_model <- R6Class("hib_brms_model",
                                        # "Fixed effects:"
                                 )
                               )
-                              # print(self$fixedef_coefficients)
                               print(summary(self$model))
                               
                               # Get loo/waic...
@@ -202,15 +200,15 @@ hib_brms_model <- R6Class("hib_brms_model",
                                                c("fixed-effects",
                                                  "random-effects"))
                               
-                              basic_thm <- theme(axis.text = element_text(size = 16),
-                                                 axis.title = element_text(size = 20),
-                                                 plot.title = element_text(size = 20),
-                                                 plot.subtitle = element_text(size = 18),
-                                                 strip.text.x = element_text(size = 18),
-                                                 strip.text.y = element_text(size = 18),
-                                                 strip.background = element_blank(),
-                                                 legend.text = element_text(size = 16),
-                                                 legend.title = element_text(size = 18),
+                              basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
+                                                 axis.title = ggplot2::element_text(size = 20),
+                                                 plot.title = ggplot2::element_text(size = 20),
+                                                 plot.subtitle = ggplot2::element_text(size = 18),
+                                                 strip.text.x = ggplot2::element_text(size = 18),
+                                                 strip.text.y = ggplot2::element_text(size = 18),
+                                                 strip.background = ggplot2::element_blank(),
+                                                 legend.text = ggplot2::element_text(size = 16),
+                                                 legend.title = ggplot2::element_text(size = 18),
                                                  legend.text.align = 0) 
                               
                               # 1. fixed effects - summary
@@ -225,23 +223,21 @@ hib_brms_model <- R6Class("hib_brms_model",
                                 }
                                 
                                 # %%%
-                                plt <- ggplot(fixef_df) +
-                                  geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  geom_errorbar(aes(x = Coefficient_name, 
+                                plt <- ggplot2::ggplot(fixef_df) +
+                                  ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
+                                  ggplot2::geom_errorbar(aes(x = Coefficient_name, 
                                                     ymin = loCI,
                                                     ymax = hiCI),
                                                 width = 0) +
-                                  geom_point(aes(x = Coefficient_name,
+                                  ggplot2::geom_point(aes(x = Coefficient_name,
                                                  y = Coefficient_value)) +
                                   
-                                  labs(y = "Estimate",
-                                       x = element_blank(),
+                                  ggplot2::labs(y = "Estimate",
+                                       x = ggplot2::element_blank(),
                                        title = "Fixed effect estimates") +
-                                  theme_bw() +
+                                  ggplot2::theme_bw() +
                                   basic_thm +
-                                  coord_flip()
-                                
-                                plot(plt)
+                                  ggplot2::coord_flip()
                                 
                               }
                               #    fixed effects - posteriors
@@ -270,34 +266,34 @@ hib_brms_model <- R6Class("hib_brms_model",
                                 
                                 # colour as +ve or -ve 
                                 # plot - no names...
-                                plt <- ggplot(rand_df) +
-                                  geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  geom_errorbar(aes(x = ID_ord, 
+                                plt <- ggplot2::ggplot(rand_df) +
+                                  ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
+                                  ggplot2::geom_errorbar(aes(x = ID_ord, 
                                                     ymin = loCI,
                                                     ymax = hiCI,
                                                     colour = sig_col),
                                                 show.legend = F,
                                                 alpha = 0.5,
                                                 width = 0) +
-                                  geom_point(aes(x = ID_ord,
+                                  ggplot2::geom_point(aes(x = ID_ord,
                                                  y = Coefficient_value,
                                                  colour = sig_col),
                                              show.legend = F,
                                              alpha = 0.7) +
-                                  labs(y = "Estimate",
-                                       x = element_blank(),
+                                  ggplot2::labs(y = "Estimate",
+                                       x = ggplot2::element_blank(),
                                        title = "Random effect estimates") +
-                                  scale_color_manual(values = c("+ve" = "dodgerblue3",
+                                  ggplot2::scale_color_manual(values = c("+ve" = "dodgerblue3",
                                                                 "-ve" = "firebrick3",
                                                                 "n.s."= "grey30")) +
-                                  facet_wrap(~Coefficient_group, scales = "free_x") +
-                                  theme_bw() +
+                                  ggplot2::facet_wrap(~Coefficient_group, scales = "free_x") +
+                                  ggplot2::theme_bw() +
                                   basic_thm +
-                                  theme(axis.text.x = element_blank(),
+                                  ggplot2::theme(axis.text.x = ggplot2::element_blank(),
                                         aspect.ratio = 1)
-                                
-                                plot(plt)
+
                               }
+                              (plt)
                             }
                           ),
                           private = list()
