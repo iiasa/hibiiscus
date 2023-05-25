@@ -12,11 +12,12 @@ hib_fit_lme4(
   calc_CIs = NULL,
   optimise_ranefs = F,
   model_dredge = F,
-  model_average = F
+  model_average = F,
+  dataset_weights = NULL
 )
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A [`Database`] object, or a list of databases.}
 
 \item{form}{A [`formula`] in the style of lme4 - including fixed and random 
 effects.}
@@ -34,6 +35,12 @@ should be calculated or not, and if so how - one of NULL, "Wald", "profile", "bo
 \item{model_dredge}{Not currently applicable - future dev}
 
 \item{model_average}{Not currently applicable - future dev}
+
+\item{dataset_weights}{A [`numeric`] vector containing the relative weights to
+assign to each dataset, should sum to 1. Note: if using this argument, the 
+supplied formula should have a response of the form [`y | weights(data_weight) ~`]
+The data_weight variable will be generated within the function call so as to 
+assign each observation per dataset an equal fraction of that dataset's weight.}
 }
 \description{
 This function fits an lme4 model using the supplied database, formula and other

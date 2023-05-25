@@ -235,11 +235,11 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 # %%%
                                 plt <- ggplot2::ggplot(fixef_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  ggplot2::geom_errorbar(aes(x = Coefficient, 
+                                  ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient, 
                                                     ymin = `0.025quant`,
                                                     ymax = `0.975quant`),
                                                 width = 0) +
-                                  ggplot2::geom_point(aes(x = Coefficient,
+                                  ggplot2::geom_point(ggplot2::aes(x = Coefficient,
                                                  y = mean)) +
                                   
                                   ggplot2::labs(y = "Estimate",
@@ -274,14 +274,14 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 # plot - no names...
                                 plt <- ggplot2::ggplot(rand_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  ggplot2::geom_errorbar(aes(x = ID_ord, 
+                                  ggplot2::geom_errorbar(ggplot2::aes(x = ID_ord, 
                                                     ymin = `0.025quant`,
                                                     ymax = `0.975quant`,
                                                     colour = sig_col),
                                                 show.legend = F,
                                                 alpha = 0.5,
                                                 width = 0) +
-                                  ggplot2::geom_point(aes(x = ID_ord,
+                                  ggplot2::geom_point(ggplot2::aes(x = ID_ord,
                                                  y = mean,
                                                  colour = sig_col),
                                              show.legend = F,
@@ -312,7 +312,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 
                                 plt <- ggplot2::ggplot() + 
                                   inlabru::gg(self$inla_mesh) +
-                                  inlabru::gg(pix, aes(fill = z),
+                                  inlabru::gg(pix, ggplot2::aes(fill = z),
                                               alpha = 0.9) +
                                   ggplot2::scale_fill_gradient2(low = "firebrick3",
                                                        mid = "gainsboro",

@@ -17,6 +17,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       data = NULL, # - restrict data to that used in model fitting... + version?
                       model = NULL,
                       fixedef_coefficients = NULL,
+                      ci_type = NULL,
                       metrics = NULL,
                       processing_flags = NULL,
                       # TODO: what else to include
@@ -30,6 +31,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                             mod_df,
                                             lme4_obj,
                                             fixef_df,
+                                            ci_type,
                                             metr_vec,
                                             n_spp
                                             # set_up_specs
@@ -50,6 +52,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           assertthat::assert_that(class(lme4_obj) == "lmerMod" || class(lme4_obj) == "glmerMod"), 
                           # Check coefficient df and metrics
                           is.data.frame(fixef_df),
+                          is.character(ci_type) || is.na(ci_type),
                           is.numeric(metr_vec),
                           is.numeric(n_spp)
                           )
@@ -68,6 +71,8 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         self$fixedef_coefficients <- fixef_df
                         # Set metrics as metr_vec
                         self$metrics <- metr_vec
+                        
+                        self$ci_type <- ci_type
                         
                         # Incl processing flags from hib_db
                         self$processing_flags <- db_obj$processing_flags
@@ -90,7 +95,6 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         if (is.list(db_obj)){
                           self$version <- lapply(db_obj, function(x){x$version})
                         }
-                        
                         
                         self$last_update <- lubridate::today()
                         
@@ -229,11 +233,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           # %%%
                           plt <- ggplot2::ggplot(fixef_df) +
                             ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                            ggplot2::geom_errorbar(aes(x = Coefficient_name, 
-                                              ymin = loCI,
-                                              ymax = hiCI),
-                                          width = 0) +
-                            ggplot2::geom_point(aes(x = Coefficient_name,
+                            ggplot2::geom_point(ggplot2::aes(x = Coefficient_name,
                                            y = Coefficient_value)) +
                             
                             ggplot2::labs(y = "Estimate",
@@ -242,6 +242,14 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                             ggplot2::theme_bw() +
                             basic_thm +
                             ggplot2::coord_flip()
+                          
+                          if (!is.na(self$ci_type)){
+                            plt <- plt +
+                              ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name,
+                                                ymin = loCI,
+                                                ymax = hiCI),
+                                            width = 0) 
+                          }
                           
                         }
                         #    fixed effects - posteriors
@@ -266,14 +274,14 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           # plot - no names...
                           plt <- ggplot2::ggplot(rand_df) +
                             ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                            ggplot2::geom_errorbar(aes(x = ID_ord, 
+                            ggplot2::geom_errorbar(ggplot2::aes(x = ID_ord, 
                                               ymin = lwr,
                                               ymax = upr,
                                               colour = sig_col),
                                           show.legend = F,
                                           alpha = 0.5,
                                           width = 0) +
-                            ggplot2::geom_point(aes(x = ID_ord,
+                            ggplot2::geom_point(ggplot2::aes(x = ID_ord,
                                            y = condval,
                                            colour = sig_col),
                                        show.legend = F,

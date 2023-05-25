@@ -26,12 +26,12 @@ hib_mod_project <- function(obj,
   # is data a df/tibble/ raster/stack 
   assertthat::assert_that(
     inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model") || inherits(obj, "hib_brms_model"), # obj is a hib model
-    is.data.frame(data) || inherits(data, "SpatRaster") || (is.list(data) & !is.data.frame(data)),
+    is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred)
   )
   # TODO: better check of input data - all items in list ar SpatRasters
-  # all(lapply(data, function(x){inherits(x, "SpatRaster")}))
+  # all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")})))
   
   # Check type of model
   # %%%%%
@@ -361,7 +361,11 @@ hib_mod_project <- function(obj,
     
     # if input was terra/list of terra, convert pred df back to terra format
     if (inherits(data, "SpatRaster")){
-      data_pred <- terra::rast(pred_df[,c("x", "y", pred_cols)])
+      # TODO: crs of input...
+      # sf::st_crs(data)
+      # data_pred <- terra::rast(pred_df[,c("x", "y", pred_cols)])
+      data_pred <- terra::rast(pred_df[,c("x", "y", pred_cols)],
+                               crs = terra::crs(data))
       
       data <- c(data, data_pred)
     }
@@ -375,8 +379,11 @@ hib_mod_project <- function(obj,
                      dplyr::select(-Year)
                    
                    tmp_df <- tmp_df[,c("x", "y", col_nms)]
-                   
+                   # TODO: crs of input...
+                   # sf::st_crs(data_orig)
                    tmp_r <- terra::rast(tmp_df)
+                   tmp_r <- terra::rast(tmp_df,
+                                        crs = terra::crs(data_orig))
                    
                    out <- c(data_orig[[.x]], tmp_r)
                  })
@@ -453,10 +460,10 @@ hib_mod_project <- function(obj,
         pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
         pred_rescaled_df <- pred_df[,pred_cols] / base_val
         colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
+      }
         # pred_rescaled_df <- pred_rescaled_df %>%
         #   dplyr::select(-rescaled_prediction_error)
-        }
-      
+        
       data <- dplyr::bind_cols(data, pred_df, pred_rescaled_df)
     }
     
@@ -465,7 +472,7 @@ hib_mod_project <- function(obj,
       data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars)
     }
     # List of raster objects
-    if ((is.list(data) & !is.data.frame(data))){
+    if (( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ) ){
       # & inherits(data[[1]], "SpatRaster")
       # Apply individual terra proj to each item of list...
       data <- purrr::map(data,
@@ -962,8 +969,6 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
   names(data_pred) <- "prediction"
   
   # %%%%
-  # TODO: incl bootMer
-  # TODO: check!
   tmp_rast_df <- terra::as.data.frame(data, xy = T)
   
   boot <- lme4::bootMer(mod, 
@@ -982,7 +987,10 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
                           prediction_q2.5  = prediction_q2.5,  
                           prediction_q97.5 = prediction_q97.5)
   uncert_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], uncert_df)
-  data_pred_uncert <- terra::rast(uncert_df)
+  # TODO: crs of input...
+  # data_pred_uncert <- terra::rast(uncert_df)
+  data_pred_uncert <- terra::rast(uncert_df,
+                                  crs = terra::crs(data))
   
   data_pred <- c(data_pred, data_pred_uncert)
   # %%%%
@@ -1049,7 +1057,8 @@ terra_proj_brms_pred <- function(mod, data, backtransform){
   # TODO: if using fitted(), need to convert  raster (data) to df, use fitted, 
   # and then convert fitted/pred back to raster
   # tmp_df <- terra::as.data.frame(data, xy = T)
-  # tmp_pred <- fitted(mod, tmp_df, re_form = NA)
+  # tmp_pred <- fitted(mod, tmp_df, re_form = NA) %>%
+  #   as.data.frame()
   # if (!is.null(backtransform)){
   #   tmp_pred <- backtransform(tmp_pred)
   # }
@@ -1059,7 +1068,11 @@ terra_proj_brms_pred <- function(mod, data, backtransform){
   #                 prediction_q2.5  = Q2.5,
   #                 prediction_q97.5 = Q97.5)
   # tmp_pred <- dplyr::bind_cols(tmp_df[,c("x", "y")], tmp_pred)
-  # data_pred <- terra::rast(tmp_pred)
+  # TODO: crs of input...
+  # sf::st_crs(data)
+  ## data_pred <- terra::rast(tmp_pred)
+  # data_pred <- terra::rast(tmp_pred,
+  #                          crs = terra::crs(data))
   # %%%%
   return(data_pred)
 }

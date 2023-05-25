@@ -245,11 +245,11 @@ lu_legend <- R6Class("lu_legend",
                             ggplot2::ggplot() +
                             ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            ggplot2::geom_bar(aes(x = Predominant_land_use, y = N),
+                            ggplot2::geom_bar(ggplot2::aes(x = Predominant_land_use, y = N),
                                      stat = "identity",
                                      fill = "#009E73",
                                      alpha = 0.7) +
-                            # geom_point(aes(x = Predominant_land_use, y = N),
+                            # geom_point(ggplot2::aes(x = Predominant_land_use, y = N),
                             #            colour = "#009E73",
                             #            alpha = 0.7,
                             #            size = 2.5) +
@@ -281,11 +281,11 @@ lu_legend <- R6Class("lu_legend",
                             ggplot2::ggplot() +
                             ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            ggplot2::geom_bar(aes(x = Use_intensity, y = N),
+                            ggplot2::geom_bar(ggplot2::aes(x = Use_intensity, y = N),
                                      stat = "identity",
                                      fill = "#009E73",
                                      alpha = 0.7) +
-                            # geom_point(aes(x = Use_intensity, y = N),
+                            # geom_point(ggplot2::aes(x = Use_intensity, y = N),
                             #            colour = "#009E73",
                             #            alpha = 0.7,
                             #            size = 2.5) +
@@ -321,14 +321,14 @@ lu_legend <- R6Class("lu_legend",
                             ggplot2::ggplot() +
                             ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                            ggplot2::geom_bar(aes(x = Predominant_land_use, y = N,
+                            ggplot2::geom_bar(ggplot2::aes(x = Predominant_land_use, y = N,
                                          group = Use_intensity,
                                          fill = Use_intensity),
                                      position = ggplot2::position_dodge(),
                                      stat = "identity",
                                      # fill = "#009E73",
                                      alpha = 0.7) +
-                            # geom_point(aes(x = Predominant_land_use, y = N,
+                            # geom_point(ggplot2::aes(x = Predominant_land_use, y = N,
                             #                group = Use_intensity,
                             #                shape = Use_intensity),
                             #            position = position_dodge(0.4),

@@ -4,17 +4,24 @@
 \alias{hib_fit_brms}
 \title{Fit a brms style mixed-effects model}
 \usage{
-hib_fit_brms(obj, form, family = gaussian, ...)
+hib_fit_brms(obj, form, family = gaussian, dataset_weights = NULL, ...)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A [`Database`] object or a list of them.}
 
 \item{form}{A [`formula`] in the style of brms (as in lme4) - including fixed and random 
 effects.}
 
 \item{family}{A [`family`] function, e.g. gaussian, poisson - as allowed by brms}
 
-\item{...}{Any other named arguments that can be passed to brms::brm, e.g. prior, data2}
+\item{dataset_weights}{A [`numeric`] vector containing the relative weights to
+assign to each dataset, should sum to 1. Note: if using this argument, the 
+supplied formula should have a response of the form [`y | weights(data_weight) ~`]
+The data_weight variable will be generated within the function call so as to 
+assign each observation per dataset an equal fraction of that dataset's weight -
+total weight sums to the total number of observations across all datasets.}
+
+\item{...}{Any other named arguments that can be passed to brms::brm(), e.g. prior, data2}
 }
 \description{
 This function fits a brms model using the supplied database, formula and other

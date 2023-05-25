@@ -14,7 +14,7 @@
 #' \dontrun{
 #'   n_spp <- calc_N_spp(obj, mod_df, mod_resp)
 #' } 
-#' @NoRd
+#' @noRd
 calc_N_spp <- function(obj,
                        mod_df,
                        mod_resp){

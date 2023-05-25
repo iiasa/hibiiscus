@@ -328,7 +328,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          
                          if (type == "response-map"){
                            plt <- ggplot2::ggplot(proj) +
-                             ggplot2::geom_tile(aes(x = x, y = y,
+                             ggplot2::geom_tile(ggplot2::aes(x = x, y = y,
                                                     fill = !!sym(resp_var),
                                                     colour = !!sym(resp_var))) +
                              ggplot2::labs(fill = resp_lab,
@@ -417,7 +417,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          # distribution of response... - histogram
                          if (type == "response-distr"){
                            plt <- ggplot2::ggplot(proj) +
-                             ggplot2::geom_histogram(aes(x = !!sym(resp_var))) +
+                             ggplot2::geom_histogram(ggplot2::aes(x = !!sym(resp_var))) +
                              ggplot2::labs(x = resp_lab,
                                            y = "Count") +
                              ggplot2::theme_bw() +
@@ -432,7 +432,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                          # distribution of response x sd... - heatmap
                          if (type == "bivariate-distr"){
                            plt <- ggplot2::ggplot(proj) +
-                             ggplot2::geom_hex(aes(x = !!sym(resp_var),
+                             ggplot2::geom_hex(ggplot2::aes(x = !!sym(resp_var),
                                                    y = !!sym(sd_var))) +
                              ggplot2::labs(x = resp_lab,
                                            y = sd_lab,

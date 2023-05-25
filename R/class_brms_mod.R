@@ -71,6 +71,7 @@ hib_brms_model <- R6Class("hib_brms_model",
                               
                               # Incl processing flags from hib_db
                               self$processing_flags <- db_obj$processing_flags
+                              # TODO: what about additional data (data2), e.g. covariance structures
                               
                               # Calc n sites/species used in  model - need to calc spp with div metrics!!
                               # N_sites <- dplyr::n_distinct(mod_df$SSBS)
@@ -225,11 +226,11 @@ hib_brms_model <- R6Class("hib_brms_model",
                                 # %%%
                                 plt <- ggplot2::ggplot(fixef_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  ggplot2::geom_errorbar(aes(x = Coefficient_name, 
+                                  ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name, 
                                                     ymin = loCI,
                                                     ymax = hiCI),
                                                 width = 0) +
-                                  ggplot2::geom_point(aes(x = Coefficient_name,
+                                  ggplot2::geom_point(ggplot2::aes(x = Coefficient_name,
                                                  y = Coefficient_value)) +
                                   
                                   ggplot2::labs(y = "Estimate",
@@ -268,14 +269,14 @@ hib_brms_model <- R6Class("hib_brms_model",
                                 # plot - no names...
                                 plt <- ggplot2::ggplot(rand_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  ggplot2::geom_errorbar(aes(x = ID_ord, 
+                                  ggplot2::geom_errorbar(ggplot2::aes(x = ID_ord, 
                                                     ymin = loCI,
                                                     ymax = hiCI,
                                                     colour = sig_col),
                                                 show.legend = F,
                                                 alpha = 0.5,
                                                 width = 0) +
-                                  ggplot2::geom_point(aes(x = ID_ord,
+                                  ggplot2::geom_point(ggplot2::aes(x = ID_ord,
                                                  y = Coefficient_value,
                                                  colour = sig_col),
                                              show.legend = F,

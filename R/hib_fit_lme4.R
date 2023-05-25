@@ -100,7 +100,8 @@ hib_fit_lme4 <- function(obj,
     for (i in 1:length(obj)){
       mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
     }
-    mod_df <- dplyr::bind_rows(mod_df_ls)
+    mod_df <- dplyr::bind_rows(mod_df_ls,
+                              .id = "dataset_modelling_id")
     
     n_spp <- purrr::map2(.x = obj, 
                          .y = mod_df_ls, 
@@ -279,13 +280,17 @@ hib_fit_lme4 <- function(obj,
   metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], AIC(m0), BIC(m0), MuMIn::AICc(m0))
   names(metr_vec) <- c("R2m", "R2c", "AIC", "BIC", "AICc")
   
-  
+  ci_type_ <- calc_CIs
+  if (is.null(calc_CIs)){
+    ci_type_ <- NA
+  }
   # instantiate an lme4_mod class
   mod_obj <- hib_lme4_model$new(
     db_obj = obj, 
     mod_df = mod_df,
     lme4_obj = m0,
     fixef_df = fixef_df,
+    ci_type = ci_type_,
     metr_vec = metr_vec,
     n_spp = n_spp
   )
@@ -318,7 +323,7 @@ hib_fit_lme4 <- function(obj,
 #' \dontrun{
 #'   mod_df <- get_model_data(obj, "Total_abundance", c("LUI"))
 #' } 
-#' @NoRd
+#' @noRd
 get_model_data <- function(obj,
                            mod_resp,
                            mod_covars){

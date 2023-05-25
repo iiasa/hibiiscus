@@ -97,7 +97,7 @@ hib_filter_species <- function(obj, condition){
   sites_upd <- species_upd %>%
     dplyr::group_by(SSBS) %>%
     dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
-                     N_samples = n()) %>%
+                     N_samples = dplyr::n()) %>%
     dplyr::ungroup()
   
   sites_orig_sub <- dplyr::filter(obj$sites, SSBS %in% sites_upd$SSBS)

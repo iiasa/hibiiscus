@@ -556,7 +556,7 @@ Database <- R6Class("Database",
                         
                         if (type == "map-sites"){
                           plt <- plt +
-                            ggplot2::geom_point(aes(x = Longitude, y  = Latitude, 
+                            ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude, 
                                            colour = version),
                                        size = 0.15,
                                        alpha = 0.25,
@@ -565,7 +565,7 @@ Database <- R6Class("Database",
                         }
                         if (type == "map-studies"){
                           plt <- plt +
-                            ggplot2::geom_point(aes(x = Longitude, y  = Latitude,
+                            ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude,
                                            size = N_sites,
                                            colour = version),
                                        alpha = 0.25,
@@ -598,7 +598,7 @@ Database <- R6Class("Database",
                                               values_to = "N")
                         
                         plt <- ggplot2::ggplot(count_df) +
-                          ggplot2::geom_bar(aes(x = !!sym(var_), y = N,
+                          ggplot2::geom_bar(ggplot2::aes(x = !!sym(var_), y = N,
                                        fill = version),
                                    # fill = "#009E73",
                                    stat = "identity") +
@@ -633,7 +633,7 @@ Database <- R6Class("Database",
                           dplyr::filter(Class != "")
                         
                         plt <- ggplot2::ggplot(class_df) +
-                          ggplot2::geom_bar(aes(x = Class, y = N_,
+                          ggplot2::geom_bar(ggplot2::aes(x = Class, y = N_,
                                        fill = version),
                                    # fill = "#E69F00",
                                    stat = "identity") +
