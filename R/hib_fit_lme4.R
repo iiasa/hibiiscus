@@ -54,7 +54,7 @@ hib_fit_lme4 <- function(obj,
   
   # Add assertions
   assertthat::assert_that(
-    inherits(obj, "Database") || is.list(obj), # obj is a hib database
+    inherits(obj, "Database") || ( is.list(obj) & all(unlist(lapply(obj, function(x){inherits(x, "Database")}))) ), # obj is a hib database
     # form can be a formula,
     is.function(family) || is.character(family), # family is character or function
     is.logical(REML), # REML is bool
