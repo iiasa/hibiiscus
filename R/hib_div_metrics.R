@@ -556,7 +556,7 @@ hib_calc_div_within <- function(obj, metrics){
                            return(hib_calc_rsr(db_obj))
                          }
                          }
-                       ) %>% bind_rows()
+                       ) %>% dplyr::bind_rows()
   
   div_empty <- is.null(obj$diversity_within)
   

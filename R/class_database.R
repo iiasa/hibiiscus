@@ -148,7 +148,7 @@ Database <- R6Class("Database",
                           dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) %>%
                           dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
                                            Sample_midpoint = Sample_midpoint[1], 
-                                           N_samples = n()) %>%
+                                           N_samples = dplyr::n()) %>%
                           dplyr::ungroup()
                         
     
@@ -159,10 +159,10 @@ Database <- R6Class("Database",
                       # Add LUI column - 
                       # TODO: Only if no LUI already??
                       sites <- sites %>%
-                        mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                        dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
                       species <- species %>%
-                        mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                        dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
                       
                       # Alternative initialisation approach - version specific

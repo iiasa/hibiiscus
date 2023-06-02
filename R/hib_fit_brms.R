@@ -91,8 +91,18 @@ hib_fit_brms <- function(obj,
     tmp_dots_ <- list(...)
     dat2_nms <- names(dots_[["data2"]])
     mod_covars <- mod_covars[!mod_covars %in% dat2_nms]
+    rm(tmp_dots_)
   }
   # %%%%%
+  
+  
+  # TODO:
+  # What about a formula of the type 
+  # y ~ 0 + Intercept + b
+  # Intercept is an internally generated brms thing...
+  if ("Intercept" %in% mod_covars){
+    mod_covars <- mod_covars[!mod_covars == "Intercept"]
+  }
   
   # TODO
   # What if multiple vars in response - e.g weights - currently would have to be in div data...
@@ -174,6 +184,8 @@ hib_fit_brms <- function(obj,
   metr_ls <- list("loo" = loo_metr,
                   "waic" = waic_metr)
   
+  # TODO: store ... as extra_pars
+  # make validation easier...
 
   # instantiate a brms_mod class
   mod_obj <- hib_brms_model$new(
@@ -182,7 +194,8 @@ hib_fit_brms <- function(obj,
     brms_obj = m0,
     fixef_df = fixef_df,
     metr_ls = metr_ls,
-    n_spp = n_spp
+    n_spp = n_spp,
+    extra_args = list(...)
   )
   
   return(mod_obj)

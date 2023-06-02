@@ -16,6 +16,7 @@ hib_brms_model <- R6Class("hib_brms_model",
                             # paths = NULL, # ??
                             data = NULL, # - restrict data to that used in model fitting... + version?
                             model = NULL,
+                            extra_args = NULL,
                             fixedef_coefficients = NULL,
                             metrics = NULL,
                             processing_flags = NULL,
@@ -31,7 +32,8 @@ hib_brms_model <- R6Class("hib_brms_model",
                                                   brms_obj,
                                                   fixef_df,
                                                   metr_ls,
-                                                  n_spp
+                                                  n_spp,
+                                                  extra_args
                                                   # set_up_specs
                                                   # spp df?
                                                   # ???? - should this do the model fitting
@@ -51,7 +53,8 @@ hib_brms_model <- R6Class("hib_brms_model",
                                 # Check coefficient df and metrics
                                 is.data.frame(fixef_df),
                                 is.list(metr_ls),
-                                is.numeric(n_spp)
+                                is.numeric(n_spp),
+                                is.list(extra_args)
                               )
                               
                               # ------ #
@@ -64,6 +67,9 @@ hib_brms_model <- R6Class("hib_brms_model",
                               self$data <- mod_df
                               # Set model as brms_obj
                               self$model <- brms_obj
+
+                              self$extra_args <- extra_args
+                              
                               # Set fixed_coefficients as fixef_df
                               self$fixedef_coefficients <- fixef_df
                               # Set metrics as metr_ls
