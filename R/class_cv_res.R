@@ -135,70 +135,134 @@ hib_cv_res <- R6Class("hib_cv_res",
                                    "\n\n",
                                    "--------------------\n\n",
                                    "Summary of cross-validated model:\n\n",
-                                   "Formula:                  ", crayon::green( m_form ) , "\n"
+                                   # "Formula:                  ", crayon::green( m_form ) , "\n"
+                                   "Formula:  ", crayon::green( m_form ) , "\n"
                             )
                           )
                           
-                          # In-sample...
-                          insamp_df <- self$insample_results$insample_metrics %>%
-                            dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
+                          # TODO: better summary printing - neat table of metrics/cv type...
+                          # insight::export_table(df, digits = 3)
+                          # self$insample_results$insample_metrics %>%
+                          #   dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
                           
-                          metr_tmp <- c("rmse" = insamp_df$Metric_val[insamp_df$Metric_shrt == "rmse"],
-                                        "rsq"   = insamp_df$Metric_val[insamp_df$Metric_shrt == "rsq"])
-                          
-                          metr_tmp <- pad_fn(metr_tmp, 3, F)
-                          names(metr_tmp) <- c("rmse", "rsq")
-                          
-                          message(
-                            paste0("--------------------\n",
-                                   "Cross-validation type:    ", crayon::green("In-sample"), "\n", 
-                                   "No. of folds:             ", crayon::green("1"), "\n\n", 
-                                   "RMSE:                     ", crayon::green( paste0( metr_tmp["rmse"], 
-                                                                                        " (", 
-                                                                                        round(insamp_df$Metric_lo[insamp_df$Metric_shrt == "rmse"],
-                                                                                              3), 
-                                                                                        ", ", 
-                                                                                        round(insamp_df$Metric_hi[insamp_df$Metric_shrt == "rmse"],
-                                                                                              3),  
-                                                                                        ")" ) ) , "\n",
-                                   "Predictive R-squared:     ", crayon::green( metr_tmp["rsq"] ) , "\n")
-                          )
+                          # Columns - CV type, N folds, RMSE (CIs), Predictive R2
                           
                           
-                          # per cv type
-                          for (x in self$cv_results){
-                            fld_typ <- x$fold_type
-                            if (fld_typ == "Custom"){
-                              fld_typ <- paste0(fld_typ, " (", x$fold_col, ")")
-                            }
-                            n_fld <- x$n_folds
-                            
-                            cv_df <- x$cv_metrics %>%
-                              dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
-                            
-                            metr_tmp <- c("rmse" = cv_df$Metric_val[cv_df$Metric_shrt == "rmse"],
-                                          "rsq"   = cv_df$Metric_val[cv_df$Metric_shrt == "rsq"])
-                            
-                            
-                            metr_tmp <- pad_fn(metr_tmp, 3, F)
-                            names(metr_tmp) <- c("rmse", "rsq")
-                            
-                            
-                            message(
-                              paste0("--------------------\n\n",
-                                     "Cross-validation type:    ", crayon::green(fld_typ), "\n", 
-                                     "No. of folds:             ", crayon::green(n_fld), "\n\n", 
-                                     "RMSE:                     ", crayon::green(paste0( metr_tmp["rmse"], 
-                                                                                         " (", 
-                                                                                         round(cv_df$Metric_lo[cv_df$Metric_shrt == "rmse"],
-                                                                                               3), 
-                                                                                         ", ", 
-                                                                                         round(cv_df$Metric_hi[cv_df$Metric_shrt == "rmse"],
-                                                                                               3),  
-                                                                                         ")" )), "\n",
-                                     "Predictive R-squared:     ", crayon::green(metr_tmp["rsq"]) , "\n")
-                            )
-                          }
+                          
+                          # # In-sample...
+                          # insamp_df <- self$insample_results$insample_metrics %>%
+                          #   dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
+                          # 
+                          # metr_tmp <- c("rmse" = insamp_df$Metric_val[insamp_df$Metric_shrt == "rmse"],
+                          #               "rsq"   = insamp_df$Metric_val[insamp_df$Metric_shrt == "rsq"])
+                          # 
+                          # metr_tmp <- pad_fn(metr_tmp, 3, F)
+                          # names(metr_tmp) <- c("rmse", "rsq")
+                          # 
+                          # message(
+                          #   paste0("--------------------\n",
+                          #          "Cross-validation type:    ", crayon::green("In-sample"), "\n", 
+                          #          "No. of folds:             ", crayon::green("1"), "\n\n", 
+                          #          "RMSE:                     ", crayon::green( paste0( metr_tmp["rmse"], 
+                          #                                                               " (", 
+                          #                                                               round(insamp_df$Metric_lo[insamp_df$Metric_shrt == "rmse"],
+                          #                                                                     3), 
+                          #                                                               ", ", 
+                          #                                                               round(insamp_df$Metric_hi[insamp_df$Metric_shrt == "rmse"],
+                          #                                                                     3),  
+                          #                                                               ")" ) ) , "\n",
+                          #          "Predictive R-squared:     ", crayon::green( metr_tmp["rsq"] ) , "\n")
+                          # )
+                          # 
+                          # 
+                          # # per cv type
+                          # for (x in self$cv_results){
+                          #   fld_typ <- x$fold_type
+                          #   if (fld_typ == "Custom"){
+                          #     fld_typ <- paste0(fld_typ, " (", x$fold_col, ")")
+                          #   }
+                          #   n_fld <- x$n_folds
+                          #   
+                          #   cv_df <- x$cv_metrics %>%
+                          #     dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
+                          #   
+                          #   metr_tmp <- c("rmse" = cv_df$Metric_val[cv_df$Metric_shrt == "rmse"],
+                          #                 "rsq"   = cv_df$Metric_val[cv_df$Metric_shrt == "rsq"])
+                          #   
+                          #   
+                          #   metr_tmp <- pad_fn(metr_tmp, 3, F)
+                          #   names(metr_tmp) <- c("rmse", "rsq")
+                          #   
+                          #   
+                          #   message(
+                          #     paste0("--------------------\n\n",
+                          #            "Cross-validation type:    ", crayon::green(fld_typ), "\n", 
+                          #            "No. of folds:             ", crayon::green(n_fld), "\n\n", 
+                          #            "RMSE:                     ", crayon::green(paste0( metr_tmp["rmse"], 
+                          #                                                                " (", 
+                          #                                                                round(cv_df$Metric_lo[cv_df$Metric_shrt == "rmse"],
+                          #                                                                      3), 
+                          #                                                                ", ", 
+                          #                                                                round(cv_df$Metric_hi[cv_df$Metric_shrt == "rmse"],
+                          #                                                                      3),  
+                          #                                                                ")" )), "\n",
+                          #            "Predictive R-squared:     ", crayon::green(metr_tmp["rsq"]) , "\n")
+                          #   )
+                          # }
+                          
+                          
+                          df1 <- lmer_cv$insample_results$insample_metrics %>%
+                            dplyr::filter(Metric_shrt %in% c("rmse", "rsq")) 
+                          
+                          insamp_df <- data.frame(CV_type = c("In-sample"),
+                                                  N_folds = c(1),
+                                                  RMSE    = c(df1$Metric_val[df1$Metric_shrt == "rmse"]),
+                                                  RMSE_lo = c(df1$Metric_lo[df1$Metric_shrt == "rmse"]),
+                                                  RMSE_hi = c(df1$Metric_hi[df1$Metric_shrt == "rmse"]),
+                                                  Predictive_R2 = c(df1$Metric_val[df1$Metric_shrt == "rsq"]))
+                          
+                          
+                          cv_df <- purrr::map_dfr(lmer_cv$cv_results,
+                                                  function(x){
+                                                    fld_typ <- x$fold_type
+                                                    if (fld_typ == "Custom"){
+                                                      fld_typ <- paste0(fld_typ, " (", x$fold_col, ")")
+                                                    }
+                                                    n_fld <- x$n_folds
+                                                    
+                                                    cv_df <- x$cv_metrics %>%
+                                                      dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
+                                                    
+                                                    out_df <- data.frame(CV_type = c(fld_typ),
+                                                                         N_folds = c(n_fld),
+                                                                         RMSE    = c(cv_df$Metric_val[cv_df$Metric_shrt == "rmse"]),
+                                                                         RMSE_lo = c(cv_df$Metric_lo[cv_df$Metric_shrt == "rmse"]),
+                                                                         RMSE_hi = c(cv_df$Metric_hi[cv_df$Metric_shrt == "rmse"]),
+                                                                         Predictive_R2 = c(cv_df$Metric_val[cv_df$Metric_shrt == "rsq"]))
+                                                    
+                                                  })
+                          
+                          
+                          df <- dplyr::bind_rows(insamp_df,
+                                                 cv_df)
+                          # drop n from cv_type for random
+                          df$CV_type[grepl("Random", df$CV_type)] <- "Random"
+                          df$RMSE <- pad_fn(df$RMSE, 3, T)
+                          df$RMSE_lo <- pad_fn(df$RMSE_lo, 3, T)
+                          df$RMSE_hi <- pad_fn(df$RMSE_hi, 3, T)
+                          df$Predictive_R2 <- pad_fn(df$Predictive_R2, 3, T)
+                          
+                          
+                          df$RMSE <- paste0(df$RMSE, " (", df$RMSE_lo, ", ", df$RMSE_hi, ")")
+                          
+                          df %>%
+                            dplyr::select(CV_type, N_folds, RMSE, Predictive_R2) %>%
+                            dplyr::rename(`CV type` = CV_type,
+                                          `N folds` = N_folds,
+                                          `Predictive R2` = Predictive_R2) %>%
+                            insight::format_table(use_symbols = T, digits = 0) %>%
+                            insight::export_table() %>%
+                            message()
                           
                           
                           # maybe some original model metrics..
@@ -256,6 +320,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                                             c("coefficients",
                                               "coefficients-summary",
                                               "obs-v-pred",
+                                              "obs-v-error", 
+                                              "pred-v-error",
                                               "metrics"
                                             ))
                           
@@ -281,6 +347,15 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       legend.title = ggplot2::element_text(size = 18),
                                                       legend.text.align = 0) 
                           
+                          # TODO
+                          # specify order of cv_type levels 
+                          base_cv_levs <- c("In-sample", "Random-2", "Random-3", 
+                                            "Random-5", "Random-10",
+                                            "Source_ID", "SS", #"SSBS",
+                                            "Country", "UN_subregion", "UN_region",
+                                            "Biome", "Realm")
+                          # plus add unique custom cv types...
+                          
                           if (type == "coefficients"){
                             # Get original and cv coefs from
                             
@@ -302,15 +377,20 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                         tmp_df
                                                       })
                             
+                            # Add cv_type that isn't in base_cv_levs to cv_levs
+                            add_cv_levs <- unique(cv_coef$cv_type)
+                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                            # set levs for cv_type
                             
                             orig_coef <- orig_coef %>%
                               dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name))) %>%
                               dplyr::arrange(coef_nm_num)
                             
                             cv_coef <- cv_coef %>%
-                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name)))
-                            
-                            # print(head(orig_coef))
+                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name)),
+                                            cv_type = factor(cv_type, 
+                                                             levels = cv_levs))
                             
                             plt <- ggplot2::ggplot(cv_coef) +
                               ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
@@ -320,7 +400,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                               xmax = coef_nm_num + 0.35,
                                                               ymin = loCI,
                                                               ymax = hiCI),
-                                                 alpha = 0.3,
+                                                 alpha = 0.35,
                                                  data = orig_coef) +
                               
                               ggplot2::geom_segment(ggplot2::aes(x = coef_nm_num - 0.35,
@@ -337,12 +417,12 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                                   colour = as.character(fold_id)),
                                                      position = ggplot2::position_dodge(0.7),
                                                      width = 0,
-                                                     alpha = 0.8) +
+                                                     alpha = 0.7) +
                               ggplot2::geom_point(ggplot2::aes(x = coef_nm_num,
                                                                y = Coefficient_value,
                                                                colour = as.character(fold_id)),
                                                   position = ggplot2::position_dodge(0.7),
-                                                  alpha = 0.8) +
+                                                  alpha = 0.7) +
                               
                               # ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name,
                               #                                     ymin = loCI,
@@ -401,13 +481,21 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                         
                                                       })
                             
+                            # Add cv_type that isn't in base_cv_levs to cv_levs
+                            add_cv_levs <- unique(cv_coef$cv_type)
+                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                            
+                            
                             orig_coef <- orig_coef %>%
                               dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name))) %>%
                               dplyr::arrange(coef_nm_num)
                             
                             cv_coef <- cv_coef %>%
                               dplyr::ungroup() %>%
-                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name)))
+                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name)),
+                                            cv_type = factor(cv_type, 
+                                                             levels = cv_levs))
                             
                             # print(head(orig_coef))
                             # print(head(cv_coef))
@@ -420,7 +508,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                               xmax = coef_nm_num + 0.35,
                                                               ymin = loCI,
                                                               ymax = hiCI),
-                                                 alpha = 0.3,
+                                                 alpha = 0.35,
                                                  data = orig_coef) +
                               
                               ggplot2::geom_segment(ggplot2::aes(x = coef_nm_num - 0.35,
@@ -477,8 +565,11 @@ hib_cv_res <- R6Class("hib_cv_res",
                               ggplot2::theme_bw() +
                               basic_thm 
                           }
-                          if (type == "obs-v-pred"){
-                            # Get obs and pred - across cv + insample
+                          
+                          # TODO: 
+                          if (type %in% c("obs-v-pred", "obs-v-error", "pred-v-error") ){
+                            
+                            # Get obs and pred and error - across cv + insample
                             insamp_df <- self$insample_results$insample_pred_df %>%
                               dplyr::mutate(cv_type = "In-sample",
                                             fold_id = NA)
@@ -500,30 +591,70 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                     })
                             
                             
+                            # Add cv_type that isn't in base_cv_levs to cv_levs
+                            add_cv_levs <- unique(cv_df$cv_type)
+                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                            
                             df <- dplyr::bind_rows(insamp_df,
                                                    cv_df) %>%
-                              dplyr::mutate(cv_type = factor(cv_type),
-                                            cv_type = relevel(cv_type, ref = "In-sample"))
-                            
-                            rng <- range(c(df$y, df$prediction), na.rm = T)
+                              dplyr::mutate(cv_type = factor(cv_type,
+                                                             levels = cv_levs))
                             
                             
-                            plt <- ggplot2::ggplot(df) +
-                              ggplot2::geom_abline(intercept = 0, 
-                                                   slope = 1,
-                                                   lty = 2, colour = "darkgrey") +
-                              ggplot2::geom_point(ggplot2::aes(x = y,
-                                                               y = prediction,
-                                                               colour = as.character(fold_id)),
-                                                  alpha = 0.25) +
-                              ggplot2::labs(x = "Observed",
-                                            y = "Predicted") +
-                              ggplot2::coord_equal(xlim = rng,
-                                                   ylim = rng) +
+                            if (type == "obs-v-pred"){
+                              rng <- range(c(df$y, df$prediction), na.rm = T)  
+                            } else {
+                              y_abs_max <- max(abs(range(df$error, na.rm = T)))
+                            }
+                            
+                            
+                            plt <- ggplot2::ggplot(df)
+                            
+                            if (type == "obs-v-pred"){
+                              plt <- plt +
+                                ggplot2::geom_abline(intercept = 0, 
+                                                     slope = 1,
+                                                     lty = 2, colour = "darkgrey") +
+                                ggplot2::geom_point(ggplot2::aes(x = y,
+                                                                 y = prediction,
+                                                                 colour = as.character(fold_id)),
+                                                    alpha = 0.25) +
+                                ggplot2::labs(x = "Observed",
+                                              y = "Predicted") +
+                                ggplot2::coord_equal(xlim = rng,
+                                                     ylim = rng) 
+                            } else {
+                              plt <- plt +
+                                ggplot2::geom_hline(yintercept = 0, 
+                                                     lty = 2, colour = "darkgrey") +
+                                ggplot2::scale_y_continuous(limits = c(-y_abs_max, y_abs_max))
+                            }
+                            
+                            if (type == "obs-v-error"){
+                              plt <- plt +
+                                ggplot2::geom_point(ggplot2::aes(x = y,
+                                                                 y = error,
+                                                                 colour = as.character(fold_id)),
+                                                    alpha = 0.25) +
+                                ggplot2::labs(x = "Observed",
+                                              y = "Error")
+                            }
+                            if (type == "pred-v-error"){
+                              plt <- plt +
+                                ggplot2::geom_point(ggplot2::aes(x = prediction,
+                                                                 y = error,
+                                                                 colour = as.character(fold_id)),
+                                                    alpha = 0.25) +
+                                ggplot2::labs(x = "Predicted",
+                                              y = "Error")
+                            }
+                            plt <- plt +
                               ggplot2::theme_bw() +
                               basic_thm +
                               ggplot2::facet_wrap(~cv_type) +
                               ggplot2::theme(legend.position = "none")
+                            
                           }
                           
                           if (type == "metrics"){
@@ -541,11 +672,20 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       
                                                       tmp_df
                                                     }) %>%
-                              dplyr::filter(Metric_shrt %in% metrics) %>%
-                              dplyr::mutate(cv_type_num = as.numeric(as.factor(cv_type)))
+                              dplyr::filter(Metric_shrt %in% metrics)
                             
                             insamp_df <- self$insample_results$insample_metrics %>%
                               dplyr::filter(Metric_shrt %in% metrics)
+                            
+                            # Add cv_type that isn't in base_cv_levs to cv_levs
+                            add_cv_levs <- unique(cv_df$cv_type)
+                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                            
+                            cv_df <- cv_df %>%
+                              dplyr::mutate(cv_type = factor(cv_type,
+                                                             levels = cv_levs),
+                                            cv_type_num = as.numeric(cv_type))
                             
                             # plot metrics by cv type, facet per metric, colour per cv type
                             plt <- ggplot2::ggplot(cv_df) +

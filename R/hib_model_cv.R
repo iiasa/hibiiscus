@@ -1,5 +1,4 @@
-# TODO: much of code is shared between cv approaches, need to neaten/condense
-# TODO: allow for custom N random - limit to 20? - have gor 2,3,5,10 - most common
+# TODO: allow for custom N random - limit to 20? - have got 2,3,5,10 - most common
 
 
 #' Cross-validate a fitted hib mixed-effects model
@@ -24,7 +23,9 @@
 #'   cv_out <- hib_mod_cv(mod_obj, db_obj, fold_type = "Source_ID")
 #' } 
 #' @export
-hib_mod_cv <- function(mod_obj, db_obj, fold_type, custom_col = NULL,
+hib_mod_cv <- function(mod_obj, db_obj, fold_type, 
+                       custom_col = NULL,
+                       random_seed = NULL,
                        backtransform = NULL){
   # Assertion checks
   assertthat::assert_that(
@@ -32,16 +33,12 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type, custom_col = NULL,
     inherits(db_obj, "Database") || ( is.list(db_obj) & all(unlist(lapply(obj, function(x){inherits(x, "Database")}))) ),    
     is.character(fold_type),
     is.character(custom_col) || is.null(custom_col),
+    is.numeric(random_seed) || is.null(random_seed),
     is.function(backtransform) || is.null(backtransform)
   )
   
-  # allow multiple fold types - 
-  # also allow multiple custom cols - 
   # make a spec df... - each of fold types (unique), plus as many custom as unique
   # custom cols
-  
-  # TODO:
-  # set random and N_fold separately...
   
   fold_type <- match.arg(fold_type,
                          c("Random-2", "Random-3", "Random-5", "Random-10", 
@@ -52,6 +49,17 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type, custom_col = NULL,
                            "Custom"), # loo??
                          several.ok = T)
   fold_type <- unique(fold_type)
+  
+  # print(grepl("Random-", fold_type))
+  # print(random_seed)
+  if ((any(grepl("Random-", fold_type)) & is.null(random_seed)) ){
+    random_seed <- 123
+  }
+  if ((!any(grepl("Random-", fold_type)) & !is.null(random_seed) )){
+    random_seed <- NULL
+    message(crayon::yellow(paste0("Warning: Random seed will not be used as ", 
+                                  "'Random' cross-validation was not specified.")))
+  }
   
   if (!is.null(custom_col)){
     if (!"Custom" %in% fold_type){
@@ -86,88 +94,49 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type, custom_col = NULL,
                                      fold_col = custom_col,
                                      stringsAsFactors = F) %>%
                            as.data.frame()
-                         )
+    )
   }
   
-
-  # print(cv_spec$fold_col)
-  # then with spec sorted, purr map for each spec, and apply relevant func...
-  # names as <fold_type>_<custom_col>
-  # each list item has pred df, coef df, fold_type, n_folds, and an in-sample pred_df...
-  # plus any model-specific specs...
+  # TODO:
+  message(crayon::green(paste0("Cross-validating supplied model:\n\t", 
+                               format(stats::formula(mod_obj$model)), "\n")))
+  if (inherits(mod_obj, "hib_brms_model")){
+    message(crayon::green("Have some patience, this may take a while...\n"))
+  }
+  cv_out <- purrr::pmap(cv_spec,
+                        function(fold_type, fold_col,  
+                                 mod_ = mod_obj,
+                                 db_ = db_obj,
+                                 rand_seed = random_seed,
+                                 backtr = backtransform){
+                          hib_cv_mod_inner(mod_, db_, fold_type, fold_col, 
+                                           rand_seed, backtr)
+                        })
+  
+  # TODO: add random_seed to cv_out...
+  
+  message(crayon::green("Generating in-sample performance metrics for comparison.\n"))
+  
   if (inherits(mod_obj, "hib_lme4_model")){
-    
-    # TODO: print - cv supplied lme4 model, (formula...)
-    message(crayon::green(paste0("Cross-validating supplied lme4 model:\n\t", 
-                                 format(stats::formula(mod_obj$model)), "\n")))
-    
-    cv_out <- purrr::pmap(cv_spec,
-                          function(fold_type, fold_col,  
-                                   mod_ = mod_obj,
-                                   db_ = db_obj,
-                                   backtr = backtransform){
-                            hib_cv_lme4(mod_, db_, fold_type, fold_col, backtr)
-                          })
-    
-    # %%%%%
     # In-sample preds
     orig_form <- stats::formula(mod_obj$model)
     insample_df <- mod_obj$data
     insample_df$prediction <- predict(mod_obj$model,
                                       insample_df,
                                       re.form = NA)
-    
-    # backtransform prediction, y as resp term, 
-    if (!is.null(backtransform)){
-      insample_df <- insample_df %>%
-        dplyr::mutate(prediction = backtransform(prediction),
-                      y = !!dplyr::sym(all.vars(orig_form[[2]])))
-    }
-    # or convert resp value to y - based on eqn, and don't backtransform prediction
-    if (is.null(backtransform)){
-      insample_df <- insample_df %>%
-        dplyr::mutate(y = !!orig_form[[2]] )
-    }
-    
-    insample_df <- insample_df %>%
-      dplyr::mutate(error = y - prediction)
-    
-    insample_metrics <- calc_cv_metrics(insample_df$prediction, 
-                                        insample_df$y, 
-                                        insample_df$error)
-    
-    insample_res = list(insample_pred_df = insample_df, 
-                        insample_metrics = insample_metrics)
-
-
   }
   
   if (inherits(mod_obj, "hib_inla_model")){
     stop("INLA cv in development!")
-    cv_out <- hib_cv_inla(mod_obj, db_obj, fold_type, custom_col,
-                          backtransform)
-    # use cv_spec fo run cv_inla function
+    # cv_out <- hib_cv_inla(mod_obj, db_obj, fold_type, custom_col,
+    #                       backtransform)
+    # use cv_spec to run cv_inla function
     # cv_res
     # also get In-sample fitted values - no ranefs...
     # insample_res
   }
   
   if (inherits(mod_obj, "hib_brms_model")){
-    # stop("INLA cv in development!")
-    message(crayon::green(paste0("Cross-validating supplied brms model:\n\t", 
-                                 format(mod_obj$model$formula$formula), "\n")))
-    
-    message(crayon::green("Have some patience, this may take a while...\n"))
-    
-    # use cv_spec fo run cv_brms function - using fitted?
-    cv_out <- purrr::pmap(cv_spec,
-                          function(fold_type, fold_col,  
-                                   mod_ = mod_obj,
-                                   db_ = db_obj,
-                                   backtr = backtransform){
-                            hib_cv_brms(mod_, db_, fold_type, fold_col, backtr)
-                          })
-    # also get In-sample fitted values - no ranefs...
     # In-sample preds
     orig_form <- mod_obj$model$formula$formula
     insample_df <- mod_obj$data
@@ -180,29 +149,34 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type, custom_col = NULL,
     insample_df$prediction_q2.5 <- tmp_pred$Q2.5
     insample_df$prediction_q97.5 <- tmp_pred$Q97.5
     
-    # backtransform prediction, y as resp term, 
-    if (!is.null(backtransform)){
-      insample_df <- insample_df %>%
-        dplyr::mutate(prediction = backtransform(prediction),
-                      y = !!dplyr::sym(all.vars(orig_form[[2]])))
-    }
-    # or convert resp value to y - based on eqn, and don't backtransform prediction
-    if (is.null(backtransform)){
-      insample_df <- insample_df %>%
-        dplyr::mutate(y = !!orig_form[[2]] )
-    }
-    
-    insample_df <- insample_df %>%
-      dplyr::mutate(error = y - prediction)
-    
-    insample_metrics <- calc_cv_metrics(insample_df$prediction, 
-                                        insample_df$y, 
-                                        insample_df$error)
-    
-    insample_res = list(insample_pred_df = insample_df, 
-                        insample_metrics = insample_metrics)
-
   }
+  
+  # %%%%%
+  # Insample processing - is the same for all model types..
+  
+  # backtransform prediction, y as resp term, 
+  if (!is.null(backtransform)){
+    insample_df <- insample_df %>%
+      dplyr::mutate(prediction = backtransform(prediction),
+                    y = !!dplyr::sym(all.vars(orig_form[[2]])))
+  }
+  # or convert resp value to y - based on eqn, and don't backtransform prediction
+  if (is.null(backtransform)){
+    insample_df <- insample_df %>%
+      dplyr::mutate(y = !!orig_form[[2]] )
+  }
+  
+  insample_df <- insample_df %>%
+    dplyr::mutate(error = y - prediction)
+  
+  insample_metrics <- calc_cv_metrics(insample_df$prediction, 
+                                      insample_df$y, 
+                                      insample_df$error)
+  
+  insample_res = list(insample_pred_df = insample_df, 
+                      insample_metrics = insample_metrics)
+  
+  # %%%%%
   
   # Return a cv object.. - incl original model? + df of cv predictions 
   # initialise cv_output...
@@ -214,44 +188,49 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type, custom_col = NULL,
     insamp_res = insample_res)
   
   return(cv_obj)
-}
+  }
 
 
-
-#' Cross-validate a fitted hib_lme4_model
+#' Cross-validate a fitted hib_XX_model
 #' 
 #' @description 
 #' This function re-fits the model on different subsets of the data, so that subsequent 
 #' evaluation of model performance can take place.
 #' @details 
-#' Expects a hib_lme4_model object...
-#' @param mod_obj A [`hib_lme4_model`] object.
+#' Expects a hib_XX_model object...
+#' @param mod_obj A [`hib_XX_model`] object.
 #' @param db_obj A [`hib_database`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
 #' of: ..., <spatial_options>, ..., "Custom" - ?"Random-5", "Random-10"?
 #' @param fold_col A [`character`] indicating the column in the model data to 
 #' use to define cross-validation folds
+#' @param random_seed A [`numeric`] indicating the random seed used to define
+#' random cross-validation folds - only used if 'Random-X' in fold_type
 #' @param backtransform A function to convert the model prediction back to the original
 #' scale of interest
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
-#'   cv_out <- hib_cv_lme4(mod_obj, db_obj, fold_type = "Source_ID")
+#'   cv_out <- hib_cv_mod_inner(mod_obj, db_obj, 
+#'                          fold_type = "Source_ID",
+#'                          fold_col  = "Source_ID")
 #' } 
 #' @noRd
-hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
-                        backtransform = NULL){
+hib_cv_mod_inner <- function(mod_obj, db_obj, 
+                             fold_type, fold_col,
+                             random_seed = NULL,
+                             backtransform = NULL){
   
   # Assertion checks 
   assertthat::assert_that(
-    inherits(mod_obj, "hib_lme4_model"),
-    inherits(db_obj, "Database") || is.list(db_obj), # TODO list of db...
+    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
+    inherits(db_obj, "Database") || is.list(db_obj), 
     is.character(fold_type),
     is.character(fold_col),
+    is.numeric(random_seed) || is.null(random_seed),
     is.function(backtransform) || is.null(backtransform)
   )
-  
   
   # Check fold_type matches one of the options
   fold_type <- match.arg(fold_type, 
@@ -291,55 +270,16 @@ hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
     }
   }
   
-  # Random cv doesn't seem sensible... - ignores important struture in data - e.g. SS
-  # Does that matter??
-  # if (fold_type == "Random-5"){
-  #   # Randomly sample/shuffle SSBS, assign to 5 indices
-  #   if ("SSBS" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS),
-  #                           fold_id = seq(1,5))  
-  #   }
-  #   if ("SSBS1" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1),
-  #                           fold_id = seq(1,5))  
-  #   }
-  #   # TODO: set seed?
-  # }
-  # 
-  # if (fold_type == "Random-10"){
-  #   # Randomly sample/shuffle SSBS, assign to 10 indices
-  #   if ("SSBS" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS),
-  #                           fold_id = seq(1,10))  
-  #   }
-  #   if ("SSBS1" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1),
-  #                           fold_id = seq(1,10))  
-  #   }
-  #   # TODO: set seed?
-  # }
-  # 
-  # 
-  # if (fold_type == "Random-2"){
-  #   # Randomly sample/shuffle SSBS, assign to 5 indices
-  #   if ("SSBS" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS),
-  #                           fold_id = seq(1,2))  
-  #   }
-  #   if ("SSBS1" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1),
-  #                           fold_id = seq(1,2))  
-  #   }
-  #   # TODO: set seed?
-  # }
-  
   
   # %%%%%%%%%%
+  # Random fold generation
   if (fold_type %in% c("Random-2", "Random-3", "Random-5", "Random-10" )){
     if ("SSBS" %in% colnames(mod_obj$data)){
+      set.seed(random_seed)
       fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS))  
     }
     if ("SSBS1" %in% colnames(mod_obj$data)){
+      set.seed(random_seed)
       fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1))  
     }
     
@@ -349,56 +289,72 @@ hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
     }
     if (fold_type == "Random-3"){
       fold_id_vec <- get_rand_fold_id(n_rows, 3)
-      # fold_id_vec <- c(rep(1:3, floor(nrow(fold_df)/3) ), 1:(nrow(fold_df)%%3))
     }
     if (fold_type == "Random-5"){
       fold_id_vec <- get_rand_fold_id(n_rows, 5)
-      # fold_id_vec <- c(rep(1:5, floor(nrow(fold_df)/5) ), 1:(nrow(fold_df)%%5))
     }
     if (fold_type == "Random-10"){
       fold_id_vec <- get_rand_fold_id(n_rows, 10)
-      # fold_id_vec <- c(rep(1:10, floor(nrow(fold_df)/10) ), 1:(nrow(fold_df)%%10))
     }
     fold_df$fold_id <- fold_id_vec
   }
   # %%%%%%%%%%
-  # %%%%%
   
   
   # Should we also try to "keep" SS together in other blockings...
   
-  # %%%%%%%%%%
-  # LME4-specific
-  # Need to obtain model fitting dataframe - mod_obj$data
   mod <- mod_obj$model
-  # model formula - formula(mod_obj$model)
-  orig_form <- stats::formula(mod)
-  
-  # Other key info from model fitting
-  # family # lmer v glmer
-  fam <- NULL
-  if (is(mod@resp, "glmResp")){
-    fam <- mod@resp$family
-  }
-  
   orig_data <- mod_obj$data
   
-  # weights
   incl_weights <- F
   if ("data_weight" %in% colnames(orig_data)){
     incl_weights <- T
   }
   
-  # reml v ml
-  if (mod@devcomp$dims[["REML"]]){
-    REML <- T
-  } else {REML <- F}
+  if (inherits(mod_obj, "hib_lme4_model")){
+    # %%%%%%%%%%
+    # LME4-specific data prep 
+    # %%%%%%%%%%
+    orig_form <- stats::formula(mod)
+    
+    fam <- NULL
+    if (is(mod@resp, "glmResp")){
+      fam <- mod@resp$family
+    }
+    
+    if (mod@devcomp$dims[["REML"]]){
+      REML <- T
+    } else {REML <- F}
+    
+    ci_type <- mod_obj$ci_type
+    # %%%%%%%%%%
+    # LME4-specific dataprep - END
+    # %%%%%%%%%%
+  }
   
+  if (inherits(mod_obj, "hib_brms_model")){
+    # %%%%%%%%%%
+    # BRMS-specific dataprep -  
+    # %%%%%%%%%%
+    orig_form <- mod$formula$formula
+    orig_fam <- mod$family
+    orig_extra_args <- mod_obj$extra_args
+    
+    m_args <- orig_extra_args
+    m_args[["formula"]] <- orig_form
+    m_args[["family"]] <- orig_fam
+    # %%%%%%%%%%
+    # BRMS-specific dataprep -  END
+    # %%%%%%%%%%
+  }
   
-  ci_type <- mod_obj$ci_type
   # %%%%%%%%%%
-  # LME4-specific
+  # INLA-specific dataprep 
+  # %%%%%%%%%%
   
+  # %%%%%%%%%%
+  # INLA-specific dataprep -  END
+  # %%%%%%%%%%
   
   # If model is based on contrasts (i.e., comp-sim style), need to get, info on both
   # SSBS1 and SSBS2... - below, am just using SSBS1...
@@ -416,23 +372,24 @@ hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
                                 by = c("SSBS1" = "SSBS"))
   }
   
-  
   fold_ids <- unique(cv_data %>% dplyr::pull(!!fold_col))
-  # print(fold_ids)
   n_folds <- length(fold_ids)
+  
   # Make a list to store output - length = length(unique(new_df[,fold_var]))
   cv_out_ls <- vector("list", n_folds)
-  
   coef_out_ls <- vector("list", n_folds)
-    
-  # For every fold - subset data
+  
   
   message(crayon::green(paste0("\tTotal number of folds: ", n_folds, "\n\n\tProgress")))
   
-  pb <- txtProgressBar(min = 1, max = n_folds, style = 3)
+  # TODO: this is only really good for LME4 models, unless we make brms/inla
+  # silent
+  if (inherits(mod_obj, "hib_lme4_model")){
+    pb <- txtProgressBar(min = 1, max = n_folds, style = 3)
+  }
   
   for (i in 1:n_folds){
-
+    
     tr <- cv_data %>%
       dplyr::filter(!!dplyr::sym(fold_col) != fold_ids[i])
     te <- cv_data %>%
@@ -443,8 +400,7 @@ hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
     te <- te %>%
       dplyr::mutate(fold_id = !!dplyr::sym(fold_col))
     
-    # TODO:
-    # Need to adjust weights in tr so sum per data type - dataset_modelling_id
+    # Adjust weights in tr so sum per data type - dataset_modelling_id
     # sum to same value as in orig data...
     if (incl_weights == T){
       weight_df <- orig_data %>%
@@ -461,69 +417,106 @@ hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
         dplyr::mutate(data_weight = prop_weight/dplyr::n())
     }
     
-    # %%%%%%%%%%
-    # LME4-specific
-    # fit model 
-    # - lmer v glmer - # - family
-    if (is.null(fam)){
-      if (incl_weights == F){
-        tmp_m <- lme4::lmer(formula = orig_form, 
-                            data = tr,
-                            REML = REML)
+    if (inherits(mod_obj, "hib_lme4_model")){
+      # %%%%%%%%%%
+      # LME4-specific
+      # %%%%%%%%%%
+      # fit model 
+      # - lmer v glmer - # - family
+      if (is.null(fam)){
+        if (incl_weights == F){
+          tmp_m <- lme4::lmer(formula = orig_form, 
+                              data = tr,
+                              REML = REML)
+        }
+        if (incl_weights == T){
+          tmp_m <- lme4::lmer(formula = orig_form, 
+                              data = tr,
+                              REML = REML,
+                              weights = data_weight)
+        }
       }
-      if (incl_weights == T){
-        tmp_m <- lme4::lmer(formula = orig_form, 
-                            data = tr,
-                            REML = REML,
-                            weights = data_weight)
+      if (!is.null(fam)){
+        if (incl_weights == F){
+          tmp_m <- lme4::glmer(formula = orig_form, 
+                               data = tr,
+                               family = fam)
+        }
+        if (incl_weights == T){
+          tmp_m <- lme4::glmer(formula = orig_form, 
+                               data = tr,
+                               family = fam,
+                               weights = data_weight)
+        }
       }
-    }
-    if (!is.null(fam)){
-      if (incl_weights == F){
-        tmp_m <- lme4::glmer(formula = orig_form, 
-                            data = tr,
-                            family = fam)
+      
+      te$prediction <- predict(tmp_m, te, re.form = NA)
+      
+      # get coefs, and cis...
+      fixef_df <- as.data.frame(lme4::fixef(tmp_m))
+      colnames(fixef_df) <- "Coefficient_value"
+      fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
+      
+      if (!is.null(ci_type)){
+        confint_df <- lme4::confint.merMod(tmp_m, parm = "beta_", method = ci_type)
+        confint_df <- as.data.frame(confint_df)
+        colnames(confint_df) <- c("loCI", "hiCI")
+        confint_df$Coefficient_name <- rownames(confint_df)
+        fixef_df <- dplyr::left_join(fixef_df,
+                                     confint_df,
+                                     by = "Coefficient_name")
       }
-      if (incl_weights == T){
-        tmp_m <- lme4::lmer(formula = orig_form, 
-                            data = tr,
-                            family = fam,
-                            weights = data_weight)
-      }
+      # %%%%%%%%%%
+      # LME4-specific - END
+      # %%%%%%%%%%
     }
     
-    te$prediction <- predict(tmp_m, te, re.form = NA)
-    # %%%%%%%%%%
-    # LME4-specific
+    
+    if (inherits(mod_obj, "hib_brms_model")){
+      # %%%%%%%%%%
+      # BRMS-specific
+      # %%%%%%%%%%
+      
+      # fit model 
+      tmp_args <- NULL
+      tmp_args <- m_args
+      tmp_args[["data"]] <- tr
+      
+      tmp_m <- do.call(brms::brm,
+                       tmp_args)
+      
+      # predict or fitted??
+      # tmp_pred <- predict(tmp_m, te, re_form = NA)%>%
+      #   as.data.frame()
+      tmp_pred <- fitted(tmp_m, te, re_form = NA) %>%
+        as.data.frame()
+      te$prediction <- tmp_pred$Estimate
+      te$prediction_q2.5 <- tmp_pred$Q2.5
+      te$prediction_q97.5 <- tmp_pred$Q97.5
+      
+      # get coefs, and cis...
+      fixef_df <- as.data.frame(brms::fixef(tmp_m))
+      colnames(fixef_df) <- c("Coefficient_value", "Coefficient_error", "loCI", "hiCI")
+      fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
+      
+      # %%%%%%%%%%
+      # BRMS-specific - END
+      # %%%%%%%%%%
+    }
     
     cv_out_ls[[i]] <- te
-    
-    # %%%%%%%%%%
-    # LME4-specific
-    # get coefs, and cis...
-    fixef_df <- as.data.frame(lme4::fixef(tmp_m))
-    colnames(fixef_df) <- "Coefficient_value"
-    fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
-    # print(calc_CIs)
-    if (!is.null(ci_type)){
-      # message(crayon::green("Getting confidence intervals ..."))
-      confint_df <- lme4::confint.merMod(tmp_m, parm = "beta_", method = ci_type)
-      confint_df <- as.data.frame(confint_df)
-      colnames(confint_df) <- c("loCI", "hiCI")
-      confint_df$Coefficient_name <- rownames(confint_df)
-      fixef_df <- dplyr::left_join(fixef_df,
-                                   confint_df,
-                                   by = "Coefficient_name")
-    }
-    # %%%%%%%%%%
-    # LME4-specific
     
     fixef_df$fold_id <- fold_ids[i]
     coef_out_ls[[i]] <- fixef_df
     
-    setTxtProgressBar(pb, i)
+    if (inherits(mod_obj, "hib_lme4_model")){
+      setTxtProgressBar(pb, i)
+    }
   }
-  close(pb)
+  
+  if (inherits(mod_obj, "hib_lme4_model")){
+    close(pb)
+  }
   
   cv_out_df <- dplyr::bind_rows(cv_out_ls)
   coef_out_df <- dplyr::bind_rows(coef_out_ls)
@@ -548,331 +541,16 @@ hib_cv_lme4 <- function(mod_obj, db_obj, fold_type, fold_col,
                                 cv_out_df$y, 
                                 cv_out_df$error)
   
+  # TODO: need to store random_seed
   return(list(cv_pred_df = cv_out_df, 
               cv_metrics = cv_metrics,
               cv_coef_df = coef_out_df,
               fold_type  = fold_type,
               fold_col   = fold_col,
-              n_folds    = n_folds
-              ))
-}
-
-# hib_cv_inla
-
-
-#' Cross-validate a fitted hib_brms_model
-#' 
-#' @description 
-#' This function re-fits the model on different subsets of the data, so that subsequent 
-#' evaluation of model performance can take place.
-#' @details 
-#' Expects a hib_lme4_model object...
-#' @param mod_obj A [`hib_brms_model`] object.
-#' @param db_obj A [`hib_database`] object, or, if modelling used multiple data-
-#' sources, a list of database objects
-#' @param fold_type A [`character`] indicating the type of cross-validation; one
-#' of: ..., <spatial_options>, ..., "Custom" - ?"Random-5", "Random-10"?
-#' @param fold_col A [`character`] indicating the column in the model data to 
-#' use to define cross-validation folds
-#' @param backtransform A function to convert the model prediction back to the original
-#' scale of interest
-#' @keywords model, evaluation
-#' @examples 
-#' \dontrun{
-#'   cv_out <- hib_cv_brms(mod_obj, db_obj, fold_type = "Source_ID")
-#' } 
-#' @noRd
-hib_cv_brms <- function(mod_obj, db_obj, fold_type, fold_col,
-                        backtransform = NULL){
-  
-  # Assertion checks 
-  assertthat::assert_that(
-    inherits(mod_obj, "hib_brms_model"),
-    inherits(db_obj, "Database") || is.list(db_obj), # TODO list of db...
-    is.character(fold_type),
-    is.character(fold_col),
-    is.function(backtransform) || is.null(backtransform)
-  )
-  
-  
-  # Check fold_type matches one of the options
-  fold_type <- match.arg(fold_type, 
-                         c("Random-2", "Random-3", "Random-5", "Random-10", 
-                           "Source_ID", "SS", #"SSBS",
-                           "Country", "UN_subregion", "UN_region",
-                           "Biome", "Realm",
-                           "Custom"), # loo??
-                         several.ok = F)
-  
-  # %%%%%
-  fold_type_msg <- fold_type
-  if (fold_type == "Custom"){
-    fold_type_msg <- paste0(fold_type, " (", fold_col, ")")
-  }
-  message(crayon::green(paste0("\nRunning cross-validation using: ", fold_type_msg, "\n")))
-  
-  
-  # Ensure fold_col is in database, and extract ...
-  if (fold_type %in% c("Source_ID", "SS", "Country", "UN_subregion", "UN_region",
-                       "Biome", "Realm", "Custom")){
-    # Check fold_col is in db_obj$site
-    if(inherits(db_obj, "Database")){
-      assertthat::assert_that(
-        assertthat::has_name(db_obj$sites, fold_col)
-      )
-      fold_df <- db_obj$sites[,c("SSBS", fold_col)]
-    }
-    # or each db_obj$site if db_obj is a list
-    if(is.list(db_obj)){
-      assertthat::assert_that(
-        all(unlist(lapply(db_obj, function(x){fold_col %in% colnames(x$sites)})))
-      )
-      
-      fold_df <- lapply(db_obj, function(x){x$sites[,c("SSBS", fold_col)]}) %>%
-        dplyr::bind_rows()
-    }
-  }
-  
-  # Random cv doesn't seem sensible... - ignores important structure in data - e.g. SS
-  # Does that matter??
-  # if (fold_type == "Random-5"){
-  #   # Randomly sample/shuffle SSBS, assign to 5 indices
-  #   if ("SSBS" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS),
-  #                           fold_id = seq(1,5))  
-  #   }
-  #   if ("SSBS1" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1),
-  #                           fold_id = seq(1,5))  
-  #   }
-  #   # TODO: set seed?
-  # }
-  # 
-  # if (fold_type == "Random-10"){
-  #   # Randomly sample/shuffle SSBS, assign to 10 indices
-  #   if ("SSBS" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS),
-  #                           fold_id = seq(1,10))  
-  #   }
-  #   if ("SSBS1" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1),
-  #                           fold_id = seq(1,10))  
-  #   }
-  #   # TODO: set seed?
-  # }
-  # 
-  # 
-  # if (fold_type == "Random-2"){
-  #   # Randomly sample/shuffle SSBS, assign to 10 indices
-  #   if ("SSBS" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS),
-  #                           fold_id = seq(1,2))  
-  #   }
-  #   if ("SSBS1" %in% colnames(mod_obj$data)){
-  #     fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1),
-  #                           fold_id = seq(1,2))  
-  #   }
-  #   # TODO: set seed?
-  # }
-  # %%%%%
-  
-  # %%%%%%%%%%
-  if (fold_type %in% c("Random-2", "Random-3", "Random-5", "Random-10" )){
-    if ("SSBS" %in% colnames(mod_obj$data)){
-      fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS))  
-    }
-    if ("SSBS1" %in% colnames(mod_obj$data)){
-      fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1))  
-    }
-    
-    n_rows <- nrow(mod_obj$data)
-    if (fold_type == "Random-2"){
-      fold_id_vec <- get_rand_fold_id(n_rows, 2)
-    }
-    if (fold_type == "Random-3"){
-      fold_id_vec <- get_rand_fold_id(n_rows, 3)
-      # fold_id_vec <- c(rep(1:3, floor(nrow(fold_df)/3) ), 1:(nrow(fold_df)%%3))
-    }
-    if (fold_type == "Random-5"){
-      fold_id_vec <- get_rand_fold_id(n_rows, 5)
-      # fold_id_vec <- c(rep(1:5, floor(nrow(fold_df)/5) ), 1:(nrow(fold_df)%%5))
-    }
-    if (fold_type == "Random-10"){
-      fold_id_vec <- get_rand_fold_id(n_rows, 10)
-      # fold_id_vec <- c(rep(1:10, floor(nrow(fold_df)/10) ), 1:(nrow(fold_df)%%10))
-    }
-    fold_df$fold_id <- fold_id_vec
-  }
-  # %%%%%%%%%%
-  
-  # Should we also try to "keep" SS together in other blockings...
-  
-  # Need to obtain model fitting dataframe - mod_obj$data
-  mod <- mod_obj$model
-  
-  # %%%%%%%%%%
-  # TODO: get items important for brms model 
-  # model, form, data2?, data, family
-  
-  # brms::brm(form, 
-  #           data = mod_df,
-  #           family = family,
-  #           ...)
-  
-  # BRMS-specific
-  # %%%%%%%%%%
-  
-  orig_form <- mod$formula$formula
-  # print(orig_form)
-  # print(all.vars(orig_form[[2]]))
-  # stop("TESTING")
-  orig_data <- mod_obj$data
-  orig_fam <- mod$family
-  orig_extra_args <- mod_obj$extra_args
-  
-  m_args <- orig_extra_args
-  m_args[["formula"]] <- orig_form
-  m_args[["family"]] <- orig_fam
-  # %%%%%%%%%%
-  
-  # If model is based on contrasts (i.e., comp-sim style), need to get, info on both
-  # SSBS1 and SSBS2... - below, am just using SSBS1...
-  
-  # Add important fold variable - from db_obj - based on SSBS, or, 
-  # if SSBS1/SSBS2 in orig_data, use these...
-  if ("SSBS" %in% colnames(orig_data)){
-    cv_data <- dplyr::left_join(orig_data,
-                                fold_df,
-                                by = "SSBS")
-  }
-  if ("SSBS1" %in% colnames(orig_data)){
-    cv_data <- dplyr::left_join(orig_data,
-                                fold_df,
-                                by = c("SSBS1" = "SSBS"))
-  }
-  
-  
-  fold_ids <- unique(cv_data %>% dplyr::pull(!!fold_col))
-  n_folds <- length(fold_ids)
-  
-  # Make a list to store output - length = length(unique(new_df[,fold_var]))
-  cv_out_ls <- vector("list", n_folds)
-  coef_out_ls <- vector("list", n_folds)
-  
-  # For every fold - subset data
-  
-  message(crayon::green(paste0("\tTotal number of folds: ", n_folds, "\n\n\tProgress")))
-  
-  # div_ <- 1
-  # if (n_folds > 10){
-  #   div_ <- 10
-  # }
-  # pb <- txtProgressBar(min = 1, max = n_folds, style = 3)
-  
-  for (i in 1:n_folds){
-    
-    message(crayon::green(paste0("\nFold ", i, " of ", n_folds, "...\n")))
-    
-    tr <- cv_data %>%
-      dplyr::filter(!!dplyr::sym(fold_col) != fold_ids[i])
-    te <- cv_data %>%
-      dplyr::filter(!!dplyr::sym(fold_col) == fold_ids[i])
-    
-    
-    # Make a fold_id/fold_idx column for te...
-    te <- te %>%
-      dplyr::mutate(fold_id = !!dplyr::sym(fold_col))
-    
-    # TODO:
-    # Need to adjust weights in tr so sum per data type - dataset_modelling_id
-    # sum to same value as in orig data...
-    if ("data_weight" %in% colnames(orig_data)){
-    # if (incl_weights == T){
-      weight_df <- orig_data %>%
-        dplyr::group_by(dataset_modelling_id) %>%
-        dplyr::summarise(prop_weight = sum(data_weight))
-      
-      tr <- tr %>%
-        select(-data_weight)
-      te <- te %>%
-        select(-data_weight)
-      
-      tr <- dplyr::left_join(tr, weight_df) %>%
-        dplyr::group_by(dataset_modelling_id) %>%
-        dplyr::mutate(data_weight = prop_weight/dplyr::n())
-    }
-    
-    # %%%%%%%%%%
-    # BRMS-specific
-    # fit model 
-    tmp_args <- NULL
-    tmp_args <- m_args
-    tmp_args[["data"]] <- tr
-    
-    tmp_m <- do.call(brms::brm,
-                     tmp_args)
-    
-    # predict or fitted??
-    # te$prediction <- predict(tmp_m, te, re_form = NA)
-    tmp_pred <- fitted(tmp_m, te, re_form = NA) %>%
-      as.data.frame()
-    te$prediction <- tmp_pred$Estimate
-    te$prediction_q2.5 <- tmp_pred$Q2.5
-    te$prediction_q97.5 <- tmp_pred$Q97.5
-    
-    # print(head(te))
-    
-    cv_out_ls[[i]] <- te
-    
-    # get coefs, and cis...
-    fixef_df <- as.data.frame(brms::fixef(tmp_m))
-    colnames(fixef_df) <- c("Coefficient_value", "Coefficient_error", "loCI", "hiCI")
-    fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
-    # %%%%%%%%%
-    
-    fixef_df$fold_id <- fold_ids[i]
-    coef_out_ls[[i]] <- fixef_df
-    
-    # setTxtProgressBar(pb, i)
-  }
-  # close(pb)
-  
-  cv_out_df <- dplyr::bind_rows(cv_out_ls)
-  coef_out_df <- dplyr::bind_rows(coef_out_ls)
-  
-  # print(all.vars(orig_form[[2]]))
-  
-  # backtransform prediction, y as resp term, 
-  if (!is.null(backtransform)){
-    cv_out_df <- cv_out_df %>%
-      dplyr::mutate(prediction = backtransform(prediction),
-                    y = !!dplyr::sym(all.vars(orig_form[[2]])))
-  }
-  # or convert resp value to y - based on eqn, and don't backtransform prediction
-  if (is.null(backtransform)){
-    cv_out_df <- cv_out_df %>%
-      dplyr::mutate(y = !!orig_form[[2]] )
-  }
-  
-  cv_out_df <- cv_out_df %>%
-    dplyr::mutate(error = y - prediction)
-  
-  # cv metrics
-  cv_metrics <- calc_cv_metrics(cv_out_df$prediction, 
-                                cv_out_df$y, 
-                                cv_out_df$error)
-  
-  return(list(cv_pred_df = cv_out_df, 
-              cv_metrics = cv_metrics,
-              cv_coef_df = coef_out_df,
-              fold_type  = fold_type,
-              fold_col   = fold_col,
-              n_folds    = n_folds
+              n_folds    = n_folds,
+              random_seed = random_seed
   ))
 }
-
-# hib_cv_inla
-
 
 
 #' Calculate a range of metrics using cross-validation outputs
@@ -1039,10 +717,21 @@ calc_cv_metrics <- function(pred, obs, error){
 #' } 
 #' @noRd
 get_rand_fold_id <- function(n_obs, n_folds){
+  assertthat::assert_that(
+    is.numeric(n_obs),
+    length(n_obs) == 1,
+    is.numeric(n_folds),
+    length(n_folds) == 1
+  )
   if (n_obs %% n_folds == 0){
     fold_id_vec <- rep(1:n_folds, n_obs / n_folds )
   } else {
     fold_id_vec <- c( rep(1:n_folds, floor(n_obs / n_folds) ), 1:(n_obs %% n_folds) )
   }
+  
+  assertthat::assert_that(
+    length(fold_id_vec) == n_obs
+  )
+  
   return(fold_id_vec)
 }

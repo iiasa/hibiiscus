@@ -80,7 +80,7 @@ hib_mod_project <- function(obj,
       pred_df <- as.data.frame(predict(obj$model,
                                        data,
                                        re.form = NA))
-      colnames(pred_df) <- "prediction"
+      colnames(pred_df) <- "prediction_mean" # prediction
       
       # %%%
       # TODO: incorp uncertainty
@@ -969,7 +969,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
   data_pred <- terra::predict(data,
                               mod,
                               re.form = NA)
-  names(data_pred) <- "prediction"
+  names(data_pred) <- "prediction_mean"
   
   # %%%%
   tmp_rast_df <- terra::as.data.frame(data, xy = T)
