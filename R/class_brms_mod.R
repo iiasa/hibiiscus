@@ -250,19 +250,35 @@ hib_brms_model <- R6Class("hib_brms_model",
                               #    fixed effects - posteriors
                               # 2. random iid
                               if (type == "random-effects"){
+                                # TODO: ranef(m) produces a list of 3D arrays
+                                # dim 1 = factor levels
+                                # dim 2 = summary stats
+                                # dim 3 = group-level effects
                                 
+                                # if random slopes, then x is 3d, not 2d
+                                # coef nm, (intercept or LU) also in colnames
                                 rand_df <- purrr::map(brms::ranef(self$model), 
                                            function(x){
-                                             tmp <- as.data.frame(x)
-                                             colnames(tmp) <- c("Coefficient_value",
-                                                                "Coefficient_error",
-                                                                "loCI",
-                                                                "hiCI")
+                                             
+                                             # melt - then colnames are coef_level, coef_stat, coef_term
+                                             tmp <- reshape2::melt(x) %>%
+                                               # widen across stat
+                                               tidyr::pivot_wider(names_from = "Var2",
+                                                                  values_from = "value") %>%
+                                               dplyr::rename(Coef_level = Var1,
+                                                             Coef_term = Var3,
+                                                             Coefficient_value = Estimate,
+                                                             Coefficient_error = Est.Error,
+                                                             loCI = Q2.5,
+                                                             hiCI = Q97.5)
+                                             # return
+                                             # tmp <- as.data.frame(x)
+                                             # colnames(tmp) <- c()
                                              tmp
                                              }) %>%
                                   dplyr::bind_rows(.id = "Coefficient_group") %>%
-                                  tibble::rownames_to_column("Coefficient_name") %>%
-                                  dplyr::group_by(Coefficient_group) %>%
+                                  # tibble::rownames_to_column("Coefficient_name") %>%
+                                  dplyr::group_by(Coefficient_group, Coef_term) %>%
                                   dplyr::arrange(Coefficient_value, .by_group = T) %>%
                                   dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
                                   dplyr::ungroup() %>%
@@ -293,7 +309,7 @@ hib_brms_model <- R6Class("hib_brms_model",
                                   ggplot2::scale_color_manual(values = c("+ve" = "dodgerblue3",
                                                                 "-ve" = "firebrick3",
                                                                 "n.s."= "grey30")) +
-                                  ggplot2::facet_wrap(~Coefficient_group, scales = "free_x") +
+                                  ggplot2::facet_grid(Coef_term~Coefficient_group, scales = "free_x") +
                                   ggplot2::theme_bw() +
                                   basic_thm +
                                   ggplot2::theme(axis.text.x = ggplot2::element_blank(),

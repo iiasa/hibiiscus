@@ -478,6 +478,8 @@ Database <- R6Class("Database",
                       # - realm N (realm-N)
                       # - class N (class-N)
                       
+                      # TODO: what about within-site and between-site diversity metrics??
+                      
                       # Assert that type arg matches one of...
                       type <- match.arg(type,
                                         c("map-sites", "map-studies", 

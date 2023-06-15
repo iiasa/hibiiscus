@@ -4,7 +4,13 @@
 \alias{hib_mod_project}
 \title{Project a hib, mixed-effects model}
 \usage{
-hib_mod_project(obj, data, backtransform = NULL, rescale_pred = F)
+hib_mod_project(
+  obj,
+  data,
+  backtransform = NULL,
+  rescale_pred = F,
+  incl_obs_uncert = F
+)
 }
 \arguments{
 \item{obj}{A [`hib_model`] object - either lme4 or inla.}
@@ -17,6 +23,10 @@ to the scale of the original variable, e.g., exp() as the inverse of log()}
 
 \item{rescale_pred}{A [`logical`] value - should the predictions be rescaled relative
 to the model intercept (assumes intercept is for baseline environment/LU)}
+
+\item{incl_obs_uncert}{A [`logical`] indicating whether or not observation-level
+uncertainty should be included in the predictions from brms models. Setting 
+this parameter to TRUE will produce predictions with larger uncertainty.}
 }
 \description{
 This function projects a fitted hib model using the supplied model object and

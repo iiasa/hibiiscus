@@ -12,7 +12,7 @@ terra_proj_lme4_pred(mod, data, backtransform)
 \item{data}{A [`SpatRaster`], prepared for projection}
 
 \item{backtransform}{A [`function`] that can backtransform the response variable
-to it original/natual scale.}
+to its original/natual scale.}
 }
 \description{
 This function projects/predicts the supplied model using the SpatRaster

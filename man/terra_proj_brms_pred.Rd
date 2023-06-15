@@ -4,7 +4,7 @@
 \alias{terra_proj_brms_pred}
 \title{# A helper function to project a model using SpatRaster data}
 \usage{
-terra_proj_brms_pred(mod, data, backtransform)
+terra_proj_brms_pred(mod, data, backtransform, incl_obs_uncert)
 }
 \arguments{
 \item{mod}{A fitted hib_brms_mod object}
@@ -12,7 +12,11 @@ terra_proj_brms_pred(mod, data, backtransform)
 \item{data}{A [`SpatRaster`], prepared for projection}
 
 \item{backtransform}{A [`function`] that can backtransform the response variable
-to it original/natual scale.}
+to its original/natual scale.}
+
+\item{incl_obs_uncert}{A [`logical`] indicating whether or not observation-level
+uncertainty should be included in the predictions. Setting this parameter to TRUE
+will produce predictions with larger uncertainty.}
 }
 \description{
 This function projects/predicts the supplied model using the SpatRaster

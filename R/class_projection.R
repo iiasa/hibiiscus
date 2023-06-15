@@ -326,6 +326,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     resp_lab <- gsub("Q2.5", "(2.5% quantile)", resp_lab)
                                     # replace "Q97.5" with "(97.5% quantile)"
                                     resp_lab <- gsub("Q97.5", "(97.5% quantile)", resp_lab)
+                                    
+                                    # TODO:
                                   }
                                   
                                   
@@ -337,6 +339,15 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     uncert_lab <- gsub("Sd", "SD", uncert_lab)
                                     # replace "Mad", with "(MAD)"
                                     uncert_lab <- gsub("Mad", "MAD", uncert_lab)
+                                    
+                                    # TODO:
+                                    if (uncertainty_var == "prediction_sd"){
+                                      uncert_lab <- "Uncertainty (SD)"
+                                    }
+                                    
+                                    if (uncertainty_var == "prediction_mad"){
+                                      uncert_lab <- "Uncertainty (MAD)"
+                                    }
                                   }
                                   
                                   

@@ -140,15 +140,6 @@ hib_cv_res <- R6Class("hib_cv_res",
                             )
                           )
                           
-                          # TODO: better summary printing - neat table of metrics/cv type...
-                          # insight::export_table(df, digits = 3)
-                          # self$insample_results$insample_metrics %>%
-                          #   dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
-                          
-                          # Columns - CV type, N folds, RMSE (CIs), Predictive R2
-                          
-                          
-                          
                           # # In-sample...
                           # insamp_df <- self$insample_results$insample_metrics %>%
                           #   dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
@@ -210,7 +201,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                           #   )
                           # }
                           
-                          
+                          # TODO: additional metrics: cor2, me (bias)
                           df1 <- lmer_cv$insample_results$insample_metrics %>%
                             dplyr::filter(Metric_shrt %in% c("rmse", "rsq")) 
                           

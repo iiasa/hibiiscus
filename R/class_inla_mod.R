@@ -259,6 +259,8 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 # Get random vars from random form
                                 rand_vars <- all.vars(self$user_formula$random)
                                 # Get random vars coefs 
+                                
+                                # Check inla summary.random - what if random slopes??
                                 rand_df <- self$model$summary.random[rand_vars] %>%
                                   dplyr::bind_rows(., .id = "Covar") %>%
                                   # order from small to large?

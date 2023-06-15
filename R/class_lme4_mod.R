@@ -262,7 +262,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                             dplyr::mutate(lwr = condval - 1.96*condsd, 
                                           upr = condval + 1.96*condsd) %>%
                             # order from small to large?
-                            dplyr::group_by(grpvar) %>%
+                            dplyr::group_by(grpvar, term) %>%
                             dplyr::arrange(condval, .by_group = T) %>%
                             dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
                             dplyr::ungroup() %>%
@@ -292,7 +292,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                             ggplot2::scale_color_manual(values = c("+ve" = "dodgerblue3",
                                                           "-ve" = "firebrick3",
                                                           "n.s."= "grey30")) +
-                            ggplot2::facet_wrap(~grpvar, scales = "free_x") +
+                            ggplot2::facet_grid(term~grpvar, scales = "free_x") +
                             ggplot2::theme_bw() +
                             basic_thm +
                             ggplot2::theme(axis.text.x = ggplot2::element_blank(),

@@ -5,7 +5,15 @@
 \title{# A helper function to wrap the preparation of SpatRaster data, and then project 
 a hib, mixed-effects model - for lme4 and brms models}
 \usage{
-terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars)
+terra_proj(
+  data,
+  obj,
+  backtransform,
+  rescale_pred,
+  base_val,
+  fix_vars,
+  incl_obs_uncert = F
+)
 }
 \arguments{
 \item{data}{A [`SpatRaster`] that can be used to project a model.}
@@ -21,6 +29,10 @@ to the model intercept (assumes intercept is for baseline environment/LU)}
 \item{base_val}{Model intercept, for use in rescaling predictions}
 
 \item{fix_vars}{Model fixed effects}
+
+\item{incl_obs_uncert}{A [`logical`] indicating whether or not observation-level
+uncertainty should be included in the predictions from brms models. Setting 
+this parameter to TRUE will produce predictions with larger uncertainty.}
 }
 \description{
 This function projects a fitted hib model using the supplied model object and

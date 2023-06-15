@@ -19,12 +19,20 @@ calc_N_spp <- function(obj,
                        mod_df,
                        mod_resp){
   
+  # TODO: what if abundance is zero - currently, included, but do these "species"
+  # actually count?? 
+  # dplyr::filter(Measurement > 0) %>%
+  
   # First, for within site metrics
   if (mod_resp %in% c("Total_abundance", "Rescaled_total_abundance", 
-                      "Simpson_diversity")){
+                      "Simpson_diversity", 
+                      "Mean_abundance", "Geometric_mean_abundance",
+                      "Shannon_diversity",
+                      "HillShannon_diversity", "HillSimpson_diversity")){
     n_spp <- obj$species %>%
       dplyr::filter(Diversity_metric_type == "Abundance") %>%
       dplyr::filter(SSBS %in% mod_df$SSBS) %>%
+      # dplyr::filter(Measurement > 0) %>%
       dplyr::select(Best_guess_binomial) %>%
       dplyr::n_distinct()
   }
@@ -35,6 +43,7 @@ calc_N_spp <- function(obj,
                       Diversity_metric_type == "Occurence"  | 
                       Diversity_metric_type == "Species richness") %>%
       dplyr::filter(SSBS %in% mod_df$SSBS) %>%
+      # dplyr::filter(Measurement > 0) %>%
       dplyr::select(Best_guess_binomial) %>%
       dplyr::n_distinct()
   }
@@ -46,9 +55,16 @@ calc_N_spp <- function(obj,
       dplyr::filter(all(floor(Measurement) == Measurement)) %>%
       dplyr::ungroup() %>%
       dplyr::filter(SSBS %in% mod_df$SSBS) %>%
+      # dplyr::filter(Measurement > 0) %>%
       dplyr::select(Best_guess_binomial) %>%
       dplyr::n_distinct()
   }
+  
+  # TODO:
+  # Add "Mean_abundance", "Geometric_mean_abundance",
+  # "Shannon_diversity",
+  # "HillShannon_diversity", "HillSimpson_diversity"
+  
   
   # Or for between site metrics
   if (mod_resp %in% tools::toTitleCase(c("manhattan", "euclidean", "canberra", "clark", "bray", 
@@ -72,6 +88,7 @@ calc_N_spp <- function(obj,
       dplyr::filter(n_sample_effort == 1 &
                       n_species > 1) %>%
       dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2))) %>%
+      # dplyr::filter(Measurement > 0) %>%
       dplyr::select(Best_guess_binomial) %>%
       dplyr::n_distinct()
   }
