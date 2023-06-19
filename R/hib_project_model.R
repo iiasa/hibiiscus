@@ -25,7 +25,15 @@ hib_mod_project <- function(obj,
                             data,
                             backtransform = NULL,
                             rescale_pred = F,
-                            incl_obs_uncert = F){
+                            incl_obs_uncert = F,
+                            lme4_boot = T,
+                            n_boot = 100
+                            # TODO: collate model type arguments into:
+                            # lme4_specs = c(lme4_boot = T, n_boot = 100),
+                            # inla_specs
+                            # brms_specs = c(incl_obs_uncert = F)
+                            # more scope for adjustment, and neater
+                            ){
   # Assertions 
   # is data a df/tibble/ raster/stack 
   assertthat::assert_that(
@@ -33,10 +41,10 @@ hib_mod_project <- function(obj,
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
-    is.logical(incl_obs_uncert)
+    is.logical(incl_obs_uncert),
+    is.logical(lme4_boot),
+    is.numeric(n_boot) || is.null(n_boot)
   )
-  # TODO: better check of input data - all items in list ar SpatRasters
-  # all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")})))
   
   # Check type of model
   # %%%%%
@@ -76,6 +84,12 @@ hib_mod_project <- function(obj,
       # Check all fixef vars are in colnames of data
       assertthat::assert_that(all(fix_vars %in% colnames(data)))
       
+      # TODO: for categorical vars, ensure levels in projection input are within 
+      # model fitting data
+      # for each fix_vars, check if chr or fct
+      # if it is, check all data[,var] are in obj$data[,var]
+      check_covar_levels(obj$model, data, fix_vars)
+      
       message(crayon::green("Projecting model...\n"))
       pred_df <- as.data.frame(predict(obj$model,
                                        data,
@@ -83,22 +97,24 @@ hib_mod_project <- function(obj,
       colnames(pred_df) <- "prediction_mean" # prediction
       
       # %%%
-      # TODO: incorp uncertainty
-      # Use bootMer - 
-      # or sampling from varCovar...??
-      message(crayon::green("Bootstrapping model predictions...\n"))
-      boot <- lme4::bootMer(obj$model, 
-                            function(mod, df = data){predict(mod, df, re.form = NA)}, 
-                            nsim = 100)
-      
-      pred_df$prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
-      pred_df$prediction_sd <- apply(boot$t, 2, sd)
-      pred_df$prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
-      pred_df$prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.975, na.rm = TRUE)))
-      # std.err <- apply(boot_test$t, 2, sd)
-      # CI.lower1 <- pred - std.err*1.96
-      # CI.upper1 <- pred + std.err*1.96
-      # %%%
+      # Use bootMer to get uncertainty
+      # TODO: optional - slow...
+      # TODO: add lmer_boot bool, and nsim option
+      if (lme4_boot == T){
+        message(crayon::green("Bootstrapping model predictions...\n"))
+        boot <- lme4::bootMer(obj$model, 
+                              function(mod, df = data){predict(mod, df, re.form = NA)}, 
+                              nsim = n_boot)
+        
+        pred_df$prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
+        pred_df$prediction_sd <- apply(boot$t, 2, sd)
+        pred_df$prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
+        pred_df$prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.975, na.rm = TRUE)))
+        # std.err <- apply(boot_test$t, 2, sd)
+        # CI.lower1 <- pred - std.err*1.96
+        # CI.upper1 <- pred + std.err*1.96
+        # %%%
+      }
       
       # What if we want to include  random effect??
       
@@ -118,7 +134,9 @@ hib_mod_project <- function(obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
-      data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars)
+      data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars,
+                         lme4_boot = lme4_boot,
+                         n_boot = n_boot)
     }
     # List of raster objects
     if ((is.list(data) & !is.data.frame(data))){
@@ -130,7 +148,9 @@ hib_mod_project <- function(obj,
                          backtransform = backtransform, 
                          rescale_pred = rescale_pred, 
                          base_val = base_val, 
-                         fix_vars = fix_vars)
+                         fix_vars = fix_vars,
+                         lme4_boot = lme4_boot,
+                         n_boot = n_boot)
     }
     
   } 
@@ -271,6 +291,13 @@ hib_mod_project <- function(obj,
     for (covar in missing_covars){
       pred_X[,covar] <- NA
     }
+    
+    # TODO: for categorical vars, ensure levels in projection input are within 
+    # model fitting data (or NA)
+    # for each fix_vars, check if chr or fct
+    # if it is, check all data[,var] are in obj$data[,var
+    check_covar_levels(obj$model, pred_X, fix_vars)
+    
     # print(missing_covars)
     # print(head(pred_X))
     # Combine data etc into stack
@@ -309,7 +336,7 @@ hib_mod_project <- function(obj,
     
     colnames(pred_df) <- paste("prediction", colnames(pred_df), sep = "_")
     
-    # TODO: need to harmonise prediction colnames
+    # Harmonise prediction colnames
     
     # prediction_mean prediction_sd prediction_q2.5
     # prediction_0.5quant prediction_0.975quant prediction_mode
@@ -438,8 +465,12 @@ hib_mod_project <- function(obj,
       assertthat::assert_that(all(fix_vars %in% colnames(data)))
       
       
-      # TODO: use either predict() or fitted() - 
-      # TODO: get median (robust = T) and mean (robust = F)
+      # TODO: for categorical vars, ensure levels in projection input are within 
+      # model fitting data
+      # for each fix_vars, check if chr or fct
+      # if it is, check all data[,var] are in obj$data[,var
+      check_covar_levels(obj$model, data, fix_vars)
+      
       # %%%%%
       if (incl_obs_uncert == T){
         mean_df <- predict(obj$model,
@@ -567,7 +598,9 @@ hib_mod_project <- function(obj,
 #' } 
 #' @export
 terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars,
-                       incl_obs_uncert = F){
+                       incl_obs_uncert = F,
+                       lme4_boot = T,
+                       n_boot = 100){
   # TODO: maybe change to @NoRd
   # assertions
   assertthat::assert_that(
@@ -577,7 +610,9 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     is.logical(rescale_pred),
     is.numeric(base_val),
     is.character(fix_vars),
-    is.logical(incl_obs_uncert)
+    is.logical(incl_obs_uncert),
+    is.logical(lme4_boot),
+    is.numeric(n_boot) || is.null(n_boot)
   )
   # Covar checks
   # print(fix_vars)
@@ -591,9 +626,17 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     #   data_pred <- backtransform(data_pred)
     # }
     # names(data_pred) <- "prediction"
+    
+    # TODO: for categorical vars, ensure levels in projection input are within 
+    # model fitting data
+    # for each fix_vars, check if chr or fct
+    # if it is, check all data[,var] are in obj$data[,var
+    check_covar_levels(obj$model, data, fix_vars)
+    
+    
     if (inherits(obj, "hib_lme4_model")){
       # TODO: incorp uncertainty
-      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform)
+      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_boot, n_boot)
     }
     if (inherits(obj, "hib_brms_model")){
       # TODO: change to fitted...??
@@ -673,6 +716,40 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         stop("In development")
       }
       
+      
+      # %%%%%%%%%%%%%%%%%%%%
+      # TODO: - if there is a non_covar in rast that doesn't have a matching covar/lev
+      # should throw an error?
+      # %%%%%%%%%%%%%%%%%%%%
+      # print(covars_not_in_rast)
+      # print(non_covars_in_rast)
+      # ID layers that are not within covariates required
+      problem_layers <- non_covars_in_rast[!non_covars_in_rast %in% covars_not_in_rast$covar_levs_rast]
+      # print(problem_layers)
+      # Are there other situations where a problem layer could arise - or actualy not be a problem??
+      # Note: extra layers in input that are not relevant to the model - eg a non-existent
+      # covar level (Not Pasture) is simply ignored!
+      if (length(problem_layers) > 0){
+        # Maybe better to throw a warning/error??
+        message(crayon::red(paste0("Error: covariate layer/s in the projection ",
+                                   "data do not align with the model fitting data!\n\n",
+                                   "Please fix this, see details below:\n")
+                            )
+                )
+        
+  
+        message(paste("Problematic layers: ",
+                      paste(problem_layers, collapse = " ; "),
+                      "\n") 
+                )
+        
+        stop("Unknown covariate layer, see above.", call. = F)
+        
+      }
+      
+      
+      # %%%%%%%%%%%%%%%%%%%%%
+      
       # For binary layers - factor is layer name, minus covar nm if name is covar_nm_lev
       # Collapse to single stack with layer names as covar_nm
       
@@ -742,10 +819,19 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         # tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
         #                                               tmp_pred_rast_ls[[i]], 
         #                                               backtransform)
+        
+        # TODO: for categorical vars, ensure levels in projection input are within 
+        # model fitting data
+        # for each fix_vars, check if chr or fct
+        # if it is, check all data[,var] are in obj$data[,var
+        check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], fix_vars)
+        
         if (inherits(obj, "hib_lme4_model")){
           tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
-                                                        backtransform)
+                                                        backtransform,
+                                                        lme4_boot,
+                                                        n_boot)
         }
         if (inherits(obj, "hib_brms_model")){
           tmp_pred_rast_ls[[i]] <- terra_proj_brms_pred(obj$model, 
@@ -810,9 +896,17 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       
       # Check all covars in new SpatRaster
       assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast)))
+      
+      # TODO: for categorical vars, ensure levels in projection input are within 
+      # model fitting data
+      # for each fix_vars, check if chr or fct
+      # if it is, check all data[,var] are in obj$data[,var
+      check_covar_levels(obj$model, tmp_pred_rast, fix_vars)
+      
       # Predict
       if (inherits(obj, "hib_lme4_model")){
-        data_pred <- terra_proj_lme4_pred(obj$model, tmp_pred_rast, backtransform)
+        data_pred <- terra_proj_lme4_pred(obj$model, tmp_pred_rast, backtransform,
+                                          lme4_boot, n_boot)
       }
       if (inherits(obj, "hib_brms_model")){
         data_pred <- terra_proj_brms_pred(obj$model, tmp_pred_rast, backtransform,
@@ -952,13 +1046,15 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #'   pred <- terra_proj_lme4_pred(mod, data, backtransform)
 #' } 
 #' @export
-terra_proj_lme4_pred <- function(mod, data, backtransform){
+terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_boot, n_boot){
   # TODO: maybe change to @NoRd
   # Assertions
   assertthat::assert_that(
     inherits(mod, "merMod"),
     inherits(data, "SpatRaster"), 
-    is.null(backtransform) || is.function(backtransform)
+    is.null(backtransform) || is.function(backtransform),
+    is.logical(lme4_boot), 
+    is.numeric(n_boot) || is.null(n_boot)
   )
   # Check all fixef covars are in data - already done before func call!
   
@@ -971,34 +1067,38 @@ terra_proj_lme4_pred <- function(mod, data, backtransform){
                               re.form = NA)
   names(data_pred) <- "prediction_mean"
   
-  # %%%%
-  tmp_rast_df <- terra::as.data.frame(data, xy = T)
   
-  boot <- lme4::bootMer(mod, 
-                        function(m, rast = data){
-                          tmp <- terra::predict(rast, m, re.form = NA) %>%
-                            terra::as.data.frame()
-                          tmp[,1]
-                        }, 
-                        nsim = 100)
+  if (lme4_boot == T){
+    # %%%%
+    tmp_rast_df <- terra::as.data.frame(data, xy = T)
+    
+    boot <- lme4::bootMer(mod, 
+                          function(m, rast = data){
+                            tmp <- terra::predict(rast, m, re.form = NA) %>%
+                              terra::as.data.frame()
+                            tmp[,1]
+                          }, 
+                          nsim = n_boot)
+    
+    prediction_sd <- apply(boot$t, 2, sd)
+    prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
+    prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
+    prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
+    
+    uncert_df <- data.frame(prediction_median= prediction_median,
+                            prediction_sd    = prediction_sd,
+                            prediction_q2.5  = prediction_q2.5,  
+                            prediction_q97.5 = prediction_q97.5)
+    uncert_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], uncert_df)
+    # TODO: crs of input...
+    # data_pred_uncert <- terra::rast(uncert_df)
+    data_pred_uncert <- terra::rast(uncert_df,
+                                    crs = terra::crs(data))
+    
+    data_pred <- c(data_pred, data_pred_uncert)
+    # %%%%
+  }
   
-  prediction_sd <- apply(boot$t, 2, sd)
-  prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
-  prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
-  prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
-  
-  uncert_df <- data.frame(prediction_median= prediction_median,
-                          prediction_sd    = prediction_sd,
-                          prediction_q2.5  = prediction_q2.5,  
-                          prediction_q97.5 = prediction_q97.5)
-  uncert_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], uncert_df)
-  # TODO: crs of input...
-  # data_pred_uncert <- terra::rast(uncert_df)
-  data_pred_uncert <- terra::rast(uncert_df,
-                                  crs = terra::crs(data))
-  
-  data_pred <- c(data_pred, data_pred_uncert)
-  # %%%%
   
   # %%%
   if (!is.null(backtransform)){
@@ -1043,12 +1143,17 @@ terra_proj_brms_pred <- function(mod, data, backtransform, incl_obs_uncert){
   # Check type of inputs
   # Check all fixef covars are in data 
   
+  # TODO: for categorical vars, ensure levels in projection input are within 
+  # model fitting data
+  # for each fix_vars, check if chr or fct
+  # if it is, check all data[,var] are in obj$data[,var
+  
+  
   # %%%
   # Project
   # TODO: could also incl df.. - more general
   
   
-  # TODO: 
   # include median for prediction (incl_obs_uncert)
   # %%%%%
   # %%%%%
@@ -1346,10 +1451,166 @@ terra_to_df_inla <- function(data, obj, fix_vars){
 }
 
 
+#' An internal helper function to check that the data provided for the projection 
+#' does not contain any facto-levels that are not in the model fitting data.
+#' 
+#' @description 
+#' This function checks whether the supplied projection data is compatible with
+#' the supplied model
+#' Returns either nothing (NULL, input data passes checks), or throws an error 
+#' (input data fails checks)
+#' 
+#' @details 
+#' Expects a model object (lme4/brms/?inla?).
+#' @param mod A fitted model, either from lme4, inla or brms
+#' @param proj_dat The prepared data used to predict from
+#' @param fix_vars The fixed-effect covariates in the model
+#' @keywords model projections data checks
+#' @examples 
+#' \dontrun{
+#'   check_covar_levels(model, projection_df, fixed_covars)
+#' } 
+#' @noRd
+check_covar_levels <- function(mod, proj_dat, fix_vars){
+  
+  # Assertion checks
+  assertthat::assert_that(
+    class(mod) == "lmerMod" || class(mod) == "glmerMod" || 
+      class(mod) == "brmsfit" || class(mod) == "inla",
+    is.data.frame(proj_dat) || inherits(proj_dat, "SpatRaster"),
+    is.character(fix_vars)
+  )
+  
+  # First check - that all fix_vars are in proj_dat
+  if (!all(fix_vars %in% names(proj_dat))){
+    
+    # Get missing covars
+    missing_covars <- fix_vars[!fix_vars %in% names(proj_dat)]
+    missing_covars_chr <- paste(missing_covars, collapse = " ; ")
+    message(crayon::red("Error: covariates missing from projection data!\n"))
+    message(crayon::red(paste("Missing covariates: ",
+                              missing_covars_chr, sep = "")))
+    
+    stop()
+  }
+  
+  
+  # store info on data type
+  proj_dat_type <- NA
+  if (is.data.frame(proj_dat)){
+    proj_dat_type <- "df"
+  }
+  if (inherits(proj_dat, "SpatRaster")){
+    proj_dat_type <- "rast"
+  }
+  
+  # lme4 fit data,
+  if ((class(mod) == "lmerMod" || class(mod) == "glmerMod")){
+    fit_dat <- mod@frame
+  }
+  # brms fit data
+  if (class(mod) == "brmsfit"){
+    fit_dat <- mod$data
+  }
+  # inla fit data
+  if (class(mod) == "inla"){
+    fit_dat <- mod$.args$data
+  }
+  
+  # print(head(fit_dat))
+  # print(head(proj_dat))
+  # 
+  problem_vars <- list()
+  
+  is_problem_var <- FALSE
+  for (i in 1:length(fix_vars)){
+    # Check if var is a factor/chr
+    var_i <- fix_vars[i]
+    if ( (is.factor(fit_dat[[var_i]]) | is.character(fit_dat[[var_i]])) ){
+      # Get unique chr values for fit data
+      var_i_fit_levs <- fit_dat[[var_i]] %>% 
+        unique() %>%
+        as.character()
+      # Alternative - get levels directly - if factor
+      # levels(fit_dat[[var_i]])
+      if (is.factor(fit_dat[[var_i]])){
+        var_i_fit_levs <- levels(fit_dat[[var_i]])
+      }
+      
+      # print(fit_dat[[var_i]])
+      # print(var_i_fit_levs)
+      # Get unique chr values for proj data 
+      var_i_proj <- proj_dat[[var_i]]
+      
+      if (proj_dat_type == "df"){
+        var_i_proj_levs <- var_i_proj %>% 
+          unique() %>%
+          as.character()
+        # Alternative - get levels directly - if factor
+        # levels(fit_dat[[var_i]])
+        if (is.factor(var_i_proj)){
+          var_i_proj_levs <- levels(var_i_proj)
+        }
+      }
+      if (proj_dat_type == "rast"){
+        var_i_proj_levs <- terra::levels(var_i_proj)[[1]][["category"]]
+      }
+      # print(var_i_proj)
+      
+      # Check all var_i_proj_levs are in var_i_fit_levs
+      if (!all(var_i_proj_levs %in% var_i_fit_levs)){
+        # if not, add to problem_vars
+        is_problem_var <- TRUE
+        
+        problem_vars[[i]] <- dplyr::tibble(Variable = var_i,
+                                           Problem_levels = list(var_i_proj_levs[!var_i_proj_levs %in% var_i_fit_levs]) )
+      }
+      
+    }
+  }
+  
+  if (!is_problem_var){
+    return(NULL)
+  }
+  if (is_problem_var){
+    # Print an error message - detail variables and levels that are issues...
+    message(crayon::red(paste0("Some categorical covariates in the projection data ",
+                               "are not in the model fitting data!\n\n",
+                               "Please fix this, see details below:\n"
+                               ) ))
+    problem_vars %>%
+      dplyr::bind_rows() %>%
+      insight::format_table(use_symbols = T, digits = 0) %>%
+      insight::export_table() %>%
+      message()
+    
+    stop("Unknown covariate levels, see above.", call. = F)
+  }
+}
+# compare data to use for projection with model fitting data - unique values of 
+# categorical covars
+# input1: fited model object (just model, not hib model object) (or just model fitting df)
+# input2: projection df or projection raster/terra
+# fix_vars: need to no covariates of interest - 
+# access model@frame
+# check for factor columns - 
+# for each, get levels
+# then check the levels of the projection data - 
+
+# If non-compatible levels - drop? from df
+# Can they also be dropped from terra rast?
+# Maybe better to throw an error - not possible to make predictions...
+# print non-compatible levels
+
+# Also need to check for NA values - should drop these I think... 
+# or throw a warning/erorr
+
+
 # TODO:
 # Sub functions:
 # hib_mod_proj_lme4
 # hib_mod_proj_inla
+
 
 
 
