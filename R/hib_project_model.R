@@ -29,9 +29,9 @@ hib_mod_project <- function(obj,
                             lme4_boot = T,
                             n_boot = 100
                             # TODO: collate model type arguments into:
-                            # lme4_specs = c(lme4_boot = T, n_boot = 100),
-                            # inla_specs
-                            # brms_specs = c(incl_obs_uncert = F)
+                            # lme4_specs = list(bootstrap = F, n_boot = NA),
+                            # inla_specs = list(),
+                            # brms_specs = list(incl_obs_uncert = F)
                             # more scope for adjustment, and neater
                             ){
   # Assertions 
@@ -44,6 +44,9 @@ hib_mod_project <- function(obj,
     is.logical(incl_obs_uncert),
     is.logical(lme4_boot),
     is.numeric(n_boot) || is.null(n_boot)
+    # is.list(lme4_specs) || is.null(lme4_specs),
+    # is.list(inla_specs) || is.null(inla_specs),
+    # is.list(brms_specs) || is.null(brms_specs),
   )
   
   # Check type of model
@@ -78,6 +81,12 @@ hib_mod_project <- function(obj,
     rand_vars <- names(lme4::ranef(obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     
+    # TODO: lme4_spec checks
+    # lme4_specs - if null, set to default (F, NA)
+    # otherwise, assert that bootstrap is logical and n_boot is numeric
+    # then just pass checked lme4_specs to functions - terra_proj...
+    # terra_proj_lme4_mod...
+    
     # Project for possible data types
     # Dataframe 
     if (is.data.frame(data)){
@@ -100,6 +109,7 @@ hib_mod_project <- function(obj,
       # Use bootMer to get uncertainty
       # TODO: optional - slow...
       # TODO: add lmer_boot bool, and nsim option
+      
       if (lme4_boot == T){
         message(crayon::green("Bootstrapping model predictions...\n"))
         boot <- lme4::bootMer(obj$model, 

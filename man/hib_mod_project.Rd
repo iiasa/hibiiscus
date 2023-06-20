@@ -9,7 +9,9 @@ hib_mod_project(
   data,
   backtransform = NULL,
   rescale_pred = F,
-  incl_obs_uncert = F
+  incl_obs_uncert = F,
+  lme4_boot = T,
+  n_boot = 100
 )
 }
 \arguments{

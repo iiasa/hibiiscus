@@ -269,7 +269,7 @@ hib_calc_simpson <- function(obj){
   return(out_tib)
 }
 
-# TODO:
+
 # Chao-1 richness
 # Rarefied richenss
 # %%%%%
@@ -971,6 +971,78 @@ hib_calc_shannon <- function(obj){
 # %%%%%
 
 
+# %%%%%
+# TODO: Hulbert's PIE
+# Hurlbert's (1971) Probability of Interspecific Encounter (PIE):
+# PIE = (N/(N-1)) * (1 - sum(p^2))
+# where:
+# p = the proportion a specific taxon composes of a sample
+# N = the total abundance of organisms
+#
+# This measurement is equivalent to Simpson's Index but includes a correction
+# factor base on the total abundance of organisms.
+
+#' Calculate PIE (Hulbert's (1971) Probability of Interspecific Encounter)
+#' 
+#' @description 
+#' This function calculates PIE per site
+#' @details 
+#' Expects a [`Database`] object.
+#' @param obj A [`Database`] object.
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   obj <- hib_calc_pie(obj)
+#' } 
+#' @export
+hib_calc_pie <- function(obj){
+  message(crayon::green("Calculating within-site Probability of Interspecific Encounter (PIE) ...\n"))
+  # TODO:
+  # Assertion checks
+  assertthat::assert_that(
+    assertthat::has_name(obj$species, "SSBS"),
+    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
+    assertthat::has_name(obj$species, "Diversity_metric_type")
+  )
+  
+  # %%%%%
+  if (obj$processing_flags$measures_effort_corrected == T){
+    measure_var <- "Effort_corrected_measurement"
+  } 
+  if (obj$processing_flags$measures_effort_corrected == F){
+    measure_var <- "Measurement"
+  }
+  pie_df <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance") %>%
+    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) %>%
+    dplyr::group_by(SSBS, SS) %>%
+    dplyr::summarise(adj_val = sum( !!dplyr::sym(measure_var) ) / ( sum( !!dplyr::sym(measure_var) ) - 1 ),
+                     PIE_ = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ),
+                     PIE = adj_val * PIE_) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(SSBS, SS, PIE)
+  # %%%%%
+  
+  
+  # Get N species used
+  n_spp <- obj$species %>%
+    dplyr::filter(Diversity_metric_type == "Abundance") %>%
+    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) %>%
+    dplyr::select(Best_guess_binomial) %>%
+    dplyr::n_distinct()
+  
+  # Store in obj$diversity
+  out_tib <- dplyr::tibble(Metric = "PIE",
+                           Data = list(pie_df),
+                           N_species_total = n_spp,
+                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+  
+  return(out_tib)
+}
+
+# %%%%%
+
+
 #' Calculate within-site diversity metrics
 #' 
 #' @description 
@@ -1002,7 +1074,8 @@ hib_calc_div_within <- function(obj, metrics){
                          "Simpson_diversity", "Rarefied_species_richness", #),
                          "Mean_abundance", "Geometric_mean_abundance",
                          "Shannon_diversity",
-                         "HillShannon_diversity", "HillSimpson_diversity"),
+                         "HillShannon_diversity", "HillSimpson_diversity",
+                         "PIE"),
                        several.ok = T)
   
   message(crayon::green("Calculating within-site diversity metrics ...\n"))
@@ -1056,8 +1129,6 @@ hib_calc_div_within <- function(obj, metrics){
                          # Hill-Simpson: 1/simpson 
                          if (metric == "HillSimpson_diversity"){
                            tmp <- hib_calc_simpson(db_obj)
-                           # print(tmp)
-                           # print(head(tmp$Data[[1]]))
                            tmp$Metric <- "HillSimpson_diversity"
                            
                            tmp$Data[[1]]$HillSimpson_diversity <- 1 / ( 1 - tmp$Data[[1]]$Simpson_diversity )
@@ -1071,6 +1142,10 @@ hib_calc_div_within <- function(obj, metrics){
                              dplyr::select(SSBS, SS, HillSimpson_diversity)
                            # , Rescaled_HillSimpson_diversity
                            return(tmp)
+                         }
+                         
+                         if (metric == "PIE"){
+                           return(hib_calc_pie(db_obj))
                          }
                          # %%%
                          }
