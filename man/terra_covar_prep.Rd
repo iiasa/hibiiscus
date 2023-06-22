@@ -24,7 +24,7 @@ names present in the raster data}
 
 \item{input_type}{A [`character`], either "binary" or "non-binary", indicating 
 the type of data in the raster - i.e., is each grid cell only a single level of 
-a covariate, or can it contain proportions of multiple levles}
+a covariate, or can it contain proportions of multiple levels}
 }
 \description{
 This function prepares the supplied SpatRaster to be ready for model projection

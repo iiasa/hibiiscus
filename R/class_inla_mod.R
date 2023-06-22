@@ -24,13 +24,14 @@ hib_inla_model <- R6Class("hib_inla_model",
                             # inla output is fairly basic, but extensive...
                             # need to have main effects
                             # important to store random effects params/hypers
+                            fixedef_coefficients = NULL,
                             user_formula = NULL,
                             inla_fitted_formula = NULL,
                             inla_incl_spatial_term = NULL,
                             inla_stack = NULL,
                             inla_mesh = NULL,
                             inla_mesh_settings = NULL,
-                            
+                            inla_mesh_source = NULL,
                             # Executed when created
                             # TODO
                             # Need to store both user provided (original), and  inla-input formula
@@ -44,12 +45,14 @@ hib_inla_model <- R6Class("hib_inla_model",
                                                   # fixef_df,
                                                   # metr_vec,
                                                   # %%%
+                                                  fixef_df,
                                                   user_formula,
                                                   inla_fitted_formula,
                                                   inla_incl_spatial_term,
                                                   inla_stack,
                                                   inla_mesh,
                                                   inla_mesh_settings,
+                                                  inla_mesh_source,
                                                   # %%%
                                                   n_spp
                                                   # set_up_specs
@@ -64,19 +67,18 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 is.data.frame(mod_df),
                                 # Check model
                                 class(inla_obj) == "inla",
+                                # Check coefficient df 
+                                is.data.frame(fixef_df),
                                 # Check formulas
                                 class(user_formula) == "formula" || is.list(user_formula),
                                 class(inla_fitted_formula) == "formula",
-                                # assertthat::assert_that(attr(user_formula, "class") == "formula"),
-                                # assertthat::assert_that(attr(inla_fitted_formula, "class") == "formula"),
                                 # Check inla specific data
                                 inherits(inla_stack, "inla.data.stack"),
                                 is.logical(inla_incl_spatial_term),
                                 inherits(inla_mesh,'inla.mesh') || is.null(inla_mesh),
-                                # Check coefficient df and metrics
-                                # is.data.frame(fixef_df),
-                                # is.numeric(metr_vec),
+                                
                                 is.list(inla_mesh_settings),
+                                is.character(inla_mesh_source) || is.null(inla_mesh_source),
                                 is.numeric(n_spp)
                               )
                               
@@ -91,9 +93,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                               # Set model as inla_obj
                               self$model <- inla_obj
                               # Set fixed_coefficients as fixef_df
-                              # inla_obj$summary.fixed
-                              # Set metrics as metr_vec
-                              # self$metrics <- metr_vec
+                              self$fixedef_coefficients <- fixef_df
                               
                               self$user_formula <- user_formula
                               self$inla_fitted_formula <- inla_fitted_formula
@@ -102,6 +102,8 @@ hib_inla_model <- R6Class("hib_inla_model",
                               self$inla_stack <- inla_stack
                               self$inla_mesh <- inla_mesh
                               self$inla_mesh_settings <- inla_mesh_settings
+                              
+                              self$inla_mesh_source <- inla_mesh_source
                               
                               # Incl processing flags from hib_db
                               self$processing_flags <- db_obj$processing_flags
@@ -130,13 +132,18 @@ hib_inla_model <- R6Class("hib_inla_model",
                               # Metrics of fit?
                               m_summ <- summary(self$model)
                               
-                              fixef_df <- m_summ$fixed %>%
-                                as.data.frame(.) %>%
-                                tibble::rownames_to_column("Coefficient") %>%
-                                dplyr::tibble(.) %>%
-                                dplyr::rename(q0.025 = `0.025quant`,
-                                              q0.975 = `0.975quant`) %>%
-                                dplyr::select(Coefficient, mean, sd, q0.025, q0.975) 
+                              # TODO: neatly print formula
+                              # self$user_formula$full
+                              form_chr <- as.character(self$user_formula$full)
+                              form_chr <- paste(form_chr[2], form_chr[1], form_chr[3])
+                              if (self$inla_incl_spatial_term){
+                                form_chr <- paste(form_chr,
+                                                  "+ f(s, model = site.spde)")
+                              }
+                              
+                              fixef_df <- self$fixedef_coefficients %>%
+                                dplyr::select(Coefficient_name, Coefficient_value,
+                                              sd, loCI, hiCI)
                               
                               ranef_chr <- purrr::map2(.x = m_summ$random.names,
                                                 .y = m_summ$random.model,
@@ -153,16 +160,18 @@ hib_inla_model <- R6Class("hib_inla_model",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                        "\n\n",
                                        "--------------------\n\n",
-                                       "Summary of fitted model:\n\n",
-                                       "Fixed effects:\n"
+                                       "Summary of fitted model\n\n",
+                                       "Formula:\n",
+                                       crayon::green(form_chr), "\n\n",
+                                       "Fixed effects estimates:\n"
                                        )
                                 )
                               print(fixef_df)
 
                               message(paste0("\n\n",
                                              # "--------------------\n",
-                                             "Random effects:\n",
-                                             ranef_chr, "\n\n",
+                                             # "Random effects:\n",
+                                             # ranef_chr, "\n\n",
                                              "Performance metrics:\n",
                                              "\tDIC \t ", m_summ$dic$dic, "\n",
                                              "\twAIC \t ", m_summ$waic$waic, "\n"))
@@ -308,21 +317,67 @@ hib_inla_model <- R6Class("hib_inla_model",
                                   message(crayon::red("Error: plotting of spatial-random-field is only available for INLA models with a spatial random effect...\n"))     
                                   stop()
                                 }
-                                pix <- inlabru::pixels(self$inla_mesh)
-                                proj <- INLA::inla.mesh.projector(self$inla_mesh, coordinates(pix))
-                                pix$z <- INLA::inla.mesh.project(proj, self$model$summary.random$s$mean)
                                 
-                                plt <- ggplot2::ggplot() + 
-                                  inlabru::gg(self$inla_mesh) +
-                                  inlabru::gg(pix, ggplot2::aes(fill = z),
-                                              alpha = 0.9) +
-                                  ggplot2::scale_fill_gradient2(low = "firebrick3",
-                                                       mid = "gainsboro",
-                                                       high = "dodgerblue3",
-                                                       midpoint = 0) + 
-                                  ggplot2::labs(fill = "Spatial\nrandom\neffect") +
-                                  ggplot2::coord_fixed() +
-                                  ggplot2::theme_bw()
+                                # TODO: Need to facilitate for 3d meshes too!!
+                                # %%%%%
+                                if (self$inla_mesh_settings$mesh_dim == "3d"){
+                                  gproj <- INLA::inla.mesh.projector(self$inla_mesh,  dims = c(360, 180))
+                                  smean <- INLA::inla.mesh.project(gproj,
+                                                                   self$model$summary.random$s$mean)
+                                  
+                                  # TODO: better plotting...
+                                  
+                                  # Convert smean to dataframe
+                                  coord <- expand.grid(x = 1:360, y = 1:180) 
+                                  out <- transform(coord, z = smean[as.matrix(coord)])
+                                  out$x <- out$x - 180.5
+                                  out$y <- out$y - 90.5
+                                  
+                                  ggplot2::ggplot(out) +
+                                    ggplot2::geom_tile(ggplot2::aes(x = x,
+                                                                    y = y,
+                                                                    fill = z),
+                                                       alpha = 0.9) +
+                                    # TODO: add locations of data?
+                                    # TODO: add underlying geogr map of country outlines
+                                    # ggplot2::geom_point(ggplot2::aes(x = Longitude, 
+                                    #                                  y = Latitude),
+                                    #                     alpha = 0.5,
+                                    #                     data = ta_inla_s$data) +
+                                    ggplot2::scale_fill_gradient2(low = "firebrick3",
+                                                                  mid = "gainsboro",
+                                                                  high = "dodgerblue3",
+                                                                  midpoint = 0) +
+                                    ggplot2::labs(fill = "Spatial\nrandom\neffect") +
+                                    ggplot2::coord_fixed(expand = F) +
+                                    ggplot2::theme_bw() +
+                                    basic_thm
+                                  
+                                  # fields::image.plot(x = gproj$x, y = gproj$y, z = smean,
+                                  #                    col = viridis::viridis(201))
+                                }
+                                
+                                
+                                # %%%%%
+                                # If inla mesh is 2d...
+                                if (self$inla_mesh_settings$mesh_dim == "2d"){
+                                  pix <- inlabru::pixels(self$inla_mesh)
+                                  proj <- INLA::inla.mesh.projector(self$inla_mesh, coordinates(pix))
+                                  pix$z <- INLA::inla.mesh.project(proj, self$model$summary.random$s$mean)
+                                  
+                                  plt <- ggplot2::ggplot() + 
+                                    inlabru::gg(self$inla_mesh) +
+                                    inlabru::gg(pix, ggplot2::aes(fill = z),
+                                                alpha = 0.9) +
+                                    ggplot2::scale_fill_gradient2(low = "firebrick3",
+                                                                  mid = "gainsboro",
+                                                                  high = "dodgerblue3",
+                                                                  midpoint = 0) + 
+                                    ggplot2::labs(fill = "Spatial\nrandom\neffect") +
+                                    ggplot2::coord_fixed() +
+                                    ggplot2::theme_bw()
+                                }
+                                
                                 
                               }
                               # 4. priors

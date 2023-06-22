@@ -45,7 +45,7 @@ hib_fit_inla <- function(obj,
     is.character(family), # family is character
     is.logical(incl_spatial_term),
     inherits(input_mesh,'inla.mesh') || is.null(input_mesh),
-    is.list(mesh_settings)
+    is.list(mesh_settings) || is.null(mesh_settings)
   )
   # TODO:
   # maybe rename random_covar to random_form?
@@ -59,7 +59,7 @@ hib_fit_inla <- function(obj,
   all_covars <- unique(c(fixed_covars,
                          all.vars(random_covar)))
   
-  
+
   # TODO
   # have single form input, resp ~ fixed + random   --- ignoring spatial
   
@@ -182,56 +182,87 @@ hib_fit_inla <- function(obj,
   X <- mod_df %>%
     dplyr::select(all_covars)
   
+  mesh_source <- NULL
+  
   # build mesh- if desired...
   if (incl_spatial_term){
+    
+    if (("Longitude" %in% colnames(mod_df)) &
+        ("Latitude" %in% colnames(mod_df)) ){
+      coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
+    }
+    if (("Longitude_midpoint" %in% colnames(mod_df)) &
+        ("Latitude_midpoint" %in% colnames(mod_df)) ){
+      coords <- as.matrix(mod_df[,c("Longitude_midpoint", "Latitude_midpoint")])
+    }
+    
+    
+    if (!is.null(input_mesh)){
+      message(crayon::green("Using provided mesh...\n"))
+      mesh_source <- "user_provided"
+      
+      # Check for mesh_dim in mesh_settings
+      if (!"mesh_dim" %in% names(mesh_settings)){
+        message(crayon::yellow("Warning: Mesh dimension not provided, assuming default value: 2d \n"))
+      }
+      
+      if ("mesh_dim" %in% names(mesh_settings)){
+        if (mesh_settings$mesh_dim == "3d"){
+          coords <- INLA::inla.mesh.map(coords, projection = "longlat")
+        }
+      }
+    }
+    
     if (is.null(input_mesh)){
       message(crayon::green("Building mesh...\n"))
-      
-      if (("Longitude" %in% colnames(mod_df)) &
-          ("Latitude" %in% colnames(mod_df)) ){
-        coords <- as.matrix(mod_df[,c("Longitude", "Latitude")])
-      }
-      if (("Longitude_midpoint" %in% colnames(mod_df)) &
-          ("Latitude_midpoint" %in% colnames(mod_df)) ){
-        coords <- as.matrix(mod_df[,c("Longitude_midpoint", "Latitude_midpoint")])
-      }
+      mesh_source <- "mesh_settings"
       
       # Create a mesh
       # check that mesh_dim, max.edge, cutoff and offset are all in mesh_settings
       # if any not, print out a message telling user that default settings (x..)
       # are being used
-      missing_mesh_specs <- c("mesh_dim", "max.edge", "cutoff", "offset")[!(c("mesh_dim", "max.edge", "cutoff", "offset") %in% names(mesh_settings))]
-      if ("mesh_dim" %in% missing_mesh_specs){
-        message(crayon::yellow("Mesh dimension (2d or 3d) not provided, using default value: 2d \n"))
-        mesh_settings$mesh_dim <- "2d"
+      if (is.null(mesh_settings)){
+        message(crayon::yellow("Mesh settings not provided, using default values.\n"))
+        
+        mesh_settings <- list(mesh_dim = "2d",
+                              max.edge = c(75,100),
+                              cutoff = 1e-12,
+                              offset = c(10,20))
+      } else {
+        missing_mesh_specs <- c("mesh_dim", "max.edge", "cutoff", "offset")[!(c("mesh_dim", "max.edge", "cutoff", "offset") %in% names(mesh_settings))]
+        if ("mesh_dim" %in% missing_mesh_specs){
+          message(crayon::yellow("Mesh dimension (2d or 3d) not provided, using default value: 2d \n"))
+          mesh_settings$mesh_dim <- "2d"
+        }
+        
+        # TODO: better defaults - link to location distances...
+        if ( ("max.edge" %in% missing_mesh_specs) &
+             (mesh_settings$mesh_dim == "2d") ){
+          message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
+          mesh_settings$max.edge <- c(75,100)
+          # From ibis:
+          # A good guess here is usally a max.edge of between 1/3 to 1/5 of the spatial range.
+          # c(diff(range(coords[,1], na.rm = T))/(3*5) , diff(range(coords[,1], na.rm = T))/(3*5) * 2)
+        }
+        if ( ("cutoff" %in% missing_mesh_specs) &
+             (mesh_settings$mesh_dim == "2d") ){
+          message(crayon::yellow("Mesh cutoff not provided, using default value: 1e-12 \n"))
+          mesh_settings$cutoff <- 1e-12
+          # From ibis:
+          # Specify as minimum distance between y coordinates
+          # val <- min(abs(diff(coords[,2])), na.rm = T)
+          # cutoff <- ifelse(val == 0, 1e-12, val)
+        }
+        if ( ("offset" %in% missing_mesh_specs) &
+             (mesh_settings$mesh_dim == "2d") ){
+          message(crayon::yellow("Mesh offset not provided, using default values: c(10,20) \n"))
+          mesh_settings$offset <- c(10,20)
+          # From ibis:
+          # Specify offset as 1/100 of the boundary distance
+        }
       }
       
-      # TODO: better defaults - link to location distances...
-      if ( ("max.edge" %in% missing_mesh_specs) &
-          (mesh_settings$mesh_dim == "2d") ){
-        message(crayon::yellow("Mesh max.edge not provided, using default values: c(75,100) \n"))
-        mesh_settings$max.edge <- c(75,100)
-        # From ibis:
-        # A good guess here is usally a max.edge of between 1/3 to 1/5 of the spatial range.
-        # c(diff(range(coords[,1], na.rm = T))/(3*5) , diff(range(coords[,1], na.rm = T))/(3*5) * 2)
-      }
-      if ( ("cutoff" %in% missing_mesh_specs) &
-           (mesh_settings$mesh_dim == "2d") ){
-        message(crayon::yellow("Mesh cutoff not provided, using default value: 1e-12 \n"))
-        mesh_settings$cutoff <- 1e-12
-        # From ibis:
-        # Specify as minimum distance between y coordinates
-        # val <- min(abs(diff(coords[,2])), na.rm = T)
-        # cutoff <- ifelse(val == 0, 1e-12, val)
-      }
-      if ( ("offset" %in% missing_mesh_specs) &
-           (mesh_settings$mesh_dim == "2d") ){
-        message(crayon::yellow("Mesh offset not provided, using default values: c(10,20) \n"))
-        mesh_settings$offset <- c(10,20)
-        # From ibis:
-        # Specify offset as 1/100 of the boundary distance
-      }
-      
+  
       # TODO: move this to a function - hib_build_inla_mesh <- function(coords, mesh_settings)??
       
       if (mesh_settings$mesh_dim == "3d"){
@@ -263,8 +294,13 @@ hib_fit_inla <- function(obj,
     # w.Host <- inla.spde.make.index('w', n.spde = site.spde$n.spde) # making the w
     
     # Create weights (A) matrix
+    
+    # TODO
+    # ERROR: coords are created in mesh build, but are also needed if mesh is provided...
+    # Even if providing a mesh, need to specify mesh_dim
+    
     A <- INLA::inla.spde.make.A(input_mesh, 
-                          loc = coords)
+                                loc = coords)
     s.site <- INLA::inla.spde.make.index('s', n.spde = site.spde$n.spde)
     
     # collate model fitting data
@@ -294,6 +330,7 @@ hib_fit_inla <- function(obj,
   ranef_chr <- as.character(random_covar)[2]
   inla_form <- paste(inla_form, ranef_chr, sep = " + ")
   
+  # spat_chr <- ""
   if (incl_spatial_term){
     # add spatial term
     spat_chr <- "f(s, model = site.spde)"
@@ -332,27 +369,50 @@ hib_fit_inla <- function(obj,
                verbose = F)
   }
 
+  # TODO:
+  fixef_df <- m0$summary.fixed %>%
+    tibble::rownames_to_column("Coefficient_name") %>%
+    dplyr::rename(Coefficient_value = mean,
+                  loCI = `0.025quant`,
+                  median = `0.5quant`,
+                  hiCI = `0.975quant`)
+  
   message(crayon::green("Collating model details ..."))
+  
+  user_form_full <- paste(as.character(response_fixed_form)[2],
+                                  as.character(response_fixed_form)[1],
+                                  as.character(response_fixed_form)[3],
+                                  "+",
+                                  as.character(random_covar)[2], sep = " ")
+  
+  # user_form_full_s <- NA
+  # if (incl_spatial_term){
+  #   # add spatial term
+  #   user_form_full_s <- paste(user_form_full, 
+  #                           "+",
+  #                           spat_chr)
+  #   user_form_full_s <- formula(user_form_full_s)
+  # }
+  user_form_full <- formula(user_form_full)
+  
   
   # instantiate an inla_mod class
   mod_obj <- hib_inla_model$new(
     db_obj = obj,
     mod_df = mod_df,
     inla_obj = m0,
+    fixef_df = fixef_df,
     # TODO:
-    user_formula = list(full = formula(paste(as.character(response_fixed_form)[2],
-                                 as.character(response_fixed_form)[1],
-                                 as.character(response_fixed_form)[3],
-                                 "+",
-                                 as.character(random_covar)[2], sep = " ")),
+    user_formula = list(full = user_form_full,
                         response_fixed = response_fixed_form,
                         random = random_covar
                         ),
-    inla_fitted_formula = inla_form,
+    inla_fitted_formula = inla_form, # This may not be needed
     inla_incl_spatial_term = incl_spatial_term,
     inla_stack = stk,
     inla_mesh = input_mesh,
     inla_mesh_settings = mesh_settings,
+    inla_mesh_source = mesh_source,
     n_spp = n_spp
   # TODO:
   # fit_settings,

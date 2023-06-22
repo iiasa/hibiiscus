@@ -273,43 +273,54 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   # INLA - (rescaled_)prediction_sd
                                   # BRMS - (rescaled_)prediction_error
                                   
+                                  # Note: if proj is a list of rasters, assertthat::hasname doesn't work
+                            
                                   
                                   # Check specified response and uncert vars are in projection data
-                                  if ((!is.null(response_var) & type %in% c("response-map", 
-                                                                            "bivariate-map",
-                                                                            "response-distr", 
-                                                                            "bivariate-distr")) ){
-                                    assertthat::assert_that(
-                                      assertthat::has_name(proj, response_var),
-                                      msg = "Error: specified response variable is not available in projection output."
-                                    )
-                                  }
-                                  if ((!is.null(uncertainty_var) & type %in% c("uncertainty-map", 
-                                                                               "bivariate-map",
-                                                                               "uncertainty-distr", 
-                                                                               "bivariate-distr")) ){
-                                    assertthat::assert_that(
-                                      assertthat::has_name(proj, uncertainty_var),
-                                      msg = "Error: specified uncertainty variable is not available in projection output."
-                                    )
-                                  }
+                                  # Do this after conversion to df...
+                                  # if ((!is.null(response_var) & type %in% c("response-map", 
+                                  #                                           "bivariate-map",
+                                  #                                           "response-distr", 
+                                  #                                           "bivariate-distr")) ){
+                                  #   assertthat::assert_that(
+                                  #     assertthat::has_name(proj, response_var),
+                                  #     msg = "Error: specified response variable is not available in projection output."
+                                  #   )
+                                  # }
+                                  # if ((!is.null(uncertainty_var) & type %in% c("uncertainty-map", 
+                                  #                                              "bivariate-map",
+                                  #                                              "uncertainty-distr", 
+                                  #                                              "bivariate-distr")) ){
+                                  #   assertthat::assert_that(
+                                  #     assertthat::has_name(proj, uncertainty_var),
+                                  #     msg = "Error: specified uncertainty variable is not available in projection output."
+                                  #   )
+                                  # }
                                   
                                   # If response/uncert are not provided, default to prediction_mean and prediction_sd
                                   if ((is.null(response_var) & type %in% c("response-map", 
                                                                            "bivariate-map",
                                                                            "response-distr", 
                                                                            "bivariate-distr")) ){
-                                    message(crayon::yellow(paste0("Warning: 'response_var' not specified, ",
+                                    message(crayon::yellow(paste0("\nWarning: 'response_var' not specified, ",
                                                                   "using 'prediction_mean' as a default.")))
                                     response_var <- "prediction_mean"
+                                    # assertthat::assert_that(
+                                    #   assertthat::has_name(proj, response_var),
+                                    #   msg = "Error: specified response variable is not available in projection output."
+                                    # )
                                   }
                                   if ((is.null(uncertainty_var) & type %in% c("uncertainty-map", 
                                                                               "bivariate-map",
                                                                               "uncertainty-distr", 
                                                                               "bivariate-distr")) ){
-                                    message(crayon::yellow(paste0("Warning: 'uncertainty_var' not specified, ",
+                                    message(crayon::yellow(paste0("\nWarning: 'uncertainty_var' not specified, ",
                                                                   "using 'prediction_sd' as a default.")))
                                     uncertainty_var <- "prediction_sd"
+                                    # assertthat::assert_that(
+                                    #   assertthat::has_name(proj, uncertainty_var),
+                                    #   msg = "Error: specified uncertainty variable is not available in projection output."
+                                    # )
                                   }
                                   
                                   # Set labels - tidy versions of response/uncertainty_var
@@ -351,48 +362,9 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   }
                                   
                                   
-                                  # # Check for self$projection_specs$Rescaled_prediction
-                                  # resp_var <- "prediction"
-                                  # resp_lab <- "Prediction"
-                                  # if (self$projection_specs$Rescaled_prediction){
-                                  #   resp_var <- "rescaled_prediction"
-                                  #   resp_lab <- "Rescaled\nprediction"
-                                  # }
-                                  # if (inherits(self$model, "hib_inla_model")){
-                                  #   resp_var <- paste(resp_var, "mean", sep = "_")
-                                  # }
-                                  # 
-                                  # vars_ <- c(resp_var)
-                                  # 
-                                  # if (type %in% c("bivariate-map", "bivariate-distr")){
-                                  # 
-                                  #   if (inherits(self$model, "hib_lme4_model")){
-                                  #     message(crayon::red("\nBivariate plots not yet supported for projections from lme4-type models ...\n")) 
-                                  #     stop() 
-                                  #   }
-                                  #   if (inherits(self$model, "hib_inla_model")){
-                                  #     sd_var <- "prediction_sd"
-                                  #   }
-                                  #   if (inherits(self$model, "hib_brms_model")){
-                                  #     sd_var <- "prediction_error"
-                                  #   }
-                                  #   
-                                  #   if (self$projection_specs$Rescaled_prediction){
-                                  #     sd_var <- paste0("rescaled_", sd_var)
-                                  #   }
-                                  #   
-                                  #   if (type == "bivariate-map"){
-                                  #     resp_lab <- "Bivariate plot"  
-                                  #   }
-                                  #   if (type == "bivariate-distr"){
-                                  #     resp_lab <- gsub("\n", " ", resp_lab)
-                                  #     sd_lab <- "Uncertainty"
-                                  #   }
-                                  #   
-                                  #   
-                                  #   vars_ <- c(vars_, sd_var)
-                                  #   
-                                  # }
+                                  # TODO: check that resp and uncert vars are in proj
+                                  # If lme4 without boot, no uncert...
+                                  
                                   vars_ <- c(response_var, uncertainty_var)
                                   
                                   # If not rescaled..., just use a basic colour gradient
@@ -403,19 +375,50 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   if (is.data.frame(proj) ){
                                     # terra::plot(proj$`2010`[[resp_var]])
+                                    # TODO
+                                    if (!all(vars_ %in% colnames(proj))){
+                                      missing_vars <- vars_[!vars_ %in% colnames(proj)]
+                                      message(crayon::red(paste("\nVariable/s missing:",
+                                                                paste(missing_vars, collapse = " ; "),
+                                                                "\n")))
+                                      stop("Variable/s required for plotting are missing, see above for details.",
+                                           call. = F)
+                                    }
+                                    
                                     vars__ <- c("x", "y", "Year", vars_)
                                     vars__ <- vars__[vars__ %in% colnames(proj)]
                                     proj <- proj[vars__]
                                   }
                                   if (inherits(proj, "SpatRaster") ){
                                     # terra::plot(proj$`2010`[[resp_var]])
+                                    if (!all(vars_ %in% names(proj))){
+                                      missing_vars <- vars_[!vars_ %in% names(proj)]
+                                      message(crayon::red(paste("\nVariable/s missing:",
+                                                                paste(missing_vars, collapse = " ; "),
+                                                                "\n")))
+                                      stop("Variable/s required for plotting are missing, see above for details.",
+                                           call. = F)
+                                    }
+                                    
                                     proj <- terra::as.data.frame(proj[[vars_]], xy = T)
                                   }
                                   if ((is.list(proj) & !is.data.frame(proj))){
                                     proj <- purrr::map(proj,
-                                                       function(z){terra::as.data.frame(z[[vars_]], xy = T)}) %>%
+                                                       function(z){
+                                                         if (!all(vars_ %in% names(z))){
+                                                           missing_vars <- vars_[!vars_ %in% names(z)]
+                                                           message(crayon::red(paste("\nVariable/s missing:",
+                                                                                     paste(missing_vars, collapse = " ; "),
+                                                                                     "\n")))
+                                                           stop("Variable/s required for plotting are missing, see above for details.",
+                                                                call. = F)
+                                                         }
+                                                         
+                                                         terra::as.data.frame(z[[vars_]], xy = T)}) %>%
                                       dplyr::bind_rows(.id = "Year")
                                   }
+                                  
+                                  
                                   # TODO: make use of tidyterra??
                                   # print(head(proj))
                                   
@@ -433,7 +436,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     
                                     # If rescaled, can also improve colour scheme 
                                     # 1 as midpoint, lower "bad" (0), higher "better" (max)
-                                    if (grepl("Rescaled_", response_var)){
+                                    if (grepl("rescaled_", response_var, ignore.case = T)){
                                       # if (self$projection_specs$Rescaled_prediction){
                                       max_resp <- max(proj[,response_var])
                                       

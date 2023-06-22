@@ -151,7 +151,7 @@ hib_brms_model <- R6Class("hib_brms_model",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                        "\n\n",
                                        "--------------------\n\n",
-                                       "Summary of fitted model:\n"
+                                       "Summary of fitted model\n"
                                        # "Fixed effects:"
                                 )
                               )

@@ -152,7 +152,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                  "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                  "\n\n",
                                  "--------------------\n\n",
-                                 "Summary of fitted model:\n"
+                                 "Summary of fitted model\n"
                                  # "Fixed effects:"
                           )
                         )

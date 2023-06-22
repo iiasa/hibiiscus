@@ -888,7 +888,7 @@ hib_calc_gma <- function(obj){
 #' } 
 #' @export
 hib_calc_shannon <- function(obj){
-  message(crayon::green("Calculating shannon diversity...\n"))
+  message(crayon::green("Calculating Shannon diversity...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(

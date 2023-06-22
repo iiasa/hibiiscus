@@ -675,10 +675,29 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     covars_not_in_rast <- fix_vars[!fix_vars %in% names(data)]
     
     if (length(non_covars_in_rast) > 0 ){
-      # for each covar, get unique levels (if factor in mod_df)
+      # for each covar, get unique levels (if factor in mod_df) - what about chr..
+      # TODO: Should use model-fitting data from obj$model...
+      # lmer: @frame
+      # inla: $.args$data
+      # brms: @frame
+      
+      # # lme4 fit data,
+      if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+        fit_dat <- obj$model@frame
+      }
+      # brms fit data
+      if (class(obj$model) == "brmsfit"){
+        fit_dat <- obj$model$data
+      }
+      # inla fit data
+      if (class(obj$model) == "inla"){
+        fit_dat <- obj$model$.args$data
+      }
+      # 
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
-                                             if (is.factor(obj$data[[x]])){
+                                             if (is.factor(fit_dat[[x]])){
+                                             # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
                                                                      covar_levs = levels(obj$data[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
@@ -701,11 +720,12 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                                          covar_nm_levs_in_rast == T ~ covar_nm_levs,
                                                          T ~ NA))
       
-      # Check for binary layers...
+      # Check for binary layers... 
+      # TODO: what about NA.../nan... (need to account for NA values...)
       is_binary_layer <- purrr::map_dfr(names(tmp_rast),
                                         function(nm){
                                           data.frame(covar_levs_rast = nm,
-                                                     is_binary_layer = all(unique(terra::values(tmp_rast[[nm]])) %in% c(0,1))
+                                                     is_binary_layer = all(unique(terra::values(tmp_rast[[nm]])) %in% c(0,1, NA, NaN)) # NA, NaN
                                           )
                                         })
       
@@ -714,6 +734,8 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         dplyr::group_by(covar_nm) %>%
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
+      # print(covars_not_in_rast)
+      
       # Split binary and non binary layers
       bin_covars <- covars_not_in_rast %>%
         dplyr::filter(is_binary_covar == T)
@@ -721,6 +743,13 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       non_bin_covars <- covars_not_in_rast %>%
         dplyr::filter(is_binary_covar == F)
       
+      # TODO: maybe this can be dropped???
+      # If we don't assume any within cell spatial structure, just sum/multiply
+      # proportional effects of each covariate level...
+      # BUT, this approach doesn't work for terra::predict
+      # would have to edit.../predict using only prop vars,
+      # then do multiplication to aggregate
+      # predict for non-prop vars - sum
       if (length(unique(non_bin_covars$covar_nm)) > 1){
         message(crayon::yellow("Warning: SpatRaster with multiple non-binary layers detected! Projections are not yet supported...\n"))
         stop("In development")
@@ -801,6 +830,8 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         # print(tmp_prop_rast)
         # Want to end up with N raster stacks - 1 per prop level
         n_prop_covar_lyrs <- dim(tmp_prop_rast)[3]
+        
+        # print(tmp_prop_rast)
       }
       # Check tmp_prop_rast is a terra SpatRaster
       # Could optionally exit here if prepping for inla...
@@ -815,6 +846,8 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       non_bin_sub <- non_bin_covars %>%
         dplyr::filter(!is.na(covar_levs_rast))
       
+      # print(non_bin_covars)
+      # print(non_bin_sub)
       non_bin_r <- tmp_rast[[non_bin_sub$covar_levs_rast]]
       
       tmp_pred_rast_ls <- vector("list", n_prop_covar_lyrs)
@@ -836,6 +869,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         # if it is, check all data[,var] are in obj$data[,var
         check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], fix_vars)
         
+        # print(tmp_pred_rast_ls[[i]])
         if (inherits(obj, "hib_lme4_model")){
           tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
@@ -855,6 +889,10 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
           dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) %>% 
           dplyr::pull(category)
+        
+        # print(tmp_prop_rast[[i]])
+        # print(terra::cats(tmp_prop_rast)[[i]])
+        # print(unique(terra::values(tmp_prop_rast[[i]])))
         
         lyr_orig_nm <- non_bin_sub %>%
           dplyr::filter(covar_levs == lyr_nm) %>%
@@ -958,7 +996,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 #' @param mod_data A [`data.frame`], of the data used to fit the model
 #' @param input_type A [`character`], either "binary" or "non-binary", indicating 
 #' the type of data in the raster - i.e., is each grid cell only a single level of 
-#' a covariate, or can it contain proportions of multiple levles
+#' a covariate, or can it contain proportions of multiple levels
 #' @keywords data, preparation, model, projection
 #' @examples 
 #' \dontrun{
@@ -988,7 +1026,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   r <- data_rast[[df$covar_levs_rast]]
   
   if (input_type == "binary"){
-    if (max(terra::values(sum(r))) != 1){
+    if (max(terra::values(sum(r)), na.rm = T) != 1){
       message(crayon::yellow("Warning: Binary SpatRaster contains cells with >1 category! Layers will be discarded ...\n"))
       return (NULL)
     }  
@@ -1010,7 +1048,17 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     
     covar_level_numeric <- lev_df$ID[lev_df$category == covar_level]
     
-    terra::values(lyr)[terra::values(lyr) > 0] <- covar_level_numeric
+    if (input_type == "binary"){
+      terra::values(lyr)[terra::values(lyr) > 0] <- covar_level_numeric
+    }
+    if (input_type == "non-binary"){
+      terra::values(lyr) <- covar_level_numeric
+    }
+    
+    # terra::values(lyr)[terra::values(lyr) > 0] <- covar_level_numeric
+    # terra::values(lyr) <- covar_level_numeric
+    # Or, set all cells to that lyr value - and then rely on subsequent multiplication
+    # to remove 0s and NAs...
     
     # TODO: is ".," needed in terra::categories ??
     if (input_type == "non-binary"){
@@ -1026,16 +1074,25 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     terra::rast() 
   
   if (input_type == "binary"){
+    
+    # print(r %>%
+    #         max() %>%
+    #         terra::as.factor())
+    # print(fac_lev_df)
+    
     r <- r %>%
       max() %>%
       terra::as.factor() %>%
       terra::categories(.,
-                        layer = 0,
+                        # layer = 0,
                         value = fac_lev_df)
+    
   }
   
   # %%%
   names(r) <- rep(covar_nm, dim(r)[3]) 
+  
+  # print(r)
   return(r)
 }
 
@@ -1074,26 +1131,38 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_boot, n_boot){
   
   data_pred <- terra::predict(data,
                               mod,
-                              re.form = NA)
+                              re.form = NA,
+                              na.rm = T)
   names(data_pred) <- "prediction_mean"
   
   
   if (lme4_boot == T){
     # %%%%
-    tmp_rast_df <- terra::as.data.frame(data, xy = T)
+    message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
+                                n_boot, "bootstrap samples...")))
     
+    
+    tmp_rast_df <- terra::as.data.frame(data, xy = T)
+    # Progress bar!!
+    # pb <- txtProgressBar(min = 1, max = n_boot, style = 3)
     boot <- lme4::bootMer(mod, 
                           function(m, rast = data){
-                            tmp <- terra::predict(rast, m, re.form = NA) %>%
+                            tmp <- terra::predict(rast, m, 
+                                                  re.form = NA,
+                                                  na.rm = T) %>%
                               terra::as.data.frame()
                             tmp[,1]
                           }, 
-                          nsim = n_boot)
+                          nsim = n_boot,
+                          .progress = "txt")
     
     prediction_sd <- apply(boot$t, 2, sd)
     prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
     prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
     prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
+    # TODO:
+    # Above apply approach is v slow for large data sets...
+    # 
     
     uncert_df <- data.frame(prediction_median= prediction_median,
                             prediction_sd    = prediction_sd,
@@ -1170,11 +1239,13 @@ terra_proj_brms_pred <- function(mod, data, backtransform, incl_obs_uncert){
   if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
                                 mod,
-                                re_form = NA)
+                                re_form = NA,
+                                na.rm = T)
     med_pred <- terra::predict(data,
                                mod,
                                re_form = NA,
-                               robust = T)
+                               robust = T,
+                               na.rm = T)
     
     names(mean_pred)[names(mean_pred) == "Estimate"] <- "prediction_mean"
     names(mean_pred)[names(mean_pred) == "Est.Error"] <- "prediction_sd"
@@ -1305,9 +1376,29 @@ terra_to_df_inla <- function(data, obj, fix_vars){
     
     if (length(non_covars_in_rast) > 0 ){
       # for each covar, get unique levels (if factor in mod_df)
+
+      # TODO: Should use model-fitting data from obj$model...
+      # lmer: @frame
+      # inla: $.args$data
+      # brms: @frame
+      
+      # # lme4 fit data,
+      if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+        fit_dat <- obj$model@frame
+      }
+      # brms fit data
+      if (class(obj$model) == "brmsfit"){
+        fit_dat <- obj$model$data
+      }
+      # inla fit data
+      if (class(obj$model) == "inla"){
+        fit_dat <- obj$model$.args$data
+      }
+      # if (is.factor(fit_dat[[x]]))
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
-                                             if (is.factor(obj$data[[x]])){
+                                             if (is.factor(fit_dat[[x]])){
+                                             # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
                                                                      covar_levs = levels(obj$data[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
@@ -1334,7 +1425,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
       is_binary_layer <- purrr::map_dfr(names(tmp_rast),
                                         function(nm){
                                           data.frame(covar_levs_rast = nm,
-                                                     is_binary_layer = all(unique(terra::values(tmp_rast[[nm]])) %in% c(0,1))
+                                                     is_binary_layer = all(unique(terra::values(tmp_rast[[nm]])) %in% c(0,1, NA, NaN))
                                           )
                                         })
       
@@ -1527,9 +1618,6 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
     fit_dat <- mod$.args$data
   }
   
-  # print(head(fit_dat))
-  # print(head(proj_dat))
-  # 
   problem_vars <- list()
   
   is_problem_var <- FALSE
@@ -1547,8 +1635,6 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
         var_i_fit_levs <- levels(fit_dat[[var_i]])
       }
       
-      # print(fit_dat[[var_i]])
-      # print(var_i_fit_levs)
       # Get unique chr values for proj data 
       var_i_proj <- proj_dat[[var_i]]
       
@@ -1565,7 +1651,6 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
       if (proj_dat_type == "rast"){
         var_i_proj_levs <- terra::levels(var_i_proj)[[1]][["category"]]
       }
-      # print(var_i_proj)
       
       # Check all var_i_proj_levs are in var_i_fit_levs
       if (!all(var_i_proj_levs %in% var_i_fit_levs)){

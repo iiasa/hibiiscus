@@ -14,16 +14,20 @@ hib_mod_cv(
 )
 }
 \arguments{
-\item{mod_obj}{A [`hib_x_model`] object.}
+\item{mod_obj}{A [`hib_XX_model`] object.}
 
 \item{db_obj}{A [`hib_database`] object, or, if modelling used multiple data-
 sources, a list of database objects}
 
 \item{fold_type}{A [`character`] indicating the type of cross-validation; one
-of: ..., <spatial_options>, ..., "Custom" - ?"Random-5", "Random-10"?}
+of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", 
+    "Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom"}
 
 \item{custom_col}{A [`character`] indicating the column in the model data to 
-use to define cross-validation folds, when fold_type == "custom"}
+use to define cross-validation folds, when fold_type == "Custom"}
+
+\item{random_seed}{A [`numeric`] indicating the random seed used to define
+random cross-validation folds - only used if 'Random-X' in fold_type}
 
 \item{backtransform}{A function to convert the model prediction back to the original
 scale of interest}
@@ -37,7 +41,7 @@ Expects a hib model object...
 }
 \examples{
 \dontrun{
-  cv_out <- hib_mod_cv(mod_obj, db_obj, fold_type = "Source_ID")
+  cv_out <- hib_mod_cv(mod_obj, db_obj, fold_type = "UN_region")
 } 
 }
 \keyword{evaluation}
