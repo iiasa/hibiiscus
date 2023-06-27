@@ -1,7 +1,7 @@
 ---
 title: "Basic usage"
 author: "Richard Cornford"
-date: "2023-03-21"
+date: "2023-06-27"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -30,8 +30,12 @@ PREDICTS project, see <https://www.nhm.ac.uk/our-science/our-work/biodiversity/p
 for example filtering to remove particular sites, or realigning land-use variables.
 We follow this by saving the hibiiscus database for future use.
 
-* Next, diversity metrics for each site will be calculated, before finally, a mixed-effects
-model will be fitted using `lme4`.
+* Next, diversity metrics for each site will be calculated, before fitting a mixed-effects
+model using `lme4`.
+
+* We then demonstrate the use of cross-validation to interogate model performance.
+
+* Before finishing with an example of model projection.
 
 
 ### 1. Load package and PREDICTS-like data
@@ -39,11 +43,10 @@ model will be fitted using `lme4`.
 ```{r Load packages}
 # library(hibiiscus)
 devtools::load_all()
-library(assertthat)
-library(dplyr)
+
 ```
 
-```{r Load data, cache=F}
+```{r Load data, cache=F, warning=FALSE}
 # PREDICTS data, 2016 release
 hib_db <- create_hib(path_species = "~/Documents/IIASA/lamasus/raw_data/PREDICTS/2016/database.rds", 
                      path_sites   = "~/Documents/IIASA/lamasus/raw_data/PREDICTS/2016/sites.rds", 
@@ -63,6 +66,9 @@ hib_db <- hib_filter_sites(hib_db,
                              Predominant_land_use != "Cannot decide")
 ```
 
+```{r Simple plot of data, fig.width=6, fig.height=5}
+hib_db$plot()
+```
 
 ### 3. Condense land-use categories 
 Here, we will add a new column to the site data, effectively grouping land-use types into
@@ -100,12 +106,17 @@ hib_db <- hib_join_sites(hib_db,
 ```{r Diversity metrics, cache=F}
 hib_db$hib_effort_correction()
 
-hib_db <- hib_calc_ta(hib_db)
+# hib_db <- hib_calc_ta(hib_db)
+hib_db <- hib_calc_div_within(hib_db,
+                              c("Total_abundance"))
+
+print(hib_db)
 
 ```
+Note: other metrics of within-site diversity include; "Species_richness", "Chao1_diversity", "Simpson_diversity", "Shannon_diversity", "Mean_abundance", "Geometric_mean_abundance", "HillShannon_diversity", "HillSimpson_diversity" and "PIE".
 
 
-### 5. Fit an overly simplified model of total abundance in response to land-use
+### 5. Fit a simple model of total abundance in response to land-use
 
 ```{r Fit model, cache=F}
 hib_ta_mod <- hib_fit_lme4(hib_db,
@@ -117,6 +128,80 @@ print(hib_ta_mod)
 
 ```
 
-```{r Simple plot of model, fig.width=6, fig.height=5}
+```{r Simple plot of fixed-effect coefficients, fig.width=6, fig.height=5}
 hib_ta_mod$plot()
 ```
+
+```{r Simple plot of random-effect coefficients, fig.width=6, fig.height=5}
+hib_ta_mod$plot("random-effects")
+```
+
+
+### 6. Cross-validate the fitted model, using both Random, and geographically blocked folds.
+
+```{r Cross-validate model, cache=F}
+# Cross-validate model, include a back-transformation to obtain predictions/errors
+# on the scale of Rescaled_total_abundance
+hib_cv <- hib_mod_cv(hib_ta_mod,
+                     hib_db,
+                     fold_type = c("Random-5", "Biome"),
+                     backtransform = function(x){x^2})
+
+print(hib_cv)
+
+```
+
+Note: other cross-validation approaches include; "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", "Country", "UN_subregion", "UN_region", "Biome", "Realm" and "Custom". 
+When using "Custom", any grouping variable can be specified, as long as it is present in the site data.
+
+
+```{r Simple plot of cross-validation folds, fig.width=8, fig.height=5}
+hib_cv$plot("map-sites")
+```
+
+```{r Simple plot of variation in fixed-effects coefficients, fig.width=8, fig.height=5}
+hib_cv$plot("coefficients")
+```
+
+```{r Simple plot of model performance, fig.width=6, fig.height=5, warning=F}
+hib_cv$plot("metrics",
+            c("corsq", "mae", "rmse", "rsq"))
+```
+
+Note: In the above figures displaying coefficients and predictive performance, the black line and grey shading indicate the values and confidence intervals, respectively, estimated based on a model fitted to the complete dataset (In-sample).
+
+
+### 7. Model projection
+
+```{r Generate an example 10x10 df for use in projection}
+# Generate a simple df of example land-uses for projection.
+proj_df <- expand.grid(x = 1:10,
+            y = 1:10) %>%
+  as.data.frame() %>%
+  dplyr::mutate(Forest_cover = runif(dplyr::n()),
+                Grouped_LU = dplyr::case_when(Forest_cover <= 0.3 ~ "Human",
+                                              Forest_cover > 0.3 & Forest_cover <= 0.7 ~ "Semi-natural",
+                                              Forest_cover > 0.7 ~ "Natural",
+                                              T ~ NA))
+```
+
+```{r Project the model}
+hib_proj <- hib_mod_project(hib_ta_mod,
+                proj_df, 
+                backtransform = function(x){x^2},
+                rescale_pred = T,
+                lme4_boot = T, n_boot = 50)
+```
+
+```{r Simple plot of projection, fig.width=6, fig.height=5}
+hib_proj$plot(response_var = "rescaled_prediction_mean")
+```
+
+```{r Bivariate map of projected values and uncertainty, fig.width=7.5, fig.height=5}
+hib_proj$plot("bivariate-map")
+```
+
+```{r Simple plot of distribution of projected values, fig.width=6, fig.height=5}
+hib_proj$plot("response-distr", response_var = "rescaled_prediction_mean")
+```
+

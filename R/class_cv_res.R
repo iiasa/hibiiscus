@@ -17,12 +17,13 @@ hib_cv_res <- R6Class("hib_cv_res",
                         original_model_obj = NULL, # All model info, except data, and functions
                         cv_results = NULL,
                         insample_results = NULL,
+                        use_original_mesh = NULL,
                         
                         # Executed when created
                         initialize = function(mod_obj,
                                               cv_res,
-                                              insamp_res
-                                              
+                                              insamp_res,
+                                              use_orig_mesh
                         ){
                           # - some assertion checks
                           assertthat::assert_that(
@@ -30,7 +31,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                             inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
                             # Check cv outputs
                             is.list(cv_res),
-                            is.list(insamp_res)
+                            is.list(insamp_res),
+                            is.logical(use_orig_mesh) || is.null(use_orig_mesh)
                           )
                           
                           # ------ #
@@ -42,7 +44,10 @@ hib_cv_res <- R6Class("hib_cv_res",
                           
                           core_items <- c("last_update", "version",
                                           "model", "processing_flags",
-                                          "fixedef_coefficients")
+                                          "fixedef_coefficients",
+                                          "site_locations")
+                          # 
+                          
                           if (inherits(mod_obj, "hib_lme4_model")){ 
                             core_items <- c(core_items, c("metrics", 
                                                           "ci_type"
@@ -55,7 +60,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                           "inla_fitted_formula", 
                                                           "inla_incl_spatial_term",
                                                           # "inla_mesh",
-                                                          "inla_mesh_settings"))
+                                                          "inla_mesh_settings",
+                                                          "inla_mesh_source"))
                             self$model_type <- "hib_inla_model"
                           }
                           if (inherits(mod_obj, "hib_brms_model")){ 
@@ -73,6 +79,14 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                                 })
                           
                           names(self$original_model_obj) <- core_items
+                          
+                          
+                          
+                          if (is.null(use_orig_mesh)){
+                            self$use_original_mesh <- NA
+                          } else {
+                            self$use_original_mesh <- use_orig_mesh
+                          }
                           
                           # If inla, add fixedef_coefficients
                           # TODO: add this to hib_inla_model class - and rm below
@@ -178,8 +192,20 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                                          RMSE_hi = c(cv_df$Metric_hi[cv_df$Metric_shrt == "rmse"]),
                                                                          Predictive_R2 = c(cv_df$Metric_val[cv_df$Metric_shrt == "rsq"]))
                                                     
+                                                    # if (n_fld > 1){
+                                                    #   
+                                                    # } else {
+                                                    #   out_df <- data.frame(CV_type = c(fld_typ),
+                                                    #                        N_folds = c(n_fld),
+                                                    #                        RMSE    = NA,
+                                                    #                        RMSE_lo = NA,
+                                                    #                        RMSE_hi = NA,
+                                                    #                        Predictive_R2 = NA)
+                                                    # }
+                                                    
                                                   })
-                          
+                          cv_df <- cv_df %>%
+                            dplyr::filter(N_folds > 1)
                           
                           df <- dplyr::bind_rows(insamp_df,
                                                  cv_df)
@@ -281,7 +307,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                                               "obs-v-pred",
                                               "obs-v-error", 
                                               "pred-v-error",
-                                              "metrics"
+                                              "metrics",
+                                              "map-sites"
                                             ))
                           
                           if (type == "metrics"){
@@ -525,7 +552,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                               basic_thm 
                           }
                           
-                          # TODO: 
+                          
                           if (type %in% c("obs-v-pred", "obs-v-error", "pred-v-error") ){
                             
                             # Get obs and pred and error - across cv + insample
@@ -837,6 +864,126 @@ hib_cv_res <- R6Class("hib_cv_res",
                             
                             
                           }
+                          
+                          if (type == "map-sites"){
+                            # stop("In development")
+                            # %%%%%
+                            # Just get a coarse-ish world map...
+                            tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
+                            # NOTE: This differe per model type!!
+                            # if (self$model_type == "hib_lme4_model"){
+                            #   m_form <- stats::formula(self$original_model_obj$model)
+                            # }
+                            # if (self$model_type == "hib_inla_model"){
+                            #   m_form <- self$original_model_obj$user_formula$full
+                            # }
+                            # if (self$model_type == "hib_brms_model"){
+                            #   m_form <- self$original_model_obj$model$formula$formula
+                            # }
+                            # 
+                            # resp_var <- all.vars(m_form[[2]])
+                            # resp_lab <- gsub("_", "\n", resp_var)
+                            # 
+                            loc_df <- self$original_model_obj$site_locations
+                            # %%%
+                            
+                            plt <- ggplot2::ggplot() +
+                              ggplot2::geom_sf(data = tmp,
+                                               fill = "lightgrey",
+                                               alpha = 0.4,
+                                               show.legend = F) +
+                              ggplot2::theme_bw() +
+                              basic_thm 
+                            # %%%
+                            
+                            cv_df <- purrr::map_dfr(.x = self$cv_results,
+                                                     .f = function(x){
+                                                       tmp_df <- x$cv_pred_df
+                                                       
+                                                       cv_type <- x$fold_type
+                                                       if (cv_type == "Custom"){
+                                                         cv_type <- paste0(cv_type, " (", x$fold_col, ")")
+                                                       }
+                                                       
+                                                       tmp_df$cv_type <- cv_type
+                                                       
+                                                       tmp_df$fold_id <- as.numeric(as.factor(tmp_df$fold_id))
+                                                       
+                                                       tmp_df
+                                                     })
+                            
+                            
+                            # Add cv_type that isn't in base_cv_levs to cv_levs
+                            add_cv_levs <- unique(cv_df$cv_type)
+                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                            
+                            cv_df <- cv_df %>%
+                              dplyr::mutate(cv_type = factor(cv_type,
+                                                             levels = cv_levs))
+                            
+                            if ("SSBS" %in% colnames(cv_df)){
+                              cv_df <- cv_df %>%
+                                dplyr::left_join(loc_df, by = "SSBS")
+                              
+                            }
+                            if ("SSBS1" %in% colnames(cv_df)){
+                              cv_df <- cv_df %>%
+                                # get the lat and long for s1
+                                dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) %>%
+                                dplyr::rename(SSBS1_latitude = Latitude,
+                                              SSBS1_longitude = Longitude) %>%
+                                # get the lat and long for s2
+                                dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) %>%
+                                dplyr::rename(SSBS2_latitude = Latitude,
+                                              SSBS2_longitude = Longitude) %>%
+                                # calculate the geographic midpoint between s1 and s2 
+                                dplyr::mutate(Latitude = (SSBS1_latitude + SSBS2_latitude) / 2,
+                                              Longitude = (SSBS1_longitude + SSBS2_longitude) / 2)
+                              
+                              # Or plot line segment between s1 and s2...
+                            }
+                            
+                            # Plot site locations - colour as response variable - untrans...
+                            
+                            # Get x/y limits for sites...
+                            x_rng <- range(cv_df$Longitude, na.rm = T)
+                            y_rng <- range(cv_df$Latitude, na.rm = T)
+                            
+                            
+                            # buffer by 5 degrees
+                            x_rng[1] <- round(x_rng[1] - 5, 2)
+                            x_rng[2] <- round(x_rng[2] + 5, 2)
+                            
+                            y_rng[1] <- round(y_rng[1] - 5, 2)
+                            y_rng[2] <- round(y_rng[2] + 5, 2)
+                            
+                            x_rng[1] <- max(c(-180, x_rng[1]))
+                            x_rng[2] <- min(c(180, x_rng[2]))
+                            
+                            y_rng[1] <- max(c(-90, y_rng[1]))
+                            y_rng[2] <- min(c(90, y_rng[2]))
+                            
+                            
+                            plt <- plt +
+                              ggplot2::geom_point(ggplot2::aes(x = Longitude,
+                                                               y = Latitude,
+                                                               colour = as.factor(as.character(fold_id))),
+                                                  alpha = 0.6,
+                                                  size = 0.5,
+                                                  show.legend = F,
+                                                  data = cv_df) +
+                              ggplot2::labs(#colour = resp_lab,
+                                            x = ggplot2::element_blank(),
+                                            y = ggplot2::element_blank()) +
+                              # ggplot2::scale_color_gradient(low = "firebrick3",
+                              #                               high = "dodgerblue3") +
+                              ggplot2::xlim(x_rng) +
+                              ggplot2::ylim(y_rng) +
+                              ggplot2::facet_wrap(~cv_type, ncol = 2)
+                            
+                          }
+                            # %%%%%
                           
                           (plt)
                         }

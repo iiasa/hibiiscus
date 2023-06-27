@@ -128,7 +128,7 @@ hib_fit_inla <- function(obj,
                                                              "Longitude_midpoint", 
                                                              "Latitude_midpoint")))]
       } else {
-        message(crayon::yellow("Warning: coordinate inforamtion unavailable, spatial random effect cannot be fitted.\n"))
+        message(crayon::yellow("Warning: coordinate information unavailable, spatial random effect cannot be fitted.\n"))
         mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB")))]
         incl_spatial_term <- F
       }
@@ -417,6 +417,8 @@ hib_fit_inla <- function(obj,
   # TODO:
   # fit_settings,
   # prior_list
+  
+  # location info for each SSBS - useful for plotting/AOA...
   )
   
   return(mod_obj)

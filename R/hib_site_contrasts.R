@@ -198,6 +198,8 @@ hib_calc_site_contrasts <- function(obj,
         dplyr::mutate(Baseline_LUI = NA)
     }
   }
+  # TODO: lu contrast (Predominant_land_use), i contrast (Use_intensity)
+
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
   if (any(c("geogr_dist_hav", "geogr_dist_geod") %in% metrics)){
     # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html

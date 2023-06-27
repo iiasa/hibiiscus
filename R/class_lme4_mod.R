@@ -20,6 +20,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       ci_type = NULL,
                       metrics = NULL,
                       processing_flags = NULL,
+                      site_locations = NULL,
                       # TODO: what else to include
                       # 
                       # lme4 output is pretty comprehensive, this is just a wrapper...
@@ -36,10 +37,6 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                             n_spp
                                             # set_up_specs
                                             # spp df?
-                                            # ???? - should this do the model fitting
-                                            # or should that be in hib_fit_lme4
-                                            # and this just return the resultant obj
-                                            # facilitating summary, printing...
                                             ){
                         # - some assertion checks
                         assertthat::assert_that(
@@ -96,6 +93,16 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           self$version <- lapply(db_obj, function(x){x$version})
                         }
                         
+
+                        # # TODO: store site locations
+                        loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
+                        if ("SSBS" %in% colnames(mod_df)){
+                          loc_df <- loc_df %>% dplyr::filter(SSBS %in% mod_df$SSBS)
+                        } else if ("SSBS1" %in% colnames(mod_df)){
+                          loc_df <- loc_df %>% dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                        }
+                        self$site_locations <- loc_df
+
                         self$last_update <- lubridate::today()
                         
                         # %%%%%%%%%%%%%%%
@@ -206,7 +213,8 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         # Plot options
                         type = match.arg(type,
                                          c("fixed-effects",
-                                           "random-effects"))
+                                           "random-effects",
+                                           "map-sites"))
                         
                         basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
                                            axis.title = ggplot2::element_text(size = 20),
@@ -299,6 +307,89 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                   aspect.ratio = 1)
                           
                         }
+                        
+                        if (type == "map-sites"){
+                          
+                          
+                          # Just get a coarse-ish world map...
+                          tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
+                          # NOTE: This differe per model type!!
+                          resp_var <- all.vars(self$model@call$formula[[2]])
+                          resp_lab <- gsub("_", "\n", resp_var)
+                          
+                          loc_df <- self$site_locations
+                          # %%%
+                          
+                          plt <- ggplot2::ggplot() +
+                            ggplot2::geom_sf(data = tmp,
+                                             fill = "lightgrey",
+                                             alpha = 0.4,
+                                             show.legend = F) +
+                            ggplot2::theme_bw() +
+                            basic_thm 
+                          # %%%
+                          
+                          plt_df <- self$data
+                          
+                          if ("SSBS" %in% colnames(plt_df)){
+                            plt_df <- plt_df %>%
+                              dplyr::left_join(loc_df, by = "SSBS")
+                            
+                          }
+                          if ("SSBS1" %in% colnames(plt_df)){
+                            plt_df <- plt_df %>%
+                              # get the lat and long for s1
+                              dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) %>%
+                              dplyr::rename(SSBS1_latitude = Latitude,
+                                            SSBS1_longitude = Longitude) %>%
+                              # get the lat and long for s2
+                              dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) %>%
+                              dplyr::rename(SSBS2_latitude = Latitude,
+                                            SSBS2_longitude = Longitude) %>%
+                              # calculate the geographic midpoint between s1 and s2 
+                              dplyr::mutate(Latitude = (SSBS1_latitude + SSBS2_latitude) / 2,
+                                            Longitude = (SSBS1_longitude + SSBS2_longitude) / 2)
+                            
+                            # Or plot line segment between s1 and s2...
+                          }
+                          
+                          # Plot site locations - colour as response variable - untrans...
+                          
+                          # Get x/y limits for sites...
+                          x_rng <- range(plt_df$Longitude, na.rm = T)
+                          y_rng <- range(plt_df$Latitude, na.rm = T)
+                          
+                        
+                          # buffer by 5 degrees
+                          x_rng[1] <- round(x_rng[1] - 5, 2)
+                          x_rng[2] <- round(x_rng[2] + 5, 2)
+                          
+                          y_rng[1] <- round(y_rng[1] - 5, 2)
+                          y_rng[2] <- round(y_rng[2] + 5, 2)
+                          
+                          x_rng[1] <- max(c(-180, x_rng[1]))
+                          x_rng[2] <- min(c(180, x_rng[2]))
+                          
+                          y_rng[1] <- max(c(-90, y_rng[1]))
+                          y_rng[2] <- min(c(90, y_rng[2]))
+                        
+                          
+                          plt <- plt +
+                            ggplot2::geom_point(ggplot2::aes(x = Longitude,
+                                                             y = Latitude,
+                                                             colour = !!dplyr::sym(resp_var)),
+                                                alpha = 0.7,
+                                                data = plt_df) +
+                            ggplot2::labs(colour = resp_lab,
+                                          x = ggplot2::element_blank(),
+                                          y = ggplot2::element_blank()) +
+                            ggplot2::scale_color_gradient(low = "firebrick3",
+                                                          high = "dodgerblue3") +
+                            ggplot2::xlim(x_rng) +
+                            ggplot2::ylim(y_rng) 
+                          
+                        }
+                        
                         (plt)
                       }
                     ),

@@ -284,6 +284,7 @@ hib_fit_lme4 <- function(obj,
   if (is.null(calc_CIs)){
     ci_type_ <- NA
   }
+
   # instantiate an lme4_mod class
   mod_obj <- hib_lme4_model$new(
     db_obj = obj, 

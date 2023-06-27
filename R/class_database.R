@@ -544,6 +544,7 @@ Database <- R6Class("Database",
                         plt <- ggplot2::ggplot() +
                           ggplot2::geom_sf(data = tmp,
                                   fill = "lightgrey",
+                                  alpha = 0.4,
                                   show.legend = F) +
                           ggplot2::xlim(x_rng) +
                           ggplot2::ylim(y_rng) +

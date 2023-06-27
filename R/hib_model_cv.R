@@ -20,6 +20,10 @@
 #' random cross-validation folds - only used if 'Random-X' in fold_type
 #' @param backtransform A function to convert the model prediction back to the original
 #' scale of interest
+#' @param use_original_mesh A logical value indicating whether cross-validation
+#' of spatial INLA models should use the original mesh for all cv folds. Computationally
+#' this is slightly more efficient, but may affect cv performance metrics - witheld
+#' sites will still exist in the mesh.
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
@@ -29,7 +33,10 @@
 hib_mod_cv <- function(mod_obj, db_obj, fold_type, 
                        custom_col = NULL,
                        random_seed = NULL,
-                       backtransform = NULL){
+                       backtransform = NULL,
+                       use_original_mesh = NULL){
+  # TODO: option to just use original mesh for inla cv - override mesh_source
+  
   # Assertion checks
   assertthat::assert_that(
     inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),     
@@ -37,7 +44,8 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     is.character(fold_type),
     is.character(custom_col) || is.null(custom_col),
     is.numeric(random_seed) || is.null(random_seed),
-    is.function(backtransform) || is.null(backtransform)
+    is.function(backtransform) || is.null(backtransform),
+    is.logical(use_original_mesh) || is.null(use_original_mesh)
   )
   
 
@@ -126,10 +134,20 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
                                  mod_ = mod_obj,
                                  db_ = db_obj,
                                  rand_seed = random_seed,
-                                 backtr = backtransform){
+                                 backtr = backtransform,
+                                 orig_mesh = use_original_mesh){
                           hib_cv_mod_inner(mod_, db_, fold_type, fold_col, 
-                                           rand_seed, backtr)
+                                           rand_seed, backtr, orig_mesh)
                         })
+  
+  # TODO: drop cv item if n_folds == 1
+  # cv_out[[i]]n_folds
+  cv_idx <- purrr::map(cv_out,
+                       function(x){
+                         x$n_folds > 1
+                       }) %>% 
+    unlist()
+  cv_out <- cv_out[cv_idx]
   
   message(crayon::green("Generating in-sample performance metrics for comparison.\n"))
   
@@ -257,6 +275,27 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   
   # %%%%%
   
+  # %%%
+  # Sort out use_original_mesh
+  # if not an inla model, set to NA
+  if (!inherits(mod_obj, "hib_inla_model")){
+    use_original_mesh <- NA
+  }
+
+  # if an inla, and spatial model, check it's not null, if it is, NA, else logical T/F
+  if (inherits(mod_obj, "hib_inla_model")){
+    if (mod_obj$inla_incl_spatial_term == T){
+      if (is.null(use_original_mesh)){
+        use_original_mesh <- NA  
+      }  
+    }
+    # if an inla, but non spatial model, set to na
+    if (mod_obj$inla_incl_spatial_term == F){
+      use_original_mesh <- NA
+    }
+  }
+  # %%%
+  
   # Return a cv object.. - incl original model? + df of cv predictions 
   # initialise cv_output...
   message(crayon::green("\nCollating cross-validation output ..."))
@@ -264,8 +303,9 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   cv_obj <- hib_cv_res$new(
     mod_obj = mod_obj,
     cv_res = cv_out,
-    insamp_res = insample_res)
-  
+    insamp_res = insample_res,
+    use_orig_mesh = use_original_mesh)
+  # Add use_original_mesh
   return(cv_obj)
 }
 
@@ -288,6 +328,10 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 #' random cross-validation folds - only used if 'Random-X' in fold_type
 #' @param backtransform A function to convert the model prediction back to the original
 #' scale of interest
+#' @param use_original_mesh A logical value indicating whether cross-validation
+#' of spatial INLA models should use the original mesh for all cv folds. Computationally
+#' this is slightly more efficient, but may affect cv performance metrics - witheld
+#' sites will still exist in the mesh.
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
@@ -299,7 +343,8 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 hib_cv_mod_inner <- function(mod_obj, db_obj, 
                              fold_type, fold_col,
                              random_seed = NULL,
-                             backtransform = NULL){
+                             backtransform = NULL,
+                             use_original_mesh = NULL){
   
   # Assertion checks 
   assertthat::assert_that(
@@ -308,7 +353,8 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     is.character(fold_type),
     is.character(fold_col),
     is.numeric(random_seed) || is.null(random_seed),
-    is.function(backtransform) || is.null(backtransform)
+    is.function(backtransform) || is.null(backtransform),
+    is.logical(use_original_mesh) || is.null(use_original_mesh)
   )
   
   # Check fold_type matches one of the options
@@ -337,6 +383,10 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
         assertthat::has_name(db_obj$sites, fold_col)
       )
       fold_df <- db_obj$sites[,c("SSBS", fold_col)]
+      
+      # TODO: what if model is of beta diversity - need to use SSBS1? 
+      # - here, assuming that SSBS1/2 are a pair, with shuffling based on SSBS1
+      # TODO: get lat/long of each ssbs
     }
     # or each db_obj$site if db_obj is a list
     if(is.list(db_obj)){
@@ -346,6 +396,9 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       
       fold_df <- lapply(db_obj, function(x){x$sites[,c("SSBS", fold_col)]}) %>%
         dplyr::bind_rows()
+      
+      # TODO: what if model is of beta diversity - need to use SSBS1?
+      # TODO: get lat/long of each ssbs (midpoint of SS?)
     }
   }
   
@@ -360,6 +413,10 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     if ("SSBS1" %in% colnames(mod_obj$data)){
       set.seed(random_seed)
       fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1))  
+      # TODO: is this a good idea? - maybe should sample from SSBS1_SSBS2 - to 
+      # properly "split" data
+      # Especially as SSBS1 will be duplicated many times in data - mostly going
+      # to be primary sites - this random sampling could be messy
     }
     
     n_rows <- nrow(mod_obj$data)
@@ -442,6 +499,9 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     
     orig_incl_spatial_term <- mod_obj$inla_incl_spatial_term
     if (orig_incl_spatial_term){
+      if (is.null(use_original_mesh)){
+        use_original_mesh <- NA
+      }
       # is mesh user provided or based on mesh_settings?
       mesh_source <- mod_obj$inla_mesh_source
       if (mesh_source == "user_provided"){
@@ -449,6 +509,10 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       }
       if (mesh_source == "mesh_settings"){
         orig_mesh_settings <-  mod_obj$inla_mesh_settings
+      }
+      if (use_original_mesh == T){
+        orig_mesh <-  mod_obj$inla_mesh
+        mesh_source <- "user_provided"
       }
     }
     
@@ -498,12 +562,25 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   fold_ids <- unique(cv_data %>% dplyr::pull(!!fold_col))
   n_folds <- length(fold_ids)
-  
   # print(n_folds)
   # Make a list to store output - length = length(unique(new_df[,fold_var]))
   cv_out_ls <- vector("list", n_folds)
   coef_out_ls <- vector("list", n_folds)
   
+  # TODO: if only one fold !! - need to note this...
+  if (n_folds == 1){
+    message(crayon::yellow(paste0("Warning: ", fold_type_msg, " has only 1 fold... Cross-validation for this specification will not be run.\n")))
+    
+    return(list(cv_pred_df  = NA, 
+                cv_metrics  = NA,
+                cv_fold_metrics  = NA,
+                cv_coef_df  = NA,
+                fold_type   = fold_type,
+                fold_col    = fold_col,
+                n_folds     = n_folds,
+                random_seed = NA
+    ))
+  }
   
   message(crayon::green(paste0("\tTotal number of folds: ", n_folds, "\n\n\tProgress")))
   
@@ -512,7 +589,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   if ( (inherits(mod_obj, "hib_lme4_model")) | 
         (inherits(mod_obj, "hib_inla_model")) ){
     # print("WOOP - lme4/inla")
-    pb <- txtProgressBar(min = 1, max = n_folds, style = 3)
+    pb <- txtProgressBar(min = 1, max = max(2, n_folds), style = 3)
   }
   
   for (i in 1:n_folds){
@@ -840,6 +917,14 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
                                               cv_out_df$y, 
                                               cv_out_df$error,
                                               cv_out_df$fold_id)
+  
+  # Only return random seed if random-
+  if (fold_type %in% c(c("Random-2", "Random-3", "Random-5", "Random-10" ))){
+    rand_num <- random_seed
+  } else {
+    rand_num <- NA
+  }
+  
   return(list(cv_pred_df  = cv_out_df, 
               cv_metrics  = cv_metrics,
               cv_fold_metrics  = cv_fold_metrics,
@@ -847,7 +932,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
               fold_type   = fold_type,
               fold_col    = fold_col,
               n_folds     = n_folds,
-              random_seed = random_seed
+              random_seed = rand_num
   ))
 }
 
