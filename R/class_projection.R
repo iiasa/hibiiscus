@@ -29,27 +29,42 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                 initialize = function(obj,
                                                       proj,
                                                       backtransform,
-                                                      rescale_pred){
+                                                      rescale_pred,
+                                                      lme4_specs,
+                                                      inla_specs,
+                                                      brms_specs){
                                   # Check that input is either a character filepath
                                   # Or dataframe/tibble
                                   assertthat::assert_that(
                                     inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model") || inherits(obj, "hib_brms_model"), # obj is a hib model
                                     is.data.frame(proj) || inherits(proj, "SpatRaster") || (is.list(proj) & !is.data.frame(proj)), # or a list of SpatRasters
                                     is.function(backtransform) || is.null(backtransform),
-                                    is.logical(rescale_pred)
+                                    is.logical(rescale_pred),
+                                    is.list(lme4_specs) || is.null(lme4_specs),
+                                    is.list(inla_specs) || is.null(inla_specs),
+                                    is.list(brms_specs) || is.null(brms_specs)
                                   )
                                   
                                   # ------ #
-                                  message(crayon::green("Initializing model projection class") )
+                                  message(crayon::green("\nInitializing model projection class") )
                                   
                                   # Store projection object (list of data)
                                   self$last_update <- lubridate::today()
                                   
                                   self$model <- obj
                                   self$projection <- proj
-                                  self$projection_specs <- list("Backransformation_function" = backtransform,
-                                                                "Rescaled_prediction" = rescale_pred)
+                                  proj_specs <- list("Backransformation_function" = backtransform,
+                                                     "Rescaled_prediction" = rescale_pred)
                                   
+                                  if (inherits(obj, "hib_lme4_model")){
+                                    self$projection_specs <- c(proj_specs, lme4_specs)
+                                  }
+                                  if (inherits(obj, "hib_inla_model")){
+                                    self$projection_specs <- c(proj_specs, inla_specs)
+                                  }
+                                  if (inherits(obj, "hib_brms_model")){
+                                    self$projection_specs <- c(proj_specs, brms_specs)
+                                  }
                                   
                                   # And check 
                                   # Outsourced security checks

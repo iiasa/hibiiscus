@@ -2,7 +2,7 @@
 #' 
 #' @description 
 #' This function projects a fitted hib model using the supplied model object and
-#' data to be used in projection - i.e., a df or raster stack of covars
+#' data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`hib_model`] object - either lme4 or inla.
@@ -15,6 +15,8 @@
 #' @param incl_obs_uncert A [`logical`] indicating whether or not observation-level
 #' uncertainty should be included in the predictions from brms models. Setting 
 #' this parameter to TRUE will produce predictions with larger uncertainty.
+#' @param lme4_boot
+#' @param n_boot
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -25,13 +27,13 @@ hib_mod_project <- function(obj,
                             data,
                             backtransform = NULL,
                             rescale_pred = F,
-                            incl_obs_uncert = F,
-                            lme4_boot = T,
-                            n_boot = 100
+                            # incl_obs_uncert = F,
+                            # lme4_boot = T,
+                            # n_boot = 100
                             # TODO: collate model type arguments into:
-                            # lme4_specs = list(bootstrap = F, n_boot = NA),
-                            # inla_specs = list(),
-                            # brms_specs = list(incl_obs_uncert = F)
+                            lme4_specs = NULL, #list(bootstrap = F, n_boot = NA),
+                            inla_specs = NULL, #list(),
+                            brms_specs = NULL #list(incl_obs_uncert = F)
                             # more scope for adjustment, and neater
                             ){
   # Assertions 
@@ -41,12 +43,12 @@ hib_mod_project <- function(obj,
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
-    is.logical(incl_obs_uncert),
-    is.logical(lme4_boot),
-    is.numeric(n_boot) || is.null(n_boot)
-    # is.list(lme4_specs) || is.null(lme4_specs),
-    # is.list(inla_specs) || is.null(inla_specs),
-    # is.list(brms_specs) || is.null(brms_specs),
+    # is.logical(incl_obs_uncert),
+    # is.logical(lme4_boot),
+    # is.numeric(n_boot) || is.null(n_boot)
+    is.list(lme4_specs) || is.null(lme4_specs),
+    is.list(inla_specs) || is.null(inla_specs),
+    is.list(brms_specs) || is.null(brms_specs)
   )
   
   # Check type of model
@@ -56,6 +58,42 @@ hib_mod_project <- function(obj,
   if (inherits(obj, "hib_lme4_model")){
     message(crayon::green("lme4 model detected! Projection in progress...\n"))
     # TODO: wrap in hib_mod_proj_lme4??
+    
+    # %%%%%
+    # Get info re bootstrapping
+    if (!is.null(lme4_specs)){
+      # Check for bootstrap - logical
+      if ("bootstrap" %in% names(lme4_specs)){
+        assertthat::assert_that(is.logical(lme4_specs$bootstrap))
+      }
+      # if absent, set to F
+      if (!"bootstrap" %in% names(lme4_specs)){
+        lme4_specs$bootstrap <- FALSE
+      }
+      
+      
+      # Check for n_boot - NA/integer/numeric
+      if (lme4_specs$bootstrap){
+        if ("n_boot" %in% names(lme4_specs)){
+          assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+        }
+        # if absent, set to F
+        if (!"n_boot" %in% names(lme4_specs)){
+          message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
+          lme4_specs$n_boot <- 50
+        }
+      }
+      # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
+      if (lme4_specs$bootstrap == F){
+        lme4_specs$n_boot <- NA
+      }
+    }
+    if (is.null(lme4_specs)){
+      lme4_specs <- list(bootstrap = F, n_boot = NA)
+    }
+    
+    print(lme4_specs)
+    # %%%%%
     
     # Get baseline value for optional rescaling
     
@@ -109,17 +147,19 @@ hib_mod_project <- function(obj,
       # Use bootMer to get uncertainty
       # TODO: optional - slow...
       # TODO: add lmer_boot bool, and nsim option
-      
-      if (lme4_boot == T){
+      # lme4_specs$bootstrap
+      # lme4_specs$n_boot
+      if (lme4_specs$bootstrap == T){
+      # if (lme4_boot == T){
         message(crayon::green("Bootstrapping model predictions...\n"))
-        boot <- lme4::bootMer(obj$model, 
-                              function(mod, df = data){predict(mod, df, re.form = NA)}, 
-                              nsim = n_boot)
+        boot_obj <- lme4::bootMer(obj$model, 
+                                  function(mod, df = data){predict(mod, df, re.form = NA)}, 
+                                  nsim = lme4_specs$n_boot)
         
-        pred_df$prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
-        pred_df$prediction_sd <- apply(boot$t, 2, sd)
-        pred_df$prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
-        pred_df$prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.975, na.rm = TRUE)))
+        pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
+        pred_df$prediction_sd <- apply(boot_obj$t, 2, sd)
+        pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
+        pred_df$prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.975, na.rm = TRUE)))
         # std.err <- apply(boot_test$t, 2, sd)
         # CI.lower1 <- pred - std.err*1.96
         # CI.upper1 <- pred + std.err*1.96
@@ -145,8 +185,9 @@ hib_mod_project <- function(obj,
     # Single raster object
     if (inherits(data, "SpatRaster")){
       data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars,
-                         lme4_boot = lme4_boot,
-                         n_boot = n_boot)
+                         lme4_specs = lme4_specs)
+                         # lme4_boot = lme4_boot,
+                         # n_boot = n_boot)
     }
     # List of raster objects
     if ((is.list(data) & !is.data.frame(data))){
@@ -159,8 +200,9 @@ hib_mod_project <- function(obj,
                          rescale_pred = rescale_pred, 
                          base_val = base_val, 
                          fix_vars = fix_vars,
-                         lme4_boot = lme4_boot,
-                         n_boot = n_boot)
+                         lme4_specs = lme4_specs)
+                         # lme4_boot = lme4_boot,
+                         # n_boot = n_boot)
     }
     
   } 
@@ -446,6 +488,25 @@ hib_mod_project <- function(obj,
   } else if (inherits(obj, "hib_brms_model")){
     message(crayon::green("brms model detected! Projection in progress...\n"))
     
+    # %%%%
+    # Get incl_obs_uncert info
+    # list(incl_obs_uncert = F)
+    # print(brms_specs)
+    if (!is.null(brms_specs)){
+      if ("incl_obs_uncert" %in% names(brms_specs)){
+        assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
+      }
+      # if absent, set to F
+      if (!"incl_obs_uncert" %in% names(brms_specs)){
+        brms_specs$incl_obs_uncert <- FALSE
+      }
+    }
+    if (is.null(brms_specs)){
+      brms_specs <- list(incl_obs_uncert = FALSE)
+    }
+    # print(brms_specs)
+    # %%%%
+    
     # Get baseline value for optional rescaling
     if ("Intercept" %in% obj$fixedef_coefficients$Coefficient_name){
       base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "Intercept"]
@@ -482,7 +543,8 @@ hib_mod_project <- function(obj,
       check_covar_levels(obj$model, data, fix_vars)
       
       # %%%%%
-      if (incl_obs_uncert == T){
+      if (brms_specs$incl_obs_uncert == T){
+      # if (incl_obs_uncert == T){
         mean_df <- predict(obj$model,
                            data,
                            re_form = NA) %>%
@@ -493,7 +555,8 @@ hib_mod_project <- function(obj,
                           robust = T) %>%
           as.data.frame()
       }
-      if (incl_obs_uncert == F){
+      if (brms_specs$incl_obs_uncert == F){
+      # if (incl_obs_uncert == F){
         mean_df <- fitted(obj$model,
                           data,
                           re_form = NA) %>%
@@ -553,8 +616,10 @@ hib_mod_project <- function(obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
+      # print(brms_specs)
       data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars,
-                         incl_obs_uncert)
+                         brms_specs = brms_specs)
+                         # incl_obs_uncert)
     }
     # List of raster objects
     if (( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ) ){
@@ -567,7 +632,8 @@ hib_mod_project <- function(obj,
                          rescale_pred = rescale_pred,
                          base_val = base_val,
                          fix_vars = fix_vars,
-                         incl_obs_uncert = incl_obs_uncert)
+                         brms_specs = brms_specs)
+                         # incl_obs_uncert = incl_obs_uncert)
     }
     
   }
@@ -577,7 +643,10 @@ hib_mod_project <- function(obj,
   proj <- hib_mod_projection$new(obj = obj,
                                  proj = data,
                                  backtransform = backtransform,
-                                 rescale_pred = rescale_pred)
+                                 rescale_pred = rescale_pred,
+                                 lme4_specs = lme4_specs,
+                                 inla_specs = inla_specs,
+                                 brms_specs = brms_specs)
   return(proj)
 }
 
@@ -608,9 +677,11 @@ hib_mod_project <- function(obj,
 #' } 
 #' @export
 terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars,
-                       incl_obs_uncert = F,
-                       lme4_boot = T,
-                       n_boot = 100){
+                       lme4_specs = NULL,
+                       brms_specs = NULL){
+                       # incl_obs_uncert = F,
+                       # lme4_boot = T,
+                       # n_boot = 100){
   # TODO: maybe change to @NoRd
   # assertions
   assertthat::assert_that(
@@ -620,9 +691,11 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     is.logical(rescale_pred),
     is.numeric(base_val),
     is.character(fix_vars),
-    is.logical(incl_obs_uncert),
-    is.logical(lme4_boot),
-    is.numeric(n_boot) || is.null(n_boot)
+    # is.logical(incl_obs_uncert),
+    # is.logical(lme4_boot),
+    # is.numeric(n_boot) || is.null(n_boot)
+    is.list(lme4_specs) || is.null(lme4_specs),
+    is.list(brms_specs) || is.null(brms_specs)
   )
   # Covar checks
   # print(fix_vars)
@@ -646,11 +719,12 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     
     if (inherits(obj, "hib_lme4_model")){
       # TODO: incorp uncertainty
-      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_boot, n_boot)
+      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_specs)#lme4_boot, n_boot)
     }
     if (inherits(obj, "hib_brms_model")){
       # TODO: change to fitted...??
-      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, incl_obs_uncert)
+      # print(brms_specs)
+      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, brms_specs)#incl_obs_uncert)
     }
     # %%%%
   } else {
@@ -696,13 +770,17 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # 
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
-                                             if (is.factor(fit_dat[[x]])){
+                                             if (is.character(fit_dat[[x]])){
+                                               # if (is.factor(obj$data[[x]])){
+                                               tmp_out <- data.frame(covar_nm = x,
+                                                                     covar_levs = unique(fit_dat[[x]]))
+                                               # Could add covar_lev_idx here... - save doing later...
+                                             } else if (is.factor(fit_dat[[x]])){
                                              # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
-                                                                     covar_levs = levels(obj$data[[x]]))
+                                                                     covar_levs = levels(fit_dat[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
-                                             }
-                                             else {
+                                             } else {
                                                tmp_out <- data.frame(covar_nm = x,
                                                                      covar_levs = NA)
                                              }
@@ -734,7 +812,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         dplyr::group_by(covar_nm) %>%
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
-      # print(covars_not_in_rast)
+      print(covars_not_in_rast)
       
       # Split binary and non binary layers
       bin_covars <- covars_not_in_rast %>%
@@ -800,7 +878,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                    terra_covar_prep,
                                    covar_df = bin_covars,
                                    data_rast = tmp_rast,
-                                   mod_data = obj$data,
+                                   mod_data = fit_dat,
                                    input_type = "binary") %>%
           unlist() %>%
           c() %>%
@@ -822,7 +900,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                     terra_covar_prep,
                                     covar_df = non_bin_covars,
                                     data_rast = tmp_rast,
-                                    mod_data = obj$data,
+                                    mod_data = fit_dat,
                                     input_type = "non-binary") %>%
           unlist() %>%
           c() %>%
@@ -874,14 +952,16 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
           tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
                                                         backtransform,
-                                                        lme4_boot,
-                                                        n_boot)
+                                                        lme4_specs)
+                                                        # lme4_boot,
+                                                        # n_boot)
         }
         if (inherits(obj, "hib_brms_model")){
           tmp_pred_rast_ls[[i]] <- terra_proj_brms_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
                                                         backtransform,
-                                                        incl_obs_uncert)
+                                                        brms_specs)
+                                                        # incl_obs_uncert)
         }
         
         
@@ -954,11 +1034,13 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # Predict
       if (inherits(obj, "hib_lme4_model")){
         data_pred <- terra_proj_lme4_pred(obj$model, tmp_pred_rast, backtransform,
-                                          lme4_boot, n_boot)
+                                          lme4_specs)
+                                          # lme4_boot, n_boot)
       }
       if (inherits(obj, "hib_brms_model")){
         data_pred <- terra_proj_brms_pred(obj$model, tmp_pred_rast, backtransform,
-                                          incl_obs_uncert)
+                                          brms_specs)
+                                          # incl_obs_uncert)
       }
     }
   }
@@ -1033,10 +1115,16 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   }
   
   # get variable level IDs
+  # What if mod_data[[covar_nm]] is not a factor!!?? - manually set... 
+  # - or, should this be dealt with previously! - i.e in hib_fit... - for brms
+  # unique(mod_data[[covar_nm]])
+  # 1:dplyr::n()
   fac_lev_df <- data.frame(ID = as.numeric(mod_data[[covar_nm]]),
                            category = mod_data[[covar_nm]]
   ) %>%
     unique()
+  # print(fac_lev_df)
+  
   
   r <- lapply(r, function(lyr, covar_df = df, lev_df = fac_lev_df){
     
@@ -1113,15 +1201,18 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #'   pred <- terra_proj_lme4_pred(mod, data, backtransform)
 #' } 
 #' @export
-terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_boot, n_boot){
+terra_proj_lme4_pred <- function(mod, data, backtransform, 
+                                 lme4_specs){
+                                 # lme4_boot, n_boot){
   # TODO: maybe change to @NoRd
   # Assertions
   assertthat::assert_that(
     inherits(mod, "merMod"),
     inherits(data, "SpatRaster"), 
     is.null(backtransform) || is.function(backtransform),
-    is.logical(lme4_boot), 
-    is.numeric(n_boot) || is.null(n_boot)
+    # is.logical(lme4_boot), 
+    # is.numeric(n_boot) || is.null(n_boot)
+    is.list(lme4_specs) || is.null(lme4_specs)
   )
   # Check all fixef covars are in data - already done before func call!
   
@@ -1135,17 +1226,52 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_boot, n_boot){
                               na.rm = T)
   names(data_pred) <- "prediction_mean"
   
+  # %%%%%
+  # Get info re bootstrapping
+  if (!is.null(lme4_specs)){
+    # Check for bootstrap - logical
+    if ("bootstrap" %in% names(lme4_specs)){
+      assertthat::assert_that(is.logical(lme4_specs$bootstrap))
+    }
+    # if absent, set to F
+    if (!"bootstrap" %in% names(lme4_specs)){
+      lme4_specs$bootstrap <- FALSE
+    }
+    
+    
+    # Check for n_boot - NA/integer/numeric
+    if (lme4_specs$bootstrap){
+      if ("n_boot" %in% names(lme4_specs)){
+        assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+      }
+      # if absent, set to F
+      if (!"n_boot" %in% names(lme4_specs)){
+        message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
+        lme4_specs$n_boot <- 50
+      }
+    }
+    # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
+    if (lme4_specs$bootstrap == F){
+      lme4_specs$n_boot <- NA
+    }
+  }
+  if (is.null(lme4_specs)){
+    lme4_specs <- list(bootstrap = F, n_boot = NA)
+  }
   
-  if (lme4_boot == T){
+  # print(lme4_specs)
+  # %%%%%
+  if (lme4_specs$bootstrap == T){
+  # if (lme4_boot == T){
     # %%%%
     message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
-                                n_boot, "bootstrap samples...")))
+                                lme4_specs$n_boot, "bootstrap samples...")))
     
     
     tmp_rast_df <- terra::as.data.frame(data, xy = T)
     # Progress bar!!
     # pb <- txtProgressBar(min = 1, max = n_boot, style = 3)
-    boot <- lme4::bootMer(mod, 
+    boot_obj <- lme4::bootMer(mod, 
                           function(m, rast = data){
                             tmp <- terra::predict(rast, m, 
                                                   re.form = NA,
@@ -1153,13 +1279,13 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_boot, n_boot){
                               terra::as.data.frame()
                             tmp[,1]
                           }, 
-                          nsim = n_boot,
+                          nsim = lme4_specs$n_boot,
                           .progress = "txt")
     
-    prediction_sd <- apply(boot$t, 2, sd)
-    prediction_median <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
-    prediction_q2.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
-    prediction_q97.5 <- apply(boot$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
+    prediction_sd <- apply(boot_obj$t, 2, sd)
+    prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
+    prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
+    prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
     # TODO:
     # Above apply approach is v slow for large data sets...
     # 
@@ -1209,7 +1335,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_boot, n_boot){
 #'   pred <- terra_proj_brms_pred(mod, data, backtransform)
 #' } 
 #' @export
-terra_proj_brms_pred <- function(mod, data, backtransform, incl_obs_uncert){
+terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs_uncert){
   # TODO: maybe change to @NoRd
   
   # Assertions
@@ -1217,7 +1343,8 @@ terra_proj_brms_pred <- function(mod, data, backtransform, incl_obs_uncert){
     inherits(mod, "brmsfit"),
     inherits(data, "SpatRaster"), 
     is.null(backtransform) || is.function(backtransform),
-    is.logical(incl_obs_uncert)
+    # is.logical(incl_obs_uncert)
+    is.list(brms_specs) || is.null(brms_specs)
   )
   # Check type of inputs
   # Check all fixef covars are in data 
@@ -1227,16 +1354,36 @@ terra_proj_brms_pred <- function(mod, data, backtransform, incl_obs_uncert){
   # for each fix_vars, check if chr or fct
   # if it is, check all data[,var] are in obj$data[,var
   
+  # %%%%
+  # Get incl_obs_uncert info
+  # list(incl_obs_uncert = F)
+  # print(brms_specs)
+  
+  if (!is.null(brms_specs)){
+    if ("incl_obs_uncert" %in% names(brms_specs)){
+      assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
+    }
+    # if absent, set to F
+    if (!"incl_obs_uncert" %in% names(brms_specs)){
+      brms_specs$incl_obs_uncert <- FALSE
+    }
+  }
+  if (is.null(brms_specs)){
+    brms_specs <- list(incl_obs_uncert = FALSE)
+  }
+  # %%%%
   
   # %%%
   # Project
   # TODO: could also incl df.. - more general
   
-  
+  # print("HERE")
+  # print(brms_specs$incl_obs_uncert)
   # include median for prediction (incl_obs_uncert)
   # %%%%%
   # %%%%%
-  if (incl_obs_uncert == T){
+  if (brms_specs$incl_obs_uncert == T){
+  # if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
                                 mod,
                                 re_form = NA,
@@ -1265,7 +1412,8 @@ terra_proj_brms_pred <- function(mod, data, backtransform, incl_obs_uncert){
   # %%%%%
   # And for incl_obs_uncert == F
   # Needs fitted, uses a df...
-  if (incl_obs_uncert == F){
+  if (brms_specs$incl_obs_uncert == F){
+  # if (incl_obs_uncert == F){
     tmp_df <- terra::as.data.frame(data, xy = T)
     mean_pred <- fitted(mod, tmp_df, 
                         re_form = NA) %>%
@@ -1400,7 +1548,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                              if (is.factor(fit_dat[[x]])){
                                              # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
-                                                                     covar_levs = levels(obj$data[[x]]))
+                                                                     covar_levs = levels(fit_dat[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
                                              }
                                              else {
@@ -1457,7 +1605,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                    terra_covar_prep,
                                    covar_df = bin_covars,
                                    data_rast = tmp_rast,
-                                   mod_data = obj$data,
+                                   mod_data = fit_dat,
                                    input_type = "binary") %>%
           unlist() %>%
           c() %>%
@@ -1479,7 +1627,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                     terra_covar_prep,
                                     covar_df = non_bin_covars,
                                     data_rast = tmp_rast,
-                                    mod_data = obj$data,
+                                    mod_data = fit_dat,
                                     input_type = "non-binary") %>%
           unlist() %>%
           c() %>%
@@ -1620,6 +1768,8 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
   
   problem_vars <- list()
   
+  # print(fit_dat)
+  
   is_problem_var <- FALSE
   for (i in 1:length(fix_vars)){
     # Check if var is a factor/chr
@@ -1635,6 +1785,7 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
         var_i_fit_levs <- levels(fit_dat[[var_i]])
       }
       
+      # print(var_i_fit_levs)
       # Get unique chr values for proj data 
       var_i_proj <- proj_dat[[var_i]]
       
@@ -1679,6 +1830,7 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
       insight::export_table() %>%
       message()
     
+    # print()
     stop("Unknown covariate levels, see above.", call. = F)
   }
 }

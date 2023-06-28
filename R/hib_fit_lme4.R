@@ -383,6 +383,16 @@ get_model_data <- function(obj,
   
   mod_df <- na.omit(mod_df)
   
+  # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
+  chr_cols_idx <- purrr::map(mod_covars, 
+                         function(x, df = mod_df){
+                           is.character(df[[x]])}) %>% 
+    unlist()
+  chr_cols <- mod_covars[chr_cols_idx]
+  for (c in chr_cols){
+    mod_df[[c]] <- as.factor(mod_df[[c]])
+  }
+
   return(mod_df)
   
 }
