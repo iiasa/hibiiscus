@@ -4,7 +4,7 @@
 \alias{terra_proj_brms_pred}
 \title{# A helper function to project a model using SpatRaster data}
 \usage{
-terra_proj_brms_pred(mod, data, backtransform, incl_obs_uncert)
+terra_proj_brms_pred(mod, data, backtransform, brms_specs)
 }
 \arguments{
 \item{mod}{A fitted hib_brms_mod object}

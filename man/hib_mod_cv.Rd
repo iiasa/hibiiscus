@@ -10,7 +10,8 @@ hib_mod_cv(
   fold_type,
   custom_col = NULL,
   random_seed = NULL,
-  backtransform = NULL
+  backtransform = NULL,
+  use_original_mesh = NULL
 )
 }
 \arguments{
@@ -31,6 +32,11 @@ random cross-validation folds - only used if 'Random-X' in fold_type}
 
 \item{backtransform}{A function to convert the model prediction back to the original
 scale of interest}
+
+\item{use_original_mesh}{A logical value indicating whether cross-validation
+of spatial INLA models should use the original mesh for all cv folds. Computationally
+this is slightly more efficient, but may affect cv performance metrics - witheld
+sites will still exist in the mesh.}
 }
 \description{
 This function re-fits models on different subsets of the data, so that subsequent 

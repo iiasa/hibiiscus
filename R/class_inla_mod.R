@@ -232,33 +232,46 @@ hib_inla_model <- R6Class("hib_inla_model",
                               
                               # 1. fixed effects - summary
                               if (type == "fixed-effects"){
-                                fixef_df <- self$model$summary.fixed
-                                fixef_df$Coefficient <- rownames(fixef_df)
+                                # TODO: just use fixedef_coefficients df
+                                fixef_df <- self$fixedef_coefficients
                                 
-                                # Set a baseline- Intercept
+                                # TODO: convert chr col of Coefficient_name to factor, based on order of terms in df
+                                fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name,
+                                                                    levels = fixef_df$Coefficient_name)
+
+                                # fixef_df <- self$model$summary.fixed
+                                # fixef_df$Coefficient <- rownames(fixef_df)
+                                
+                                # # Set a baseline- Intercept
+                                # # %%%
+                                # int_id <- which(grepl("intercept", fixef_df$Coefficient, ignore.case = T))
+                                # # TODO: What if another covar also contains intercept...
+                                # if (length(int_id) > 1){
+                                #   message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
+                                #   int_id <- int_id[1]
+                                # }
+                                # # If no explicit intercept, set as 1st value...
+                                # if (length(int_id) == 0){
+                                #   int_id <- 1
+                                # }
+                                # fixef_df$Coefficient <- factor(fixef_df$Coefficient)
+                                # fixef_df$Coefficient <- relevel(fixef_df$Coefficient,
+                                #                                 ref = as.character(fixef_df$Coefficient[int_id]))
                                 # %%%
-                                int_id <- which(grepl("intercept", fixef_df$Coefficient, ignore.case = T))
-                                # TODO: What if another covar also contains intercept...
-                                if (length(int_id) > 1){
-                                  message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
-                                  int_id <- int_id[1]
-                                }
-                                # If no explicit intercept, set as 1st value...
-                                if (length(int_id) == 0){
-                                  int_id <- 1
-                                }
-                                fixef_df$Coefficient <- factor(fixef_df$Coefficient)
-                                fixef_df$Coefficient <- relevel(fixef_df$Coefficient,
-                                                                ref = as.character(fixef_df$Coefficient[int_id]))
-                                # %%%
+
+                                # TODO: use Coefficient_name as x!
                                 plt <- ggplot2::ggplot(fixef_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient, 
-                                                    ymin = `0.025quant`,
-                                                    ymax = `0.975quant`),
-                                                width = 0) +
-                                  ggplot2::geom_point(ggplot2::aes(x = Coefficient,
-                                                 y = mean)) +
+                                  # ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name, 
+                                  #                   ymin = `0.025quant`,
+                                  #                   ymax = `0.975quant`),
+                                  #               width = 0) +
+                                  ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name,
+                                                ymin = loCI,
+                                                ymax = hiCI),
+                                            width = 0) +
+                                  ggplot2::geom_point(ggplot2::aes(x = Coefficient_name,
+                                                                   y = Coefficient_value)) +
                                   
                                   ggplot2::labs(y = "Estimate",
                                        x = ggplot2::element_blank(),

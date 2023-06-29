@@ -12,9 +12,8 @@ terra_proj(
   rescale_pred,
   base_val,
   fix_vars,
-  incl_obs_uncert = F,
-  lme4_boot = T,
-  n_boot = 100
+  lme4_specs = NULL,
+  brms_specs = NULL
 )
 }
 \arguments{

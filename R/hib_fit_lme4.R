@@ -10,7 +10,7 @@
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by lme4
 #' @param REML A [`boolean`] - if using a gaussian family, should model be fitted 
-#' useing REML or ML - as in lme4
+#' using REML (T) or ML (F) - as in lme4
 #' @param calc_CIs An indication of whether fixed effect confidence intervals (95%) 
 #' should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"
 #' @param optimise_ranefs Not currently applicable - future dev
@@ -266,6 +266,7 @@ hib_fit_lme4 <- function(obj,
   fixef_df <- as.data.frame(lme4::fixef(m0))
   colnames(fixef_df) <- "Coefficient_value"
   fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
+  
   # print(calc_CIs)
   if (!is.null(calc_CIs)){
     message(crayon::green("Getting confidence intervals ..."))

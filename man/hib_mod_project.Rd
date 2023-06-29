@@ -9,9 +9,9 @@ hib_mod_project(
   data,
   backtransform = NULL,
   rescale_pred = F,
-  incl_obs_uncert = F,
-  lme4_boot = T,
-  n_boot = 100
+  lme4_specs = NULL,
+  inla_specs = NULL,
+  brms_specs = NULL
 )
 }
 \arguments{
@@ -32,7 +32,7 @@ this parameter to TRUE will produce predictions with larger uncertainty.}
 }
 \description{
 This function projects a fitted hib model using the supplied model object and
-data to be used in projection - i.e., a df or raster stack of covars
+data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 }
 \details{
 Expects a [`Database`] object.

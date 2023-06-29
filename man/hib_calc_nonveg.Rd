@@ -16,7 +16,7 @@ hib_calc_nonveg(spp_site_data, metric, binary, rel_abund, rescale)
 \item{rel_abund}{A [`logical`] value - whether relative abundance values should 
 be used; applicable for ...hypervolume}
 
-\item{rescale}{A [`logical`] value - should distance be rescaled relative to
+\item{rescale}{A [`logical`] value - should distance/similarity be rescaled relative to
 theoretical max (if applicable and not 1)}
 }
 \description{

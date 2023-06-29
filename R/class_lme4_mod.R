@@ -232,11 +232,15 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           fixef_df <- self$fixedef_coefficients
                           
                           # Set a baseline- Intercept
-                          fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name)
-                          if ("(Intercept)" %in% fixef_df$Coefficient_name){
-                            fixef_df$Coefficient <- relevel(fixef_df$Coefficient_name,
-                                                            ref = "(Intercept)")
-                          }
+                          # TODO: convert chr col of Coefficient_name to factor, based on order of terms in df
+                          fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name,
+                                                              levels = fixef_df$Coefficient_name)
+  
+                          # fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name)
+                          # if ("(Intercept)" %in% fixef_df$Coefficient_name){
+                          #   fixef_df$Coefficient <- relevel(fixef_df$Coefficient_name,
+                          #                                   ref = "(Intercept)")
+                          # }
                           
                           # %%%
                           plt <- ggplot2::ggplot(fixef_df) +

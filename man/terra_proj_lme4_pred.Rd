@@ -4,7 +4,7 @@
 \alias{terra_proj_lme4_pred}
 \title{# A helper function to project a model using SpatRaster data}
 \usage{
-terra_proj_lme4_pred(mod, data, backtransform, lme4_boot, n_boot)
+terra_proj_lme4_pred(mod, data, backtransform, lme4_specs)
 }
 \arguments{
 \item{mod}{A fitted hib_lme4_mod object}

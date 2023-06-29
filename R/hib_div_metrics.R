@@ -1291,6 +1291,45 @@ hib_calc_veg <- function(spp_site_data,
 
 
 
+#' Calculate cosine similarity metric
+#' 
+#' @description 
+#' This function calculates cosine similarity between the relative abundances of 
+#' species at two sites
+#' @details 
+#' Expects two vectors, one each for the abundance/occurence of species at two sites
+#' assuming that values at the same index (e.g., x1[i], x2[i]) correspond to the 
+#' same species/taxonomic entity
+#' @param x1 A [`numeric`] vector for abundance/occurence of species at site 1
+#' @param x2 A [`numeric`] vector for abundance/occurence of species at site 2
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   cosine_sim <- calc_cosine_sim(c(0,1,1), c(1,0,1))
+#' } 
+#' @noRd
+calc_cosine_sim <- function(x1, x2){
+  assertthat::assert_that(
+    length(x1) == length(x2)
+  )
+  cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
+  
+  # if one of the sites doesn't have any individuals/species in it
+  # i.e. the row sum is 0
+  if ((sum(x1, na.rm = TRUE) == 0) |
+      (sum(x2, na.rm = TRUE) == 0)) {
+    # then the similarity between sites should be 0
+    cosine <- 0
+    # if both sites have no individuals/species
+  } else if (((sum(x1, na.rm = TRUE) == 0) &
+              (sum(x2, na.rm = TRUE) == 0)) ){
+    # then class the similarity as NA
+    cosine <- NA
+  }
+  cosine
+}
+
+
 #' Calculate non-vegan-based dissimilarity metrics
 #' 
 #' @description 
@@ -1303,7 +1342,7 @@ hib_calc_veg <- function(spp_site_data,
 #' @param binary A [`logical`] value - should distance be based on presence/absence
 #' @param rel_abund A [`logical`] value - whether relative abundance values should 
 #' be used; applicable for ...hypervolume
-#' @param rescale A [`logical`] value - should distance be rescaled relative to
+#' @param rescale A [`logical`] value - should distance/similarity be rescaled relative to
 #' theoretical max (if applicable and not 1)
 #' @keywords database, processing
 #' @examples 
@@ -1329,7 +1368,7 @@ hib_calc_nonveg <- function(spp_site_data,
   )
   # print(use_relative_abundance)
   metric <- match.arg(metric, 
-                      c("hypervolumne", "cosine",
+                      c("hypervolume", "cosine", "theta",
                         "baselga_bray_balanced", "baselga_bray_gradient", 
                         "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"),
                       # "baselga_bray","baselga_ruzicka",
@@ -1338,7 +1377,7 @@ hib_calc_nonveg <- function(spp_site_data,
   
   # Add in hypervolume approach
   if (metric == "hypervolume"){
-    
+    # TODO: turn hypervolume and cosine into functions 
     if (rel_abund){
       row_abund <- rowSums(spp_site_data)
       row_abund[row_abund == 0] <- 1
@@ -1379,23 +1418,45 @@ hib_calc_nonveg <- function(spp_site_data,
     # N rows == 2
     x1 <- x[1,]
     x2 <- x[2,]
-    cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
+
+    out <- data.frame("Cosine" = calc_cosine_sim(x1, x2))
+
+    # cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
     
-    # if one of the sites doesn't have any individuals/species in it
-    # i.e. the row sum is 0
-    if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
-      # then the similarity between sites should be 0
-      cosine <- 0
-      # if both sites have no individuals/species
-    } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
-      # then class the similarity as NA
-      cosine <- NA
-    }
-    out <- data.frame("Cosine" = cosine)
+    # # if one of the sites doesn't have any individuals/species in it
+    # # i.e. the row sum is 0
+    # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
+    #   # then the similarity between sites should be 0
+    #   cosine <- 0
+    #   # if both sites have no individuals/species
+    # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
+    #   # then class the similarity as NA
+    #   cosine <- NA
+    # }
+    # out <- data.frame("Cosine" = cosine)
     # return (out)
   }
   
-  
+  # TODO: theta (angle between multidim points); acos(cosine); if rescale, set 0 to 0 angle, and 1 to 90deg? or ther way around
+  else if (metric == "theta"){
+    x <- as.matrix(spp_site_data)
+    # N rows == 2
+    x1 <- x[1,]
+    x2 <- x[2,]
+    # print("Here 1")
+
+    cosine_sim <- calc_cosine_sim(x1, x2)
+    # print("Here 2")
+
+    theta <- acos(cosine_sim)
+    # print("Here 3")
+
+    if (rescale){
+      theta <- theta / (pi / 2)
+    }
+    out <- data.frame("Theta" = theta)
+  }
+
   # else if (metric %in% c("jaccard", "sorensen")){
   #   # "baselga_jaccard", "baselga_sorensen"
   #   spp_site_data[spp_site_data > 0] <- 1
@@ -1547,7 +1608,7 @@ hib_calc_div_between <- function(obj,
                    "hellinger", "aitchison", "robust.aitchison")
                    
                    # Non-Vegan  
-  non_veg_metrics <- c("hypervolumne", "cosine",
+  non_veg_metrics <- c("hypervolume", "cosine", "theta",
                        "baselga_bray_balanced", "baselga_bray_gradient",
                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")
   # "baselga_bray","baselga_ruzicka",
@@ -1585,7 +1646,7 @@ hib_calc_div_between <- function(obj,
     dplyr::filter(!is.na(Predominant_land_use) &
                     Diversity_metric_type == "Abundance") %>%
     dplyr::group_by(SS) %>%
-    dplyr::mutate(n_sample_effort = n_distinct(Sampling_effort),
+    dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
            # Taxon_name_entered v best_guess_binomial ??
            n_species = dplyr::n_distinct(Taxon_name_entered)) %>%
     dplyr::ungroup() %>%
@@ -1682,6 +1743,16 @@ hib_calc_div_between <- function(obj,
     return(site_comparisons)
   })
   
+  # TODO: if nrow(site_comp_df == 0) stop...
+  if (nrow(site_comp_df) == 0){
+    message(crayon::red(paste0("\nError: no site comparisons possible...\n\n",
+                               "Maybe check that the specified baseline LUI ('", baseline_lui,
+                               "') is present...\n"))
+    )
+    stop("Unable to generate any site comparisons, see above for details.")
+  }
+
+
   message(crayon::green(paste0(nrow(site_comp_df), 
                                " site comparisons to make...\n"))
           )
@@ -1799,7 +1870,7 @@ hib_calc_div_between <- function(obj,
                                                           }) %>%
                                   dplyr::bind_cols()
                                 
-                                out_df <- out_df %>% bind_cols(out_met)
+                                out_df <- out_df %>% dplyr::bind_cols(out_met)
                                 return(out_df)
                               }
     )
@@ -1808,7 +1879,7 @@ hib_calc_div_between <- function(obj,
   # combine veg and non_veg
   # s1, s2, ...
   if ((!is.null(veg_df)) & (!is.null(non_veg_df))){
-    veg_df <- left_join(veg_df, non_veg_df) 
+    veg_df <- dplyr::left_join(veg_df, non_veg_df) 
   }
   if (is.null(veg_df) & (!is.null(non_veg_df))){
     veg_df <- non_veg_df

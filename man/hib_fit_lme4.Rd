@@ -25,7 +25,7 @@ effects.}
 \item{family}{A [`family`] function, e.g. gaussian, poisson - as allowed by lme4}
 
 \item{REML}{A [`boolean`] - if using a gaussian family, should model be fitted 
-useing REML or ML - as in lme4}
+using REML (T) or ML (F) - as in lme4}
 
 \item{calc_CIs}{An indication of whether fixed effect confidence intervals (95%) 
 should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"}
