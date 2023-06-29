@@ -12,11 +12,15 @@
 #' to the scale of the original variable, e.g., exp() as the inverse of log()
 #' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
 #' to the model intercept (assumes intercept is for baseline environment/LU)
-#' @param incl_obs_uncert A [`logical`] indicating whether or not observation-level
-#' uncertainty should be included in the predictions from brms models. Setting 
-#' this parameter to TRUE will produce predictions with larger uncertainty.
-#' @param lme4_boot
-#' @param n_boot
+#' @param lme4_specs A list containing details relevant to projecting an lme4-style
+#' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
+#' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
+#' estimated, and if so, how many bootstrap samples should be used.
+#' @param inla_specs Currently unused, but may be useful in future dev.
+#' @param brms_specs A list containing details relevant to projecting a brms-style
+#' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+#' to determine whether or not observation-level uncertainty is included in predictions.
+#' Setting this parameter to TRUE will produce predictions with larger uncertainty.
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -30,7 +34,7 @@ hib_mod_project <- function(obj,
                             # incl_obs_uncert = F,
                             # lme4_boot = T,
                             # n_boot = 100
-                            # TODO: collate model type arguments into:
+                            # TODO: collate model type arguments into: - fix argument documentation
                             lme4_specs = NULL, #list(bootstrap = F, n_boot = NA),
                             inla_specs = NULL, #list(),
                             brms_specs = NULL #list(incl_obs_uncert = F)
@@ -667,9 +671,14 @@ hib_mod_project <- function(obj,
 #' to the model intercept (assumes intercept is for baseline environment/LU)
 #' @param base_val Model intercept, for use in rescaling predictions
 #' @param fix_vars Model fixed effects
-#' @param incl_obs_uncert A [`logical`] indicating whether or not observation-level
-#' uncertainty should be included in the predictions from brms models. Setting 
-#' this parameter to TRUE will produce predictions with larger uncertainty.
+#' @param lme4_specs A list containing details relevant to projecting an lme4-style
+#' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
+#' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
+#' estimated, and if so, how many bootstrap samples should be used.
+#' @param brms_specs A list containing details relevant to projecting a brms-style
+#' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+#' to determine whether or not observation-level uncertainty is included in predictions. 
+#' Setting this parameter to TRUE will produce predictions with larger uncertainty.
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -1195,6 +1204,10 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' @param data A [`SpatRaster`], prepared for projection
 #' @param backtransform A [`function`] that can backtransform the response variable
 #' to its original/natual scale.
+#' #' @param lme4_specs A list containing details relevant to projecting an lme4-style
+#' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
+#' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
+#' estimated, and if so, how many bootstrap samples should be used.
 #' @keywords model, projection
 #' @examples 
 #' \dontrun{
@@ -1326,9 +1339,10 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 #' @param data A [`SpatRaster`], prepared for projection
 #' @param backtransform A [`function`] that can backtransform the response variable
 #' to its original/natual scale.
-#' @param incl_obs_uncert A [`logical`] indicating whether or not observation-level
-#' uncertainty should be included in the predictions. Setting this parameter to TRUE
-#' will produce predictions with larger uncertainty.
+#' @param brms_specs A list containing details relevant to projecting a brms-style
+#' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+#' to determine whether or not observation-level uncertainty is included in predictions.
+#' Setting this parameter to TRUE will produce predictions with larger uncertainty.
 #' @keywords model, projection
 #' @examples 
 #' \dontrun{

@@ -14,9 +14,10 @@ terra_proj_brms_pred(mod, data, backtransform, brms_specs)
 \item{backtransform}{A [`function`] that can backtransform the response variable
 to its original/natual scale.}
 
-\item{incl_obs_uncert}{A [`logical`] indicating whether or not observation-level
-uncertainty should be included in the predictions. Setting this parameter to TRUE
-will produce predictions with larger uncertainty.}
+\item{brms_specs}{A list containing details relevant to projecting a brms-style
+model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+to determine whether or not observation-level uncertainty is included in predictions.
+Setting this parameter to TRUE will produce predictions with larger uncertainty.}
 }
 \description{
 This function projects/predicts the supplied model using the SpatRaster

@@ -26,9 +26,17 @@ to the scale of the original variable, e.g., exp() as the inverse of log()}
 \item{rescale_pred}{A [`logical`] value - should the predictions be rescaled relative
 to the model intercept (assumes intercept is for baseline environment/LU)}
 
-\item{incl_obs_uncert}{A [`logical`] indicating whether or not observation-level
-uncertainty should be included in the predictions from brms models. Setting 
-this parameter to TRUE will produce predictions with larger uncertainty.}
+\item{lme4_specs}{A list containing details relevant to projecting an lme4-style
+model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
+'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
+estimated, and if so, how many bootstrap samples should be used.}
+
+\item{inla_specs}{Currently unused, but may be useful in future dev.}
+
+\item{brms_specs}{A list containing details relevant to projecting a brms-style
+model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+to determine whether or not observation-level uncertainty is included in predictions.
+Setting this parameter to TRUE will produce predictions with larger uncertainty.}
 }
 \description{
 This function projects a fitted hib model using the supplied model object and

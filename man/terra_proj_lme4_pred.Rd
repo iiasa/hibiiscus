@@ -12,7 +12,11 @@ terra_proj_lme4_pred(mod, data, backtransform, lme4_specs)
 \item{data}{A [`SpatRaster`], prepared for projection}
 
 \item{backtransform}{A [`function`] that can backtransform the response variable
-to its original/natual scale.}
+to its original/natual scale.
+#' @param lme4_specs A list containing details relevant to projecting an lme4-style
+model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
+'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
+estimated, and if so, how many bootstrap samples should be used.}
 }
 \description{
 This function projects/predicts the supplied model using the SpatRaster
