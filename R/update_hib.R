@@ -37,7 +37,7 @@ update_hib <- function(obj, path_species, path_sites = "",
       }
       # or basename(paths$species), but also get rid of extension
       if (custom_version_name == ""){
-        custom_version_name <- tools::file_path_sans_ext(basename(paths$species))
+        custom_version_name <- tools::file_path_sans_ext(basename(path_species))
         version <- paste("Custom -", custom_version_name)
       }
     }
