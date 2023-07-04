@@ -1,5 +1,7 @@
 # Testthat checks for hib_lu_legend.R
 
+# TODO: put millard data in inst/extdata/millard_et_al_2021_PREDICTS_pollinators_8_exp.rds
+
 tmp_db <- create_hib(path_species = "../raw_data/millard_et_al_2021/PREDICTS_pollinators_8_exp.rds",
                      version = "custom")
 tmp_db <- hib_filter_sites(tmp_db, Country == "United Kingdom")
@@ -80,7 +82,8 @@ test_that("save_legend returns an error if file path is numeric", {
 })
 
 # TODO: check that this also works...
-# write to a temp file??
+# write to a temp file?? - write to "inst/extdata/example_lu_legend.rds"
+
 
 # %%%%%%%%%%
 # load_lu_legend
@@ -99,6 +102,7 @@ test_that("load_lu_legend returns an error if file is not a valid lu_legend", {
 })
 
 # TODO: check that this also works...
+# load from "inst/extdata/example_lu_legend.rds"
 
 # %%%%%%%%%%
 # set_lu_legend

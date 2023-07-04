@@ -226,6 +226,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                 },
                                 # Save object
+                                # TODO - have a generic save_hib function for all hib datatypes
+                                # Everything is just an RDS anyway
                                 save_projection = function(output_path = NULL){
                                   # TODO: check this works with a terra-based projection
                                   # terra objects are pointer-associated...
@@ -235,6 +237,13 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   if(!assertthat::has_extension(output_path, "rds")){
                                     output_path <- paste0(output_path, ".rds")
+                                  }
+                                  
+                                  if (!dir.exists(dirname(output_path))){
+                                    message(crayon::yellow(paste0("Warning: '", dirname(output_path), "' doesn't exist.",
+                                                                  "\n",
+                                                                  "This folder will be created.\n")))
+                                    dir.create(dirname(output_path), recursive = T)
                                   }
                                   
                                   if (file.exists(output_path)){

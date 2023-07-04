@@ -1313,7 +1313,9 @@ calc_cosine_sim <- function(x1, x2){
     length(x1) == length(x2)
   )
   cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
-  
+  # TODO: to address div by zero if one vector is all 0, could use a small value 
+  # "epsilon" (1e-8) to denomintor if zero
+
   # if one of the sites doesn't have any individuals/species in it
   # i.e. the row sum is 0
 

@@ -28,7 +28,8 @@
 #'   obj
 #' }
 #' @export
-create_hib <- function(path_species, path_sites = "", version = "2016", ...){
+create_hib <- function(path_species, path_sites = "", 
+                       version = "2016", custom_version_name = "", ...){
   # NOTE RC - dropping output path - not really needed - use save_hib instead.
   # output = NULL,
   #  #' @param output A optional [`character`] name to store the underlying database. 
@@ -42,12 +43,26 @@ create_hib <- function(path_species, path_sites = "", version = "2016", ...){
     # is.character(path_sites),
     # file.exists(path_sites),
     (is.character(path_sites) & file.exists(path_sites) ) || (is.character(path_sites) & path_sites == ""),
-    is.character(version)
+    is.character(version),
+    is.character(custom_version_name)
     # is.null(output) || is.character(output)
   )
 
   # Check that version is correct
   version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
+  
+  # if version == "custom", add a bit more detail
+  if (version == "custom"){
+    # either from custom_version_name
+    if (custom_version_name != ""){
+      version <- paste("Custom -", custom_version_name)
+    }
+    # or basename(paths$species), but also get rid of extension
+    if (custom_version_name == ""){
+      custom_version_name <- tools::file_path_sans_ext(basename(paths$species))
+      version <- paste("Custom -", custom_version_name)
+    }
+  }
   
   # # If output is null, create one
   # if(is.null(output)){

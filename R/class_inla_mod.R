@@ -204,6 +204,13 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 output_path <- paste0(output_path, ".rds")
                               }
                               
+                              if (!dir.exists(dirname(output_path))){
+                                message(crayon::yellow(paste0("Warning: '", dirname(output_path), "' doesn't exist.",
+                                                              "\n",
+                                                              "This folder will be created.\n")))
+                                dir.create(dirname(output_path), recursive = T)
+                              }
+                              
                               if (file.exists(output_path)){
                                 message(crayon::yellow(paste0("Warning: '", output_path, "' already exists.",
                                                               "\n",

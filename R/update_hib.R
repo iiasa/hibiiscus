@@ -13,25 +13,38 @@
 #'   obj <- update_hib(obj1, obj2)
 #' } 
 #' @export
-update_hib <- function(obj, path_species, path_sites = "", version = "2022", ...){
+update_hib <- function(obj, path_species, path_sites = "", 
+                       version = "2022", custom_version_name = "", ...){
 
   assertthat::assert_that(
     inherits(obj, "Database"),
     is.character(path_species),
     file.exists(path_species),
     (is.character(path_sites) & file.exists(path_sites) ) || (is.character(path_sites) & path_sites == ""),
-    is.character(version)
+    is.character(version),
+    is.character(custom_version_name)
     # is.null(output) || is.character(output)
   )
 
     # Check that version is correct
     version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
+    
+    # if version == "custom", add a bit more detail
+    if (version == "custom"){
+      # either from custom_version_name
+      if (custom_version_name != ""){
+        version <- paste("Custom -", custom_version_name)
+      }
+      # or basename(paths$species), but also get rid of extension
+      if (custom_version_name == ""){
+        custom_version_name <- tools::file_path_sans_ext(basename(paths$species))
+        version <- paste("Custom -", custom_version_name)
+      }
+    }
+    
     # Ensure that the version isn't already in the database
     assertthat::assert_that(!version %in% obj$version,
                             msg = "This version of PREDICTS is already in the database object!")
-    # TODO: but two custom objects would be okay??...
-    # This version identidy is problematic - need to have a custom_version input
-    # Custom-<custom_version_nm>
 
     # Checks of the existing database
     obj$checkself()
@@ -72,7 +85,7 @@ update_hib <- function(obj, path_species, path_sites = "", version = "2022", ...
                            new_obj$sites)    
     
     # Update version info and update info
-    obj$version <- paste(obj$version, version, sep = ", ")
+    obj$version <- paste(obj$version, version, sep = "; ")
     obj$last_update <- lubridate::today()
     
     # Add paths...
