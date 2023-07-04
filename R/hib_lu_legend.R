@@ -20,7 +20,9 @@ create_lu_legend <- function(input){
     is.character(input) || is.data.frame(input)
   )
   if (is.character(input)){
-    assertthat::assert_that(file.exists(input))
+    assertthat::assert_that(
+      file.exists(input),
+      assertthat::has_extension(input, "rds"))
   }
   
   # ------ #
@@ -67,12 +69,15 @@ load_lu_legend <- function(path_input){
     file.exists(path_input),
     assertthat::has_extension(path_input, "rds")
   )
-  # Try and read in the database
+  # Try and read in the legend
   message(crayon::green(paste0("Loading land-use legend from: '", path_input, "...\n")))
   
   leg <- readr::read_rds(path_input)
   
-  # TODO: Make some sensitivity checks that the object is correct
+  # Sensitivity checks that the object is correct
+  assertthat::assert_that(
+    inherits(leg, "lu_legend")
+  )
   leg$checkself()
   
   return(leg)
@@ -105,7 +110,6 @@ set_lu_legend <- function(obj, leg){
     inherits(obj, "Database") ,
     inherits(leg, "lu_legend") 
   )
-  # Try and read in the database
   message(crayon::green("Setting land-use legend for hib database...\n"))
   
   # Make some sensitivity checks that the inputs are okay

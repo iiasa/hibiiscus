@@ -15,6 +15,12 @@ hib_filter_sites <- function(obj, condition){
   # str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
   # str_cond <- gsub("\"", "'", str_cond)
   
+  assertthat::assert_that(
+    inherits(obj, "Database")
+    )
+
+  # TODO: Is there a way to check the condition is a condition
+
   str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] %>%
     rlang::quo_get_expr() %>%
     deparse() %>%
@@ -33,9 +39,12 @@ hib_filter_sites <- function(obj, condition){
   
   assertthat::assert_that( 
     nrow(sites_upd) > 0,
-    nrow(species_upd) > 0)
+    nrow(species_upd) > 0
+  )
   # TODO: any need for further assertions??
+  # TODO: could compare nrow before and after - throw a warning if no reduction
   
+
   # Update obj
   obj$species <- species_upd
   obj$sites <- sites_upd
@@ -75,6 +84,11 @@ hib_filter_species <- function(obj, condition){
   # e.g. by taxa: "Kingdom", "Phylum",  "Class", "Order", "Family", "Genus"
   # str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
   # str_cond <- gsub("\"", "'", str_cond)
+  assertthat::assert_that(
+    inherits(obj, "Database")
+    )
+  # TODO: Is there a way to check the condition is a condition
+
   str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] %>%
     rlang::quo_get_expr() %>%
     deparse() %>%
@@ -102,6 +116,7 @@ hib_filter_species <- function(obj, condition){
   
   sites_orig_sub <- dplyr::filter(obj$sites, SSBS %in% sites_upd$SSBS)
   
+  # TODO: what if Higher_taxa/N_samples are not in sites, 
   sites_upd <- sites_orig_sub %>%
     dplyr::select(-c(Higher_taxa, N_samples)) %>%
     dplyr::left_join(sites_upd, by = "SSBS")

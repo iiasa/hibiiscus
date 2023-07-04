@@ -1,8 +1,8 @@
 #' This function updates an existing Database object with further data
 #' 
 #' @description 
-#' This function can update an existing database, for example by adding the 2022 or a custom PREDICTS version 
-#' to it.
+#' This function can update an existing database, for example by adding the 2022 
+#' or a custom PREDICTS version to it.
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
@@ -29,7 +29,10 @@ update_hib <- function(obj, path_species, path_sites = "", version = "2022", ...
     # Ensure that the version isn't already in the database
     assertthat::assert_that(!version %in% obj$version,
                             msg = "This version of PREDICTS is already in the database object!")
-    
+    # TODO: but two custom objects would be okay??...
+    # This version identidy is problematic - need to have a custom_version input
+    # Custom-<custom_version_nm>
+
     # Checks of the existing database
     obj$checkself()
     

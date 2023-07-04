@@ -111,6 +111,10 @@ load_hib <- function(path_input){
   obj <- readr::read_rds(path_input)
   
   #Make some sensitivity checks that the object is correct
+  # TODO: check its a Database
+  assertthat::assert_that(
+    inherits(obj, "Database")
+    )
   obj$checkself()
   
   return(obj)

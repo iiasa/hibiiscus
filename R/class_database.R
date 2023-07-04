@@ -39,6 +39,11 @@ Database <- R6Class("Database",
             
                       # %%%%%
                       # Load species data
+                      # ensure paths$species is RDS
+                      assertthat::assert_that(
+                        assertthat::has_extension(paths$species, "rds")
+                        )
+
                       species <- readr::read_rds(paths$species)
                       species$version <- version
                       
@@ -64,6 +69,11 @@ Database <- R6Class("Database",
                       
                       # If available, load sites data
                       if (paths$sites != ""){
+                        # ensure paths$sites is RDS
+                        assertthat::assert_that(
+                          assertthat::has_extension(paths$sites, "rds")
+                          )
+                      
                         sites <- readr::read_rds(paths$sites)
                         sites$version <- version
                         
@@ -434,6 +444,9 @@ Database <- R6Class("Database",
                       
                       message(crayon::green(paste0("Saving hib database to: '", output_path, "' ...\n")) )
                       
+                      # Note: currently doesn't make the folder or check parent folders exist...
+                      # Could include - with a warning...
+
                       saveRDS(self, output_path)
                       assertthat::assert_that(file.exists(output_path),
                                               msg = "Writing a copy of the database failed...")

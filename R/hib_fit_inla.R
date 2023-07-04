@@ -37,6 +37,18 @@ hib_fit_inla <- function(obj,
                                               cutoff = 1e-12,
                                               offset = NULL),
                          prior_list){
+
+
+  # Package check
+  if (!requireNamespace("INLA", quietly = TRUE)) {
+    stop(
+      "Package \"INLA\" must be installed to use this function.",
+      call. = FALSE
+    )
+  }
+  # OR
+  # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
+  
   # Assertions
   assertthat::assert_that(
     inherits(obj, "Database"), # obj is a hib database
@@ -376,7 +388,7 @@ hib_fit_inla <- function(obj,
                   loCI = `0.025quant`,
                   median = `0.5quant`,
                   hiCI = `0.975quant`)
-  
+
   message(crayon::green("Collating model details ..."))
   
   user_form_full <- paste(as.character(response_fixed_form)[2],

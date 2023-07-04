@@ -110,6 +110,16 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   
 
   if (inherits(mod_obj, "hib_inla_model")){
+    # Package check
+    if (!requireNamespace("INLA", quietly = TRUE)) {
+      stop(
+        "Package \"INLA\" must be installed to use this function.",
+        call. = FALSE
+      )
+    }
+    # OR
+    # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
+    
     m_form <- as.character(mod_obj$user_formula$full)
     m_form <- paste(form_chr[2], form_chr[1], form_chr[3])
     if (mod_obj$inla_incl_spatial_term){

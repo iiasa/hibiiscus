@@ -139,6 +139,7 @@ lu_legend <- R6Class("lu_legend",
                       checkself = function(df = self$lu_df){
                         # ------ #
                         # Security checks - recheck
+
                         assertthat::assert_that(
                           assertthat::has_name(df, "SSBS"),
                           # any(c("Predominant_land_use", "Predominant_habitat", "Land_use") %in% colnames(df)),

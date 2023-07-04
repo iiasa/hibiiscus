@@ -214,6 +214,17 @@ hib_mod_project <- function(obj,
   # INLA
   # %%%%%
   else if (inherits(obj, "hib_inla_model")){
+
+    # Package check
+    if (!requireNamespace("INLA", quietly = TRUE)) {
+      stop(
+        "Package \"INLA\" must be installed to use this function.",
+        call. = FALSE
+      )
+    }
+    # OR
+    # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
+    
     # message(crayon::yellow("Warning: INLA model detected! Projections are not yet supported...\n"))
     message(crayon::green("INLA model detected! Projection in progress...\n"))
     # stop("In development")

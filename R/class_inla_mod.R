@@ -55,6 +55,17 @@ hib_inla_model <- R6Class("hib_inla_model",
                                                   # set_up_specs
                                                   # spp df?
                             ){
+
+                              # Package check
+                              if (!requireNamespace("INLA", quietly = TRUE)) {
+                                stop(
+                                  "Package \"INLA\" must be installed to use this class",
+                                  call. = FALSE
+                                )
+                              }
+                              # OR
+                              # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
+                              
                               # - some assertion checks
                               assertthat::assert_that(
                                 # Check database obj

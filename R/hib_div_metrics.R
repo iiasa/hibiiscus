@@ -1316,16 +1316,18 @@ calc_cosine_sim <- function(x1, x2){
   
   # if one of the sites doesn't have any individuals/species in it
   # i.e. the row sum is 0
-  if ((sum(x1, na.rm = TRUE) == 0) |
-      (sum(x2, na.rm = TRUE) == 0)) {
-    # then the similarity between sites should be 0
-    cosine <- 0
-    # if both sites have no individuals/species
-  } else if (((sum(x1, na.rm = TRUE) == 0) &
-              (sum(x2, na.rm = TRUE) == 0)) ){
-    # then class the similarity as NA
-    cosine <- NA
-  }
+
+  # # TODO: think I should scrap the below adjustments...
+  # if ((sum(x1, na.rm = TRUE) == 0) |
+  #     (sum(x2, na.rm = TRUE) == 0)) {
+  #   # then the similarity between sites should be 0
+  #   cosine <- 0
+  #   # if both sites have no individuals/species
+  # } else if (((sum(x1, na.rm = TRUE) == 0) &
+  #             (sum(x2, na.rm = TRUE) == 0)) ){
+  #   # then class the similarity as NA
+  #   cosine <- NA
+  # }
   cosine
 }
 
@@ -1374,7 +1376,8 @@ hib_calc_nonveg <- function(spp_site_data,
                       # "baselga_bray","baselga_ruzicka",
                       # "baselga_jaccard", "baselga_sorensen") 
                       several.ok = FALSE)
-  
+  # TODO: challenge of single spp communities?? - this would affect metric calcs..??
+
   # Add in hypervolume approach
   if (metric == "hypervolume"){
     # TODO: turn hypervolume and cosine into functions 
@@ -1395,18 +1398,23 @@ hib_calc_nonveg <- function(spp_site_data,
     spp_site_data <- rbind(spp_site_data,
                            rep(0, ncol(spp_site_data)))
 
+    # Should an error default to 0
+    # 0 should be vol if either site has 0 total abund
+    # And technically if both comms are 0..
     vol <- tryCatch(
       {
         geometry::convhulln(spp_site_data, 
                             output.options = TRUE)$vol
       },
       error = function(e) {
+        # NA # ??
         0
+        # Wouldn't NA be a better error value
       }
     )
     
     if (rescale & rel_abund){
-      vol <- vol/0.5
+      vol <- vol / 0.5
     }
     
     out <- data.frame("Hypervolume" = vol)
@@ -1784,6 +1792,8 @@ hib_calc_div_between <- function(obj,
                                                         values_fill = 0) %>%
                                      # set the rownames to the SSBS and then remove that column
                                      tibble::column_to_rownames("SSBS")
+                                   
+                                   # TODO: check at least 2 species are present (i.e 2 cols or more)
                                    
                                    # Depending on metric_vec values, calc metrics of interest
                                    # %%%
