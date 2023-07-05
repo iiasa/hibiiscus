@@ -240,16 +240,16 @@ lu_legend <- R6Class("lu_legend",
                           # lu_col <- c("Predominant_land_use", "Predominant_habitat", "Land_use")
                           # lu_col <- lu_col[lu_col %in% colnames(self$lu_df)]
                           # 
-                          # df <- self$lu_df %>%
-                          #   dplyr::group_by(!!sym(lu_col)) %>%
+                          # df <- self$lu_df |>
+                          #   dplyr::group_by(!!sym(lu_col)) |>
                           #   dplyr::summarise(N = n_distinct(SSBS))
                           # print(head(df))
                           
-                          df <- self$lu_df %>%
-                            dplyr::group_by(Predominant_land_use) %>%
+                          df <- self$lu_df |>
+                            dplyr::group_by(Predominant_land_use) |>
                             dplyr::summarise(N = n_distinct(SSBS))
                           
-                          plt <- df %>%
+                          plt <- df |>
                             ggplot2::ggplot() +
                             ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
@@ -276,16 +276,16 @@ lu_legend <- R6Class("lu_legend",
                           # i_col <- c("Management_intensity", "Use_intensity")
                           # i_col <- i_col[i_col %in% colnames(self$lu_df)]
                           # 
-                          # df <- self$lu_df %>%
-                          #   dplyr::group_by(!!sym(i_col)) %>%
+                          # df <- self$lu_df |>
+                          #   dplyr::group_by(!!sym(i_col)) |>
                           #   dplyr::summarise(N = n_distinct(SSBS))
                           # print(head(df))
                           
-                          df <- self$lu_df %>%
-                            dplyr::group_by(Use_intensity) %>%
+                          df <- self$lu_df |>
+                            dplyr::group_by(Use_intensity) |>
                             dplyr::summarise(N = n_distinct(SSBS))
                           
-                          plt <- df %>%
+                          plt <- df |>
                             ggplot2::ggplot() +
                             ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
@@ -316,16 +316,16 @@ lu_legend <- R6Class("lu_legend",
                           # i_col <- c("Management_intensity", "Use_intensity")
                           # i_col <- i_col[i_col %in% colnames(self$lu_df)]
                           # 
-                          # df <- self$lu_df %>%
-                          #   dplyr::group_by(!!sym(lu_col), !!sym(i_col)) %>%
+                          # df <- self$lu_df |>
+                          #   dplyr::group_by(!!sym(lu_col), !!sym(i_col)) |>
                           #   dplyr::summarise(N = n_distinct(SSBS))
                           # print(head(df))
                           
-                          df <- self$lu_df %>%
-                              dplyr::group_by(Predominant_land_use, Use_intensity) %>%
+                          df <- self$lu_df |>
+                              dplyr::group_by(Predominant_land_use, Use_intensity) |>
                               dplyr::summarise(N = n_distinct(SSBS))
                             
-                          plt <- df %>%
+                          plt <- df |>
                             ggplot2::ggplot() +
                             ggplot2::geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                             # geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
@@ -377,7 +377,7 @@ lu_legend <- R6Class("lu_legend",
                         
                         # plot
                         # %%%
-                        # df %>%
+                        # df |>
                         #   ggplot() +
                         #   geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
                         #   geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
@@ -389,8 +389,8 @@ lu_legend <- R6Class("lu_legend",
                         #   geom_text(aes(x = var,
                         #                 y = -100,
                         #                 label = N_tot),
-                        #             data = df %>%
-                        #               group_by(var) %>%
+                        #             data = df |>
+                        #               group_by(var) |>
                         #               summarise(N_tot = sum(N)) ) +
                         #   labs(x = "Land use",
                         #        y = "Count",

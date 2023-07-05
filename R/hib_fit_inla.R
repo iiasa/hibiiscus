@@ -89,12 +89,12 @@ hib_fit_inla <- function(obj,
   # if response is in diversity_between, need to use site_contrasts df for covars
   
   within_site_resp <- purrr::map(obj$diversity_within$Data,
-                                 colnames) %>%
-    unlist() %>%
+                                 colnames) |>
+    unlist() |>
     unique() 
   between_site_resp <- purrr::map(obj$diversity_between$Data,
-                                  colnames) %>%
-    unlist() %>%
+                                  colnames) |>
+    unlist() |>
     unique() 
   
   if (mod_resp %in% within_site_resp){
@@ -120,7 +120,7 @@ hib_fit_inla <- function(obj,
       length(div_data_idx) == 1
     )
     
-    mod_df <- mod_df %>%
+    mod_df <- mod_df |>
       dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
     
     mod_df <- na.omit(mod_df)
@@ -160,7 +160,7 @@ hib_fit_inla <- function(obj,
       length(div_data_idx) == 1
     )
     
-    mod_df <- mod_df %>%
+    mod_df <- mod_df |>
       dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
     
     mod_df <- na.omit(mod_df)
@@ -187,11 +187,11 @@ hib_fit_inla <- function(obj,
   # if response var is not just a column, need to make response var (e.g., log(x))
   # Make y response var - need to make even if it is just a column....
   # A bit hacky!!!
-  mod_df <- mod_df %>%
+  mod_df <- mod_df |>
     dplyr::mutate(y = !!response_fixed_form[[2]] )
     # dplyr::mutate(y = !!as.formula(paste0(response, "~ 1"))[[2]] )
   
-  X <- mod_df %>%
+  X <- mod_df |>
     dplyr::select(all_covars)
   
   mesh_source <- NULL
@@ -382,8 +382,8 @@ hib_fit_inla <- function(obj,
   }
 
   # TODO:
-  fixef_df <- m0$summary.fixed %>%
-    tibble::rownames_to_column("Coefficient_name") %>%
+  fixef_df <- m0$summary.fixed |>
+    tibble::rownames_to_column("Coefficient_name") |>
     dplyr::rename(Coefficient_value = mean,
                   loCI = `0.025quant`,
                   median = `0.5quant`,

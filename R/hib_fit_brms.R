@@ -131,7 +131,7 @@ hib_fit_brms <- function(obj,
     # }
     
     # %%%
-    n_df_vec <- lapply(mod_df_ls, nrow) %>% unlist()
+    n_df_vec <- lapply(mod_df_ls, nrow) |> unlist()
     
     prop_weight_vec <- dataset_weights * sum(n_df_vec)
     df_weight_vec <- prop_weight_vec / n_df_vec
@@ -147,7 +147,7 @@ hib_fit_brms <- function(obj,
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
                            calc_N_spp(.x, .y, resp)
-                         }) %>% unlist()
+                         }) |> unlist()
   }
   if (inherits(obj, "Database")){
     mod_df <- get_model_data(obj,

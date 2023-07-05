@@ -130,9 +130,9 @@ hib_inla_model <- R6Class("hib_inla_model",
                               # TODO: store site locations
                               loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
                               if ("SSBS" %in% colnames(mod_df)){
-                                loc_df <- loc_df %>% dplyr::filter(SSBS %in% mod_df$SSBS)
+                                loc_df <- loc_df |> dplyr::filter(SSBS %in% mod_df$SSBS)
                               } else if ("SSBS1" %in% colnames(mod_df)){
-                                loc_df <- loc_df %>% dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                                loc_df <- loc_df |> dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
                               }
                               self$site_locations <- loc_df
                               
@@ -159,14 +159,14 @@ hib_inla_model <- R6Class("hib_inla_model",
                                                   "+ f(s, model = site.spde)")
                               }
                               
-                              fixef_df <- self$fixedef_coefficients %>%
+                              fixef_df <- self$fixedef_coefficients |>
                                 dplyr::select(Coefficient_name, Coefficient_value,
                                               sd, loCI, hiCI)
                               
                               ranef_chr <- purrr::map2(.x = m_summ$random.names,
                                                 .y = m_summ$random.model,
-                                                function(.x, .y){paste0("\t", .x, "\t ", .y)}) %>%
-                                      unlist() %>%
+                                                function(.x, .y){paste0("\t", .x, "\t ", .y)}) |>
+                                      unlist() |>
                                       paste0(., collapse = "\n")
                               
                               
@@ -310,13 +310,13 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 # Get random vars coefs 
                                 
                                 # Check inla summary.random - what if random slopes??
-                                rand_df <- self$model$summary.random[rand_vars] %>%
-                                  dplyr::bind_rows(., .id = "Covar") %>%
+                                rand_df <- self$model$summary.random[rand_vars] |>
+                                  dplyr::bind_rows(., .id = "Covar") |>
                                   # order from small to large?
-                                  dplyr::group_by(Covar) %>%
-                                  dplyr::arrange(mean, .by_group = T) %>%
-                                  dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
-                                  dplyr::ungroup() %>%
+                                  dplyr::group_by(Covar) |>
+                                  dplyr::arrange(mean, .by_group = T) |>
+                                  dplyr::mutate(ID_ord = 1:dplyr::n()) |>
+                                  dplyr::ungroup() |>
                                   dplyr::mutate(sig_col = dplyr::case_when(`0.025quant` > 0 ~ "+ve",
                                                                     `0.975quant` < 0 ~ "-ve",
                                                                     T ~ "n.s."))
@@ -447,20 +447,20 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 plt_df <- self$data
                                 
                                 if ("SSBS" %in% colnames(plt_df)){
-                                  plt_df <- plt_df %>%
+                                  plt_df <- plt_df |>
                                     dplyr::left_join(loc_df, by = "SSBS")
                                   
                                 }
                                 if ("SSBS1" %in% colnames(plt_df)){
-                                  plt_df <- plt_df %>%
+                                  plt_df <- plt_df |>
                                     # get the lat and long for s1
-                                    dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) %>%
+                                    dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) |>
                                     dplyr::rename(SSBS1_latitude = Latitude,
-                                                  SSBS1_longitude = Longitude) %>%
+                                                  SSBS1_longitude = Longitude) |>
                                     # get the lat and long for s2
-                                    dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) %>%
+                                    dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) |>
                                     dplyr::rename(SSBS2_latitude = Latitude,
-                                                  SSBS2_longitude = Longitude) %>%
+                                                  SSBS2_longitude = Longitude) |>
                                     # calculate the geographic midpoint between s1 and s2 
                                     dplyr::mutate(Latitude = (SSBS1_latitude + SSBS2_latitude) / 2,
                                                   Longitude = (SSBS1_longitude + SSBS2_longitude) / 2)

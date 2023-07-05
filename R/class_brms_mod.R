@@ -102,9 +102,9 @@ hib_brms_model <- R6Class("hib_brms_model",
                               # TODO: store site locations
                               loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
                               if ("SSBS" %in% colnames(mod_df)){
-                                loc_df <- loc_df %>% dplyr::filter(SSBS %in% mod_df$SSBS)
+                                loc_df <- loc_df |> dplyr::filter(SSBS %in% mod_df$SSBS)
                               } else if ("SSBS1" %in% colnames(mod_df)){
-                                loc_df <- loc_df %>% dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                                loc_df <- loc_df |> dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
                               }
                               self$site_locations <- loc_df
 
@@ -283,10 +283,10 @@ hib_brms_model <- R6Class("hib_brms_model",
                                            function(x){
                                              
                                              # melt - then colnames are coef_level, coef_stat, coef_term
-                                             tmp <- reshape2::melt(x) %>%
+                                             tmp <- reshape2::melt(x) |>
                                                # widen across stat
                                                tidyr::pivot_wider(names_from = "Var2",
-                                                                  values_from = "value") %>%
+                                                                  values_from = "value") |>
                                                dplyr::rename(Coef_level = Var1,
                                                              Coef_term = Var3,
                                                              Coefficient_value = Estimate,
@@ -297,13 +297,13 @@ hib_brms_model <- R6Class("hib_brms_model",
                                              # tmp <- as.data.frame(x)
                                              # colnames(tmp) <- c()
                                              tmp
-                                             }) %>%
-                                  dplyr::bind_rows(.id = "Coefficient_group") %>%
-                                  # tibble::rownames_to_column("Coefficient_name") %>%
-                                  dplyr::group_by(Coefficient_group, Coef_term) %>%
-                                  dplyr::arrange(Coefficient_value, .by_group = T) %>%
-                                  dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
-                                  dplyr::ungroup() %>%
+                                             }) |>
+                                  dplyr::bind_rows(.id = "Coefficient_group") |>
+                                  # tibble::rownames_to_column("Coefficient_name") |>
+                                  dplyr::group_by(Coefficient_group, Coef_term) |>
+                                  dplyr::arrange(Coefficient_value, .by_group = T) |>
+                                  dplyr::mutate(ID_ord = 1:dplyr::n()) |>
+                                  dplyr::ungroup() |>
                                   dplyr::mutate(sig_col = dplyr::case_when(loCI > 0 ~ "+ve",
                                                                     hiCI < 0 ~ "-ve",
                                                                     T ~ "n.s."))
@@ -363,20 +363,20 @@ hib_brms_model <- R6Class("hib_brms_model",
                                 plt_df <- self$data
                                 
                                 if ("SSBS" %in% colnames(plt_df)){
-                                  plt_df <- plt_df %>%
+                                  plt_df <- plt_df |>
                                     dplyr::left_join(loc_df, by = "SSBS")
                                   
                                 }
                                 if ("SSBS1" %in% colnames(plt_df)){
-                                  plt_df <- plt_df %>%
+                                  plt_df <- plt_df |>
                                     # get the lat and long for s1
-                                    dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) %>%
+                                    dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) |>
                                     dplyr::rename(SSBS1_latitude = Latitude,
-                                                  SSBS1_longitude = Longitude) %>%
+                                                  SSBS1_longitude = Longitude) |>
                                     # get the lat and long for s2
-                                    dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) %>%
+                                    dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) |>
                                     dplyr::rename(SSBS2_latitude = Latitude,
-                                                  SSBS2_longitude = Longitude) %>%
+                                                  SSBS2_longitude = Longitude) |>
                                     # calculate the geographic midpoint between s1 and s2 
                                     dplyr::mutate(Latitude = (SSBS1_latitude + SSBS2_latitude) / 2,
                                                   Longitude = (SSBS1_longitude + SSBS2_longitude) / 2)

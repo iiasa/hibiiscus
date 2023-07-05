@@ -97,9 +97,9 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         # # TODO: store site locations
                         loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
                         if ("SSBS" %in% colnames(mod_df)){
-                          loc_df <- loc_df %>% dplyr::filter(SSBS %in% mod_df$SSBS)
+                          loc_df <- loc_df |> dplyr::filter(SSBS %in% mod_df$SSBS)
                         } else if ("SSBS1" %in% colnames(mod_df)){
-                          loc_df <- loc_df %>% dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                          loc_df <- loc_df |> dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2)))
                         }
                         self$site_locations <- loc_df
 
@@ -277,14 +277,14 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                          
                           rand_vars <- all.vars(self$user_formula$random)
                           
-                          rand_df <- as.data.frame(lme4::ranef(self$model)) %>%
+                          rand_df <- as.data.frame(lme4::ranef(self$model)) |>
                             dplyr::mutate(lwr = condval - 1.96*condsd, 
-                                          upr = condval + 1.96*condsd) %>%
+                                          upr = condval + 1.96*condsd) |>
                             # order from small to large?
-                            dplyr::group_by(grpvar, term) %>%
-                            dplyr::arrange(condval, .by_group = T) %>%
-                            dplyr::mutate(ID_ord = 1:dplyr::n()) %>%
-                            dplyr::ungroup() %>%
+                            dplyr::group_by(grpvar, term) |>
+                            dplyr::arrange(condval, .by_group = T) |>
+                            dplyr::mutate(ID_ord = 1:dplyr::n()) |>
+                            dplyr::ungroup() |>
                             dplyr::mutate(sig_col = dplyr::case_when(lwr > 0 ~ "+ve",
                                                               upr < 0 ~ "-ve",
                                                               T ~ "n.s."))
@@ -343,20 +343,20 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           plt_df <- self$data
                           
                           if ("SSBS" %in% colnames(plt_df)){
-                            plt_df <- plt_df %>%
+                            plt_df <- plt_df |>
                               dplyr::left_join(loc_df, by = "SSBS")
                             
                           }
                           if ("SSBS1" %in% colnames(plt_df)){
-                            plt_df <- plt_df %>%
+                            plt_df <- plt_df |>
                               # get the lat and long for s1
-                              dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) %>%
+                              dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) |>
                               dplyr::rename(SSBS1_latitude = Latitude,
-                                            SSBS1_longitude = Longitude) %>%
+                                            SSBS1_longitude = Longitude) |>
                               # get the lat and long for s2
-                              dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) %>%
+                              dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) |>
                               dplyr::rename(SSBS2_latitude = Latitude,
-                                            SSBS2_longitude = Longitude) %>%
+                                            SSBS2_longitude = Longitude) |>
                               # calculate the geographic midpoint between s1 and s2 
                               dplyr::mutate(Latitude = (SSBS1_latitude + SSBS2_latitude) / 2,
                                             Longitude = (SSBS1_longitude + SSBS2_longitude) / 2)

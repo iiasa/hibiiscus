@@ -107,7 +107,7 @@ hib_fit_lme4 <- function(obj,
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
                            calc_N_spp(.x, .y, resp)
-                         }) %>% unlist()
+                         }) |> unlist()
   }
   if (inherits(obj, "Database")){
     mod_df <- get_model_data(obj,
@@ -331,12 +331,12 @@ get_model_data <- function(obj,
                            mod_covars){
   
   within_site_resp <- purrr::map(obj$diversity_within$Data,
-                                 colnames) %>%
-    unlist() %>%
+                                 colnames) |>
+    unlist() |>
     unique() 
   between_site_resp <- purrr::map(obj$diversity_between$Data,
-                                  colnames) %>%
-    unlist() %>%
+                                  colnames) |>
+    unlist() |>
     unique() 
   
   if (mod_resp %in% within_site_resp){
@@ -357,7 +357,7 @@ get_model_data <- function(obj,
       length(div_data_idx) == 1
     )
     
-    mod_df <- mod_df %>%
+    mod_df <- mod_df |>
       dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
     
   } else if (mod_resp %in% between_site_resp){
@@ -374,7 +374,7 @@ get_model_data <- function(obj,
       length(div_data_idx) == 1
     )
     
-    mod_df <- mod_df %>%
+    mod_df <- mod_df |>
       dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
     
   } else {
@@ -387,7 +387,7 @@ get_model_data <- function(obj,
   # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
   chr_cols_idx <- purrr::map(mod_covars, 
                          function(x, df = mod_df){
-                           is.character(df[[x]])}) %>% 
+                           is.character(df[[x]])}) |> 
     unlist()
   chr_cols <- mod_covars[chr_cols_idx]
   for (c in chr_cols){

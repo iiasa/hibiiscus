@@ -60,14 +60,14 @@ hib_calc_site_contrasts <- function(obj,
   # Get site contrasts
   spp_tmp <- obj$species
   
-  spp_tmp <- spp_tmp %>%
+  spp_tmp <- spp_tmp |>
     dplyr::filter(!is.na(Predominant_land_use) &
-                    Diversity_metric_type == "Abundance") %>%
-    dplyr::group_by(SS) %>%
+                    Diversity_metric_type == "Abundance") |>
+    dplyr::group_by(SS) |>
     dplyr::mutate(n_sample_effort = n_distinct(Sampling_effort),
            # Taxon_name_entered v best_guess_binomial ??
-           n_species = dplyr::n_distinct(Taxon_name_entered)) %>%
-    dplyr::ungroup() %>%
+           n_species = dplyr::n_distinct(Taxon_name_entered)) |>
+    dplyr::ungroup() |>
     dplyr::filter(n_sample_effort == 1 &
              n_species > 1)
   
@@ -75,39 +75,39 @@ hib_calc_site_contrasts <- function(obj,
   #   # TODO: should this be ammended to primary forest...
   #   spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
   #                                     grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
-  #   spp_tmp <- spp_tmp %>%
-  #     dplyr::group_by(SS) %>%
-  #     dplyr::mutate(n_primin_records = sum(prim_min)) %>%
-  #     dplyr::filter(n_primin_records > 0) %>%
+  #   spp_tmp <- spp_tmp |>
+  #     dplyr::group_by(SS) |>
+  #     dplyr::mutate(n_primin_records = sum(prim_min)) |>
+  #     dplyr::filter(n_primin_records > 0) |>
   #     dplyr::ungroup()
   #   
-  #   site_tmp <- obj$sites %>%
-  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-  #     left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) %>%
+  #   site_tmp <- obj$sites |>
+  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
+  #     left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) |>
   #     droplevels()
   #   
   # } else if (primin_baseline == F){
-  #   site_tmp <- obj$sites %>%
-  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
+  #   site_tmp <- obj$sites |>
+  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
   #     droplevels()
   # }
   if (!is.null(baseline_lui)){
     spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
     
-    spp_tmp <- spp_tmp %>%
-      dplyr::group_by(SS) %>%
-      dplyr::mutate(n_base_lui = sum(base_lui)) %>%
-      dplyr::filter(n_base_lui > 0) %>%
+    spp_tmp <- spp_tmp |>
+      dplyr::group_by(SS) |>
+      dplyr::mutate(n_base_lui = sum(base_lui)) |>
+      dplyr::filter(n_base_lui > 0) |>
       dplyr::ungroup()
     
-    site_tmp <- obj$sites %>%
-      dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
-      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) %>%
+    site_tmp <- obj$sites |>
+      dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
+      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) |>
       droplevels()
     
   } else if (is.null(baseline_lui)){
-    site_tmp <- obj$sites %>%
-      dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) %>%
+    site_tmp <- obj$sites |>
+      dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
       droplevels()
   }
   
@@ -122,44 +122,44 @@ hib_calc_site_contrasts <- function(obj,
     
     # pull out the sites that are Primary minimal (we only want to use comparisons with the baseline)
     # if (primin_baseline == T){
-    #   site_data <- dplyr::filter(site_tmp, SS == x) %>%
+    #   site_data <- dplyr::filter(site_tmp, SS == x) |>
     #     # pull out the SSBS and LandUse information
     #     dplyr::select(SSBS, prim_min)
     #   
-    #   baseline_sites <- site_data %>%
-    #     dplyr::filter(prim_min == 1) %>%
+    #   baseline_sites <- site_data |>
+    #     dplyr::filter(prim_min == 1) |>
     #     dplyr::pull(SSBS)
     # } else if (primin_baseline == F){
     #   site_data <- dplyr::filter(site_tmp, SS == x)
     #   
-    #   baseline_sites <- site_data %>%
+    #   baseline_sites <- site_data |>
     #     dplyr::pull(SSBS)
     # }
     if (!is.null(baseline_lui)){
-      site_data <- dplyr::filter(site_tmp, SS == x) %>%
+      site_data <- dplyr::filter(site_tmp, SS == x) |>
         # pull out the SSBS and LandUse information
         dplyr::select(SSBS, base_lui)
       
-      baseline_sites <- site_data %>%
-        dplyr::filter(base_lui == 1) %>%
+      baseline_sites <- site_data |>
+        dplyr::filter(base_lui == 1) |>
         dplyr::pull(SSBS)
     } else if (is.null(baseline_lui)){
       site_data <- dplyr::filter(site_tmp, SS == x)
       
-      baseline_sites <- site_data %>%
+      baseline_sites <- site_data |>
         dplyr::pull(SSBS)
     }
     
     # pull out all the sites
-    site_list <- site_data %>%
+    site_list <- site_data |>
       dplyr::pull(SSBS)
     
     # get all site x site comparisons for this study
-    site_comparisons <- expand.grid(baseline_sites, site_list) %>%
+    site_comparisons <- expand.grid(baseline_sites, site_list) |>
       # rename the columns so they will be what the compositional similarity function expects for ease
-      dplyr::rename(SSBS1 = Var1, SSBS2 = Var2) %>%
+      dplyr::rename(SSBS1 = Var1, SSBS2 = Var2) |>
       # remove the comparisons where the same site is being compared to itself
-      dplyr::filter(SSBS1 != SSBS2) %>%
+      dplyr::filter(SSBS1 != SSBS2) |>
       # make the values characters rather than factors
       dplyr::mutate(SSBS1 = as.character(SSBS1),
                     SSBS2 = as.character(SSBS2),
@@ -182,19 +182,19 @@ hib_calc_site_contrasts <- function(obj,
   # - LUI - left join SSBS1, LUI1, SSBS2, LUI2, paste together
   if ("lui_contrast" %in% metrics){
     # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
-    site_comp_df <- site_comp_df %>%
+    site_comp_df <- site_comp_df |>
       dplyr::left_join(site_df[, c("SSBS", "LUI")], 
-                       by = c("SSBS1" = "SSBS")) %>%
-      dplyr::rename(SSBS1_LUI = LUI) %>%
+                       by = c("SSBS1" = "SSBS")) |>
+      dplyr::rename(SSBS1_LUI = LUI) |>
       # get the land use for s2
       dplyr::left_join(site_df[, c("SSBS", "LUI")], 
-                       by = c("SSBS2" = "SSBS")) %>%
-      dplyr::rename(SSBS2_LUI = LUI) %>%
+                       by = c("SSBS2" = "SSBS")) |>
+      dplyr::rename(SSBS2_LUI = LUI) |>
       # create an lu_contrast column (what we'll use for modelling)
       dplyr::mutate(LUI_contrast = paste(SSBS1_LUI, SSBS2_LUI, sep = "_vs_"),
                     Baseline_LUI = baseline_lui)
     if (is.null(baseline_lui)){
-      site_comp_df <- site_comp_df %>%
+      site_comp_df <- site_comp_df |>
         dplyr::mutate(Baseline_LUI = NA)
     }
   }
@@ -203,32 +203,32 @@ hib_calc_site_contrasts <- function(obj,
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
   if (any(c("geogr_dist_hav", "geogr_dist_geod") %in% metrics)){
     # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
-    site_comp_df <- site_comp_df %>%
+    site_comp_df <- site_comp_df |>
       # get the lat and long for s1
       dplyr::left_join(site_df[, c("SSBS", "Longitude" ,"Latitude")], 
-                       by = c("SSBS1" = "SSBS")) %>%
+                       by = c("SSBS1" = "SSBS")) |>
       dplyr::rename(SSBS1_latitude = Latitude,
-                    SSBS1_longitude = Longitude) %>%
+                    SSBS1_longitude = Longitude) |>
       # get the lat and long for s2
       dplyr::left_join(site_df[, c("SSBS", "Longitude" ,"Latitude")], 
-                       by = c("SSBS2" = "SSBS")) %>%
+                       by = c("SSBS2" = "SSBS")) |>
       dplyr::rename(SSBS2_latitude = Latitude,
                     SSBS2_longitude = Longitude)
     
     if ("geogr_dist_hav" %in% metrics){
-      site_comp_df <- site_comp_df %>%
+      site_comp_df <- site_comp_df |>
         # calculate the geographic distances between s1 and s2 
         dplyr::mutate(Geogr_dist_hav = geosphere::distHaversine(cbind(SSBS1_longitude, SSBS1_latitude), 
                                                                 cbind(SSBS2_longitude, SSBS2_latitude)))
     }
     if ("geogr_dist_geod" %in% metrics){
-      site_comp_df <- site_comp_df %>%
+      site_comp_df <- site_comp_df |>
         # calculate the geographic distances between s1 and s2 
         dplyr::mutate(Geogr_dist_geod = geosphere::distGeo(cbind(SSBS1_longitude, SSBS1_latitude), 
                                                            cbind(SSBS2_longitude, SSBS2_latitude)))
     }
     if ("geogr_midpoint" %in% metrics){
-      site_comp_df <- site_comp_df %>%
+      site_comp_df <- site_comp_df |>
         # calculate the geographic midpoint between s1 and s2 
         dplyr::mutate(Latitude_midpoint = (SSBS1_latitude + SSBS2_latitude) / 2,
                       Longitude_midpoint = (SSBS1_longitude + SSBS2_longitude) / 2)
@@ -237,14 +237,14 @@ hib_calc_site_contrasts <- function(obj,
   }
   
   # Also, by default incl SSB - either SSB or NA if sites are from different blocks
-  site_comp_df <- site_comp_df %>%
+  site_comp_df <- site_comp_df |>
     # get the lat and long for s1
     dplyr::left_join(site_df[, c("SSBS", "SSB")], 
-                     by = c("SSBS1" = "SSBS")) %>%
-    dplyr::rename(SSB1 = SSB) %>%
+                     by = c("SSBS1" = "SSBS")) |>
+    dplyr::rename(SSB1 = SSB) |>
     dplyr::left_join(site_df[, c("SSBS", "SSB")], 
-                     by = c("SSBS2" = "SSBS")) %>%
-    dplyr::rename(SSB2 = SSB) %>%
+                     by = c("SSBS2" = "SSBS")) |>
+    dplyr::rename(SSB2 = SSB) |>
     dplyr::mutate(SSB = dplyr::case_when(SSB1 == SSB2 ~ SSB1,
                                          T ~ NA))
   

@@ -362,7 +362,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   # Set labels - tidy versions of response/uncertainty_var
                                   
                                   if (!is.null(response_var)){
-                                    resp_lab <- gsub("_", " ", response_var) %>%
+                                    resp_lab <- gsub("_", " ", response_var) |>
                                       tools::toTitleCase()
                                     
                                     # replace "Mean" with "(mean)"
@@ -379,7 +379,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   
                                   if (!is.null(uncertainty_var)){
-                                    uncert_lab <- gsub("_", " ", uncertainty_var) %>%
+                                    uncert_lab <- gsub("_", " ", uncertainty_var) |>
                                       tools::toTitleCase()
                                     
                                     # replace "Sd", with "(SD)"
@@ -450,7 +450,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                                                 call. = F)
                                                          }
                                                          
-                                                         terra::as.data.frame(z[[vars_]], xy = T)}) %>%
+                                                         terra::as.data.frame(z[[vars_]], xy = T)}) |>
                                       dplyr::bind_rows(.id = "Year")
                                   }
                                   

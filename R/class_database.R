@@ -50,20 +50,20 @@ Database <- R6Class("Database",
                       
                       # If predicts2022 column names, rename to align with 2016...
                       if ("Predominant_habitat" %in% colnames(species)){
-                        species <- species %>%
+                        species <- species |>
                           dplyr::rename(Predominant_land_use = Predominant_habitat)
                       }
                       if ("Source_for_predominant_habitat" %in% colnames(species)){
-                        species <- species %>%
+                        species <- species |>
                           dplyr::rename(Source_for_predominant_land_use = Source_for_predominant_habitat)
                       }
                       
                       if ("Eco_region_distance_metres" %in% colnames(species)){
-                        species <- species %>%
+                        species <- species |>
                           dplyr::rename(Ecoregion_distance_metres = Eco_region_distance_metres)
                       }
                       if ("Max_linear_extent" %in% colnames(species)){
-                        species <- species %>%
+                        species <- species |>
                           dplyr::rename(Max_linear_extent_metres = Max_linear_extent)
                       }
                       
@@ -114,7 +114,7 @@ Database <- R6Class("Database",
                         if ((!"Sample_midpoint" %in% colnames(species) &
                              "Sample_start_earliest" %in% colnames(species) & 
                              "Sample_end_latest" %in% colnames(species))){
-                          species <- species %>%
+                          species <- species |>
                             dplyr::mutate(Sample_midpoint = Sample_start_earliest + floor((Sample_end_latest - Sample_start_earliest)/2))
                         }
                         
@@ -155,11 +155,11 @@ Database <- R6Class("Database",
                         site_specific_cols <- site_specific_cols[site_specific_cols %in% colnames(species)]
                         
                         # Summarise to site info
-                        sites <- species %>%
-                          dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) %>%
+                        sites <- species |>
+                          dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) |>
                           dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
                                            Sample_midpoint = Sample_midpoint[1], 
-                                           N_samples = dplyr::n()) %>%
+                                           N_samples = dplyr::n()) |>
                           dplyr::ungroup()
                         
     
@@ -169,10 +169,10 @@ Database <- R6Class("Database",
                       
                       # Add LUI column - 
                       # TODO: Only if no LUI already??
-                      sites <- sites %>%
+                      sites <- sites |>
                         dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
-                      species <- species %>%
+                      species <- species |>
                         dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
                       
@@ -242,23 +242,23 @@ Database <- R6Class("Database",
                       #   # subset site_specific cols to those in species??
                       #   
                       #   # if sample_midpoint not present and sample_strt/end are...
-                      #   sites <- species %>%
-                      #     dplyr::mutate(Sample_midpoint = Sample_start_earliest + floor((Sample_end_latest - Sample_start_earliest)/2)) %>%
-                      #     dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) %>%
+                      #   sites <- species |>
+                      #     dplyr::mutate(Sample_midpoint = Sample_start_earliest + floor((Sample_end_latest - Sample_start_earliest)/2)) |>
+                      #     dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) |>
                       #     dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
                       #                      Sample_midpoint = Sample_midpoint[1], 
-                      #                      N_samples = n()) %>%
+                      #                      N_samples = n()) |>
                       #     dplyr::ungroup()
                       #   
                       #   # Name changes to match PREDICTS 2016
                       #   # Convert Predominant_habitat to Predominant_land_use
                       #   # Convert Eco_region_distance_metres to Ecoregion_distance_metres
                       #   # Convert Max_linear_extent to Max_linear_extent_metres
-                      #   species <- species %>%
+                      #   species <- species |>
                       #     dplyr::rename(Predominant_land_use = Predominant_habitat,
                       #                   Ecoregion_distance_metres = Eco_region_distance_metres,
                       #                   Max_linear_extent_metres = Max_linear_extent)
-                      #   sites <- sites %>%
+                      #   sites <- sites |>
                       #     dplyr::rename(Predominant_land_use = Predominant_habitat,
                       #                   Ecoregion_distance_metres = Eco_region_distance_metres,
                       #                   Max_linear_extent_metres = Max_linear_extent)
@@ -472,12 +472,12 @@ Database <- R6Class("Database",
                       # add a message...
                       message(crayon::green("Correcting measuremnts for sampling effort...\n"))
                       
-                      self$species <- self$species %>%
+                      self$species <- self$species |>
                         dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
-                                                                         T ~ Sampling_effort)) %>%
-                        dplyr::group_by(SS) %>%
-                        dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort)) %>%
-                        dplyr::ungroup() %>%
+                                                                         T ~ Sampling_effort)) |>
+                        dplyr::group_by(SS) |>
+                        dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort)) |>
+                        dplyr::ungroup() |>
                         dplyr::mutate(Effort_corrected_measurement = dplyr::case_when(Diversity_metric_is_effort_sensitive == T ~ Measurement / Rescaled_sampling_effort,
                                                                                       T ~ Measurement))
                       # Add a flag to some background info - Measures are effort corrected = T
@@ -538,8 +538,8 @@ Database <- R6Class("Database",
                           plt_df <- self$sites
                         }
                         if (type == "map-studies"){
-                          plt_df <- self$sites %>%
-                            dplyr::group_by(SS, version) %>%
+                          plt_df <- self$sites |>
+                            dplyr::group_by(SS, version) |>
                             dplyr::summarise(N_sites = dplyr::n(),
                                              Longitude = mean(Longitude, na.rm = T),
                                              Latitude = mean(Latitude, na.rm = T))
@@ -605,17 +605,17 @@ Database <- R6Class("Database",
                       
                       # %%%%%
                       if (type %in% c("biome-N", "ecoregion-N", "realm-N")){
-                        var_ <- tools::toTitleCase(type) %>% gsub("-N", "", .)
+                        var_ <- tools::toTitleCase(type) |> gsub("-N", "", .)
 
                         # Assert that Lat and long are in sites
                         assertthat::assert_that(
                           assertthat::has_name(self$sites, var_)
                           )
                         
-                        count_df <- self$sites %>%
-                          dplyr::group_by(!!sym(var_), version) %>%
+                        count_df <- self$sites |>
+                          dplyr::group_by(!!sym(var_), version) |>
                           dplyr::summarise(Sites = dplyr::n_distinct(SS),
-                                           Studies = dplyr::n_distinct(SSBS)) %>%
+                                           Studies = dplyr::n_distinct(SSBS)) |>
                           tidyr::pivot_longer(c(Sites, Studies),
                                               names_to = "dat_type",
                                               values_to = "N")
@@ -649,10 +649,10 @@ Database <- R6Class("Database",
                         assertthat::assert_that(
                           assertthat::has_name(self$sites, "Class")
                           )
-                        class_df <- self$species %>%
-                          dplyr::group_by(Class, version) %>%
-                          dplyr::summarise(N_ = dplyr::n()) %>%
-                          # dplyr::filter(N_ > 0) %>%
+                        class_df <- self$species |>
+                          dplyr::group_by(Class, version) |>
+                          dplyr::summarise(N_ = dplyr::n()) |>
+                          # dplyr::filter(N_ > 0) |>
                           dplyr::filter(Class != "")
                         
                         plt <- ggplot2::ggplot(class_df) +

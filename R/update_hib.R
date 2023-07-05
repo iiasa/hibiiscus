@@ -71,9 +71,9 @@ update_hib <- function(obj, path_species, path_sites = "",
                                     "These sites will not be updated.\n")))
       print(new_sites_to_rm)
       
-      new_obj$species <- new_obj$species %>%
+      new_obj$species <- new_obj$species |>
         dplyr::filter(!(SSBS %in% new_sites_to_rm))
-      new_obj$sites <- new_obj$sites %>%
+      new_obj$sites <- new_obj$sites |>
         dplyr::filter(!(SSBS %in% new_sites_to_rm))
     }
     

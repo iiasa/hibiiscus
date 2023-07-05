@@ -91,8 +91,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                           # If inla, add fixedef_coefficients
                           # TODO: add this to hib_inla_model class - and rm below
                           # if (inherits(mod_obj, "hib_inla_model")){
-                          #   fixef_df <- mod_obj$model$summary.fixed %>%
-                          #     tibble::rownames_to_column("Coefficient_name") %>%
+                          #   fixef_df <- mod_obj$model$summary.fixed |>
+                          #     tibble::rownames_to_column("Coefficient_name") |>
                           #     dplyr::rename(Coefficient_value = mean,
                           #                   loCI = `0.025quant`,
                           #                   median = `0.5quant`,
@@ -163,7 +163,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                           }
                           
                           # TODO: additional metrics: cor2, me (bias)
-                          df1 <- self$insample_results$insample_metrics %>%
+                          df1 <- self$insample_results$insample_metrics |>
                             dplyr::filter(Metric_shrt %in% c("rmse", "rsq")) 
                           
                           insamp_df <- data.frame(CV_type = c("In-sample"),
@@ -182,7 +182,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                     }
                                                     n_fld <- x$n_folds
                                                     
-                                                    cv_df <- x$cv_metrics %>%
+                                                    cv_df <- x$cv_metrics |>
                                                       dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
                                                     
                                                     out_df <- data.frame(CV_type = c(fld_typ),
@@ -204,7 +204,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                     # }
                                                     
                                                   })
-                          cv_df <- cv_df %>%
+                          cv_df <- cv_df |>
                             dplyr::filter(N_folds > 1)
                           
                           df <- dplyr::bind_rows(insamp_df,
@@ -240,13 +240,13 @@ hib_cv_res <- R6Class("hib_cv_res",
                           )
                           
                           
-                          df %>%
-                            dplyr::select(CV_type, N_folds, RMSE, Predictive_R2) %>%
+                          df |>
+                            dplyr::select(CV_type, N_folds, RMSE, Predictive_R2) |>
                             dplyr::rename(`CV type` = CV_type,
                                           `N folds` = N_folds,
-                                          `Predictive R2` = Predictive_R2) %>%
-                            insight::format_table(use_symbols = T, digits = 0) %>%
-                            insight::export_table() %>%
+                                          `Predictive R2` = Predictive_R2) |>
+                            insight::format_table(use_symbols = T, digits = 0) |>
+                            insight::export_table() |>
                             message()
                           
                           
@@ -376,11 +376,11 @@ hib_cv_res <- R6Class("hib_cv_res",
                             cv_levs <- c(base_cv_levs, add_cv_levs)
                             # set levs for cv_type
                             
-                            orig_coef <- orig_coef %>%
-                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name))) %>%
+                            orig_coef <- orig_coef |>
+                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name))) |>
                               dplyr::arrange(coef_nm_num)
                             
-                            cv_coef <- cv_coef %>%
+                            cv_coef <- cv_coef |>
                               dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name)),
                                             cv_type = factor(cv_type, 
                                                              levels = cv_levs))
@@ -443,7 +443,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                           
                           if (type == "coefficients-summary" ){
                             
-                            orig_coef <- self$original_model_obj$fixedef_coefficients %>%
+                            orig_coef <- self$original_model_obj$fixedef_coefficients |>
                               dplyr::mutate(cv_type = "In-sample",
                                             fold_id = NA)
                             
@@ -462,8 +462,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                         tmp_df$fold_id <- as.numeric(as.factor(tmp_df$fold_id))
                                                         
                                                         
-                                                        tmp_df <- tmp_df %>%
-                                                          dplyr::group_by(Coefficient_name, cv_type) %>%
+                                                        tmp_df <- tmp_df |>
+                                                          dplyr::group_by(Coefficient_name, cv_type) |>
                                                           dplyr::summarise(Coefficient_median = median(Coefficient_value),
                                                                            Coefficient_min = min(Coefficient_value),
                                                                            Coefficient_max = max(Coefficient_value),
@@ -480,12 +480,12 @@ hib_cv_res <- R6Class("hib_cv_res",
                             cv_levs <- c(base_cv_levs, add_cv_levs)
                             
                             
-                            orig_coef <- orig_coef %>%
-                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name))) %>%
+                            orig_coef <- orig_coef |>
+                              dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name))) |>
                               dplyr::arrange(coef_nm_num)
                             
-                            cv_coef <- cv_coef %>%
-                              dplyr::ungroup() %>%
+                            cv_coef <- cv_coef |>
+                              dplyr::ungroup() |>
                               dplyr::mutate(coef_nm_num = as.numeric(as.factor(Coefficient_name)),
                                             cv_type = factor(cv_type, 
                                                              levels = cv_levs))
@@ -563,7 +563,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                           if (type %in% c("obs-v-pred", "obs-v-error", "pred-v-error") ){
                             
                             # Get obs and pred and error - across cv + insample
-                            insamp_df <- self$insample_results$insample_pred_df %>%
+                            insamp_df <- self$insample_results$insample_pred_df |>
                               dplyr::mutate(cv_type = "In-sample",
                                             fold_id = NA)
                             
@@ -590,7 +590,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                             cv_levs <- c(base_cv_levs, add_cv_levs)
                             
                             df <- dplyr::bind_rows(insamp_df,
-                                                   cv_df) %>%
+                                                   cv_df) |>
                               dplyr::mutate(cv_type = factor(cv_type,
                                                              levels = cv_levs))
                             
@@ -701,7 +701,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       tmp_df$cv_type <- cv_type
                                                       
                                                       tmp_df
-                                                    }) %>%
+                                                    }) |>
                               dplyr::filter(Metric_shrt %in% metrics)
                             
                             
@@ -719,11 +719,11 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       tmp_df$fold_id <- as.numeric(tmp_df$fold_id)
                                                       
                                                       tmp_df
-                                                    }) %>%
+                                                    }) |>
                               dplyr::filter(Metric_shrt %in% metrics)
                             # %%%%
                             
-                            insamp_df <- self$insample_results$insample_metrics %>%
+                            insamp_df <- self$insample_results$insample_metrics |>
                               dplyr::filter(Metric_shrt %in% metrics)
                             
                             # print(insamp_df)
@@ -734,12 +734,12 @@ hib_cv_res <- R6Class("hib_cv_res",
                             cv_levs <- base_cv_levs[base_cv_levs %in% unique(cv_df$cv_type)]
                             cv_levs <- c(cv_levs, add_cv_levs)
                             
-                            cv_df <- cv_df %>%
+                            cv_df <- cv_df |>
                               dplyr::mutate(cv_type = factor(cv_type,
                                                              levels = cv_levs),
                                             cv_type_num = as.numeric(cv_type))
                             
-                            cv_fold_df <- cv_fold_df %>%
+                            cv_fold_df <- cv_fold_df |>
                               dplyr::mutate(cv_type = factor(cv_type,
                                                              levels = cv_levs),
                                             cv_type_num = as.numeric(cv_type))
@@ -760,8 +760,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                               "Correlation_squared",
                                                               "Predictive_R_squared"))
                               
-                              cor_df <- cor_df %>%
-                                dplyr::filter(Metric %in% cv_df$Metric) %>%
+                              cor_df <- cor_df |>
+                                dplyr::filter(Metric %in% cv_df$Metric) |>
                                 dplyr::mutate(Metric_fct = factor(Metric,
                                                                   levels = metr_levs,
                                                                   labels = metr_labs ))
@@ -795,8 +795,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                               "Root_mean_squared_log_error",
                                                               "Relative_squared_error"))
                               
-                              err_df <- err_df %>%
-                                dplyr::filter(Metric %in% cv_df$Metric) %>%
+                              err_df <- err_df |>
+                                dplyr::filter(Metric %in% cv_df$Metric) |>
                                 dplyr::mutate(Metric_fct = factor(Metric,
                                                                   levels = metr_levs,
                                                                   labels = metr_labs ))
@@ -812,7 +812,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                               rse_df <- data.frame(bad = 1,
                                                    Metric = c("Relative_squared_error"))
                               
-                              rse_df <- rse_df %>%
+                              rse_df <- rse_df |>
                                 dplyr::mutate(Metric_fct = factor(Metric,
                                                                   levels = metr_levs,
                                                                   labels = metr_labs ))
@@ -925,25 +925,25 @@ hib_cv_res <- R6Class("hib_cv_res",
                             add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
                             cv_levs <- c(base_cv_levs, add_cv_levs)
                             
-                            cv_df <- cv_df %>%
+                            cv_df <- cv_df |>
                               dplyr::mutate(cv_type = factor(cv_type,
                                                              levels = cv_levs))
                             
                             if ("SSBS" %in% colnames(cv_df)){
-                              cv_df <- cv_df %>%
+                              cv_df <- cv_df |>
                                 dplyr::left_join(loc_df, by = "SSBS")
                               
                             }
                             if ("SSBS1" %in% colnames(cv_df)){
-                              cv_df <- cv_df %>%
+                              cv_df <- cv_df |>
                                 # get the lat and long for s1
-                                dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) %>%
+                                dplyr::left_join(loc_df, by = c("SSBS1" = "SSBS")) |>
                                 dplyr::rename(SSBS1_latitude = Latitude,
-                                              SSBS1_longitude = Longitude) %>%
+                                              SSBS1_longitude = Longitude) |>
                                 # get the lat and long for s2
-                                dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) %>%
+                                dplyr::left_join(loc_df, by = c("SSBS2" = "SSBS")) |>
                                 dplyr::rename(SSBS2_latitude = Latitude,
-                                              SSBS2_longitude = Longitude) %>%
+                                              SSBS2_longitude = Longitude) |>
                                 # calculate the geographic midpoint between s1 and s2 
                                 dplyr::mutate(Latitude = (SSBS1_latitude + SSBS2_latitude) / 2,
                                               Longitude = (SSBS1_longitude + SSBS2_longitude) / 2)

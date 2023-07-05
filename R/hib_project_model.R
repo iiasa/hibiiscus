@@ -281,7 +281,7 @@ hib_mod_project <- function(obj,
       data_df <- purrr::map(data,
                             terra_to_df_inla,
                             obj = obj, 
-                            fix_vars = fix_vars) %>%
+                            fix_vars = fix_vars) |>
         # TODO: is ".," needed?
         # TODO: better term for id
         dplyr::bind_rows(., .id = "Year")
@@ -346,7 +346,7 @@ hib_mod_project <- function(obj,
     # print(all_covars)
     # print(covars_sub)
     
-    pred_X <- data_df %>%
+    pred_X <- data_df |>
       dplyr::select(covars_sub)
     
     if ( ("Intercept" %in% all_covars) &
@@ -410,7 +410,7 @@ hib_mod_project <- function(obj,
     
     # prediction_mean prediction_sd prediction_0.025quant
     # prediction_median prediction_q97.5 prediction_mode
-    pred_df <- pred_df %>%
+    pred_df <- pred_df |>
       dplyr::rename(prediction_q2.5   = prediction_0.025quant,
                     prediction_median = prediction_0.5quant,
                     prediction_q97.5  = prediction_0.975quant)
@@ -429,13 +429,13 @@ hib_mod_project <- function(obj,
       if ("prop_cover" %in% colnames(data_df)){
         # How to better deal with "Year" - could be sc_yr
         if ("Year" %in% colnames(data_df)){
-          pred_df <- pred_df %>%
-            dplyr::group_by(x, y, Year) %>%
+          pred_df <- pred_df |>
+            dplyr::group_by(x, y, Year) |>
             dplyr::summarise(dplyr::across(dplyr::contains("prediction"), ~ stats::weighted.mean(.x, w = prop_cover)))
         }
         if (!"Year" %in% colnames(data_df)){
-          pred_df <- pred_df %>%
-            dplyr::group_by(x, y)  %>%
+          pred_df <- pred_df |>
+            dplyr::group_by(x, y)  |>
             dplyr::summarise(dplyr::across(dplyr::contains("prediction"), ~ stats::weighted.mean(.x, w = prop_cover)))
           # weighted av of all predictions cols  
         }
@@ -449,7 +449,7 @@ hib_mod_project <- function(obj,
       pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
       pred_rescaled_df <- pred_df[,pred_cols] / base_val
       colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
-      # pred_rescaled_df <- pred_rescaled_df %>%
+      # pred_rescaled_df <- pred_rescaled_df |>
       #   dplyr::select(-rescaled_prediction_sd)
     }
     
@@ -478,8 +478,8 @@ hib_mod_project <- function(obj,
                          function(.x, df = pred_df, 
                                   data_orig = data, 
                                   col_nms = pred_cols){
-                           tmp_df <- df %>%
-                             dplyr::filter(Year == .x) %>%
+                           tmp_df <- df |>
+                             dplyr::filter(Year == .x) |>
                              dplyr::select(-Year)
                            
                            tmp_df <- tmp_df[,c("x", "y", col_nms)]
@@ -562,37 +562,37 @@ hib_mod_project <- function(obj,
       # if (incl_obs_uncert == T){
         mean_df <- predict(obj$model,
                            data,
-                           re_form = NA) %>%
+                           re_form = NA) |>
           as.data.frame()
         med_df <- predict(obj$model,
                           data,
                           re_form = NA,
-                          robust = T) %>%
+                          robust = T) |>
           as.data.frame()
       }
       if (brms_specs$incl_obs_uncert == F){
       # if (incl_obs_uncert == F){
         mean_df <- fitted(obj$model,
                           data,
-                          re_form = NA) %>%
+                          re_form = NA) |>
           as.data.frame()
         med_df <- fitted(obj$model,
                          data,
                          re_form = NA,
-                         robust = T) %>%
+                         robust = T) |>
           as.data.frame()
       }
-      mean_df <- mean_df %>%
+      mean_df <- mean_df |>
         dplyr::rename(prediction_mean  = Estimate,
                       prediction_sd    = Est.Error,
                       prediction_q2.5  = Q2.5,
                       prediction_q97.5 = Q97.5)
-      med_df <- med_df %>%
+      med_df <- med_df |>
         dplyr::rename(prediction_median= Estimate,
                       prediction_mad   = Est.Error)
       
-      pred_df <- mean_df %>%
-        dplyr::bind_cols(med_df %>%
+      pred_df <- mean_df |>
+        dplyr::bind_cols(med_df |>
                            dplyr::select(prediction_median,
                                          prediction_mad))
       # %%%%%
@@ -603,7 +603,7 @@ hib_mod_project <- function(obj,
       #                                  re_form = NA))
       
       # fix names...
-      # pred_df <- pred_df %>%
+      # pred_df <- pred_df |>
       #   dplyr::rename(prediction       = Estimate,
       #                 prediction_error = Est.Error,
       #                 prediction_q2.5  = Q2.5,
@@ -623,7 +623,7 @@ hib_mod_project <- function(obj,
         pred_rescaled_df <- pred_df[,pred_cols] / base_val
         colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
       }
-      # pred_rescaled_df <- pred_rescaled_df %>%
+      # pred_rescaled_df <- pred_rescaled_df |>
       #   dplyr::select(-rescaled_prediction_error)
       
       data <- dplyr::bind_cols(data, pred_df, pred_rescaled_df)
@@ -807,7 +807,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                              tmp_out
                                            })
       
-      covars_not_in_rast <- covars_not_in_rast %>%
+      covars_not_in_rast <- covars_not_in_rast |>
         # Combine covar nm with levels
         dplyr::mutate(covar_nm_levs = paste0(covar_nm, covar_levs), 
                       # check for presence in tmp_rast
@@ -827,18 +827,18 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                           )
                                         })
       
-      covars_not_in_rast <- covars_not_in_rast %>%
-        dplyr::left_join(is_binary_layer) %>%
-        dplyr::group_by(covar_nm) %>%
+      covars_not_in_rast <- covars_not_in_rast |>
+        dplyr::left_join(is_binary_layer) |>
+        dplyr::group_by(covar_nm) |>
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
       print(covars_not_in_rast)
       
       # Split binary and non binary layers
-      bin_covars <- covars_not_in_rast %>%
+      bin_covars <- covars_not_in_rast |>
         dplyr::filter(is_binary_covar == T)
       
-      non_bin_covars <- covars_not_in_rast %>%
+      non_bin_covars <- covars_not_in_rast |>
         dplyr::filter(is_binary_covar == F)
       
       # TODO: maybe this can be dropped???
@@ -899,9 +899,9 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                    covar_df = bin_covars,
                                    data_rast = tmp_rast,
                                    mod_data = fit_dat,
-                                   input_type = "binary") %>%
-          unlist() %>%
-          c() %>%
+                                   input_type = "binary") |>
+          unlist() |>
+          c() |>
           terra::rast()
         
         n_bin_covar_layers <- dim(tmp_bin_rast)[3]
@@ -921,9 +921,9 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                     covar_df = non_bin_covars,
                                     data_rast = tmp_rast,
                                     mod_data = fit_dat,
-                                    input_type = "non-binary") %>%
-          unlist() %>%
-          c() %>%
+                                    input_type = "non-binary") |>
+          unlist() |>
+          c() |>
           terra::rast()
         # print(tmp_prop_rast)
         # Want to end up with N raster stacks - 1 per prop level
@@ -941,7 +941,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     # if n_prop_covar_lyrs > 1  - list of rasters - each named based on covar level
     if (n_prop_covar_lyrs > 1){
       
-      non_bin_sub <- non_bin_covars %>%
+      non_bin_sub <- non_bin_covars |>
         dplyr::filter(!is.na(covar_levs_rast))
       
       # print(non_bin_covars)
@@ -986,16 +986,16 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         
         
         # Get proportional weighting
-        lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
-          dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) %>% 
+        lyr_nm <- terra::cats(tmp_prop_rast)[[i]] |> 
+          dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) |> 
           dplyr::pull(category)
         
         # print(tmp_prop_rast[[i]])
         # print(terra::cats(tmp_prop_rast)[[i]])
         # print(unique(terra::values(tmp_prop_rast[[i]])))
         
-        lyr_orig_nm <- non_bin_sub %>%
-          dplyr::filter(covar_levs == lyr_nm) %>%
+        lyr_orig_nm <- non_bin_sub |>
+          dplyr::filter(covar_levs == lyr_nm) |>
           dplyr::pull(covar_levs_rast)
         
         # multiply prediction by original raster (correctly matched names)
@@ -1018,10 +1018,10 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                                                            lyr_nm = lyr_of_interest){
                                                                     return(.x[[lyr_nm]])
                                                                   })
-                                       tmp_terra <- tmp_terra_ls %>%
-                                         unlist() %>%
-                                         c() %>%
-                                         terra::rast() %>%
+                                       tmp_terra <- tmp_terra_ls |>
+                                         unlist() |>
+                                         c() |>
+                                         terra::rast() |>
                                          sum()
                                        
                                        names(tmp_terra) <- lyr_of_interest                    
@@ -1029,9 +1029,9 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                        return(tmp_terra)
                                      })
       
-      data_pred <- tmp_pred_rast_ls %>%
-        unlist() %>%
-        c() %>%
+      data_pred <- tmp_pred_rast_ls |>
+        unlist() |>
+        c() |>
         terra::rast()
       # %%%%%
       
@@ -1121,7 +1121,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   input_type <- match.arg(input_type, c("binary", "non-binary"), several.ok = FALSE)
   
   # Subset to covar of interest
-  df <- covar_df %>%
+  df <- covar_df |>
     dplyr::filter(covar_nm == covar_nm &
                     !is.na(covar_levs_rast))
   
@@ -1141,7 +1141,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   # 1:dplyr::n()
   fac_lev_df <- data.frame(ID = as.numeric(mod_data[[covar_nm]]),
                            category = mod_data[[covar_nm]]
-  ) %>%
+  ) |>
     unique()
   # print(fac_lev_df)
   
@@ -1150,8 +1150,8 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     
     # Need to convert values > 0 to the number that  matches that factor level 
     # in the model df; e.g. primin = 1 in model levels, needs to be 1 here too 
-    covar_level <- covar_df %>%
-      dplyr::filter(covar_levs_rast == names(lyr)) %>%
+    covar_level <- covar_df |>
+      dplyr::filter(covar_levs_rast == names(lyr)) |>
       dplyr::pull(covar_levs)
     
     covar_level_numeric <- lev_df$ID[lev_df$category == covar_level]
@@ -1170,27 +1170,27 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     
     # TODO: is ".," needed in terra::categories ??
     if (input_type == "non-binary"){
-      lyr <- lyr %>%
-        terra::as.factor() %>%
+      lyr <- lyr |>
+        terra::as.factor() |>
         terra::categories(., value = lev_df)
       # %%%
     }
     return(lyr)
   })
   
-  r <- unlist(r) %>%
+  r <- unlist(r) |>
     terra::rast() 
   
   if (input_type == "binary"){
     
-    # print(r %>%
-    #         max() %>%
+    # print(r |>
+    #         max() |>
     #         terra::as.factor())
     # print(fac_lev_df)
     
-    r <- r %>%
-      max() %>%
-      terra::as.factor() %>%
+    r <- r |>
+      max() |>
+      terra::as.factor() |>
       terra::categories(.,
                         # layer = 0,
                         value = fac_lev_df)
@@ -1299,7 +1299,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                           function(m, rast = data){
                             tmp <- terra::predict(rast, m, 
                                                   re.form = NA,
-                                                  na.rm = T) %>%
+                                                  na.rm = T) |>
                               terra::as.data.frame()
                             tmp[,1]
                           }, 
@@ -1441,25 +1441,25 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
   # if (incl_obs_uncert == F){
     tmp_df <- terra::as.data.frame(data, xy = T)
     mean_pred <- fitted(mod, tmp_df, 
-                        re_form = NA) %>%
+                        re_form = NA) |>
       as.data.frame()
     median_pred <- fitted(mod, tmp_df, 
                           re_form = NA,
-                          robust = T) %>%
+                          robust = T) |>
       as.data.frame()
     
     
-    mean_pred <- mean_pred %>%
+    mean_pred <- mean_pred |>
       dplyr::rename(prediction_mean  = Estimate,
                     prediction_sd = Est.Error,
                     prediction_q2.5  = Q2.5,
                     prediction_q97.5 = Q97.5)
-    median_pred <- median_pred %>%
+    median_pred <- median_pred |>
       dplyr::rename(prediction_median  = Estimate,
                     prediction_mad = Est.Error)
     tmp_pred <- dplyr::bind_cols(tmp_df[,c("x", "y")], 
                                  mean_pred,
-                                 median_pred %>%
+                                 median_pred |>
                                    dplyr::select(prediction_median, 
                                                  prediction_mad))
     
@@ -1583,7 +1583,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                              tmp_out
                                            })
       
-      covars_not_in_rast <- covars_not_in_rast %>%
+      covars_not_in_rast <- covars_not_in_rast |>
         # Combine covar nm with levels
         dplyr::mutate(covar_nm_levs = paste0(covar_nm, covar_levs), 
                       # check for presence in tmp_rast
@@ -1602,16 +1602,16 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                           )
                                         })
       
-      covars_not_in_rast <- covars_not_in_rast %>%
-        dplyr::left_join(is_binary_layer) %>%
-        dplyr::group_by(covar_nm) %>%
+      covars_not_in_rast <- covars_not_in_rast |>
+        dplyr::left_join(is_binary_layer) |>
+        dplyr::group_by(covar_nm) |>
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
       # Split binary and non binary layers
-      bin_covars <- covars_not_in_rast %>%
+      bin_covars <- covars_not_in_rast |>
         dplyr::filter(is_binary_covar == T)
       
-      non_bin_covars <- covars_not_in_rast %>%
+      non_bin_covars <- covars_not_in_rast |>
         dplyr::filter(is_binary_covar == F)
       
       if (length(unique(non_bin_covars$covar_nm)) > 1){
@@ -1631,9 +1631,9 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                    covar_df = bin_covars,
                                    data_rast = tmp_rast,
                                    mod_data = fit_dat,
-                                   input_type = "binary") %>%
-          unlist() %>%
-          c() %>%
+                                   input_type = "binary") |>
+          unlist() |>
+          c() |>
           terra::rast()
         
         n_bin_covar_layers <- dim(tmp_bin_rast)[3]
@@ -1653,9 +1653,9 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                     covar_df = non_bin_covars,
                                     data_rast = tmp_rast,
                                     mod_data = fit_dat,
-                                    input_type = "non-binary") %>%
-          unlist() %>%
-          c() %>%
+                                    input_type = "non-binary") |>
+          unlist() |>
+          c() |>
           terra::rast()
         # print(tmp_prop_rast)
         # Want to end up with N raster stacks - 1 per prop level
@@ -1671,7 +1671,7 @@ terra_to_df_inla <- function(data, obj, fix_vars){
     # if n_prop_covar_lyrs > 1  - list of rasters - each named based on covar level
     if (n_prop_covar_lyrs > 1){
       
-      non_bin_sub <- non_bin_covars %>%
+      non_bin_sub <- non_bin_covars |>
         dplyr::filter(!is.na(covar_levs_rast))
       
       non_bin_r <- tmp_rast[[non_bin_sub$covar_levs_rast]]
@@ -1687,12 +1687,12 @@ terra_to_df_inla <- function(data, obj, fix_vars){
                                        xy = T)
         
         # Get proportional weighting
-        lyr_nm <- terra::cats(tmp_prop_rast)[[i]] %>% 
-          dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) %>% 
+        lyr_nm <- terra::cats(tmp_prop_rast)[[i]] |> 
+          dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) |> 
           dplyr::pull(category)
         
-        lyr_orig_nm <- non_bin_sub %>%
-          dplyr::filter(covar_levs == lyr_nm) %>%
+        lyr_orig_nm <- non_bin_sub |>
+          dplyr::filter(covar_levs == lyr_nm) |>
           dplyr::pull(covar_levs_rast)
         
         prop_df <- terra::as.data.frame(non_bin_r[[lyr_orig_nm]],
@@ -1801,8 +1801,8 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
     var_i <- fix_vars[i]
     if ( (is.factor(fit_dat[[var_i]]) | is.character(fit_dat[[var_i]])) ){
       # Get unique chr values for fit data
-      var_i_fit_levs <- fit_dat[[var_i]] %>% 
-        unique() %>%
+      var_i_fit_levs <- fit_dat[[var_i]] |> 
+        unique() |>
         as.character()
       # Alternative - get levels directly - if factor
       # levels(fit_dat[[var_i]])
@@ -1815,8 +1815,8 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
       var_i_proj <- proj_dat[[var_i]]
       
       if (proj_dat_type == "df"){
-        var_i_proj_levs <- var_i_proj %>% 
-          unique() %>%
+        var_i_proj_levs <- var_i_proj |> 
+          unique() |>
           as.character()
         # Alternative - get levels directly - if factor
         # levels(fit_dat[[var_i]])
@@ -1849,10 +1849,10 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
                                "are not in the model fitting data!\n\n",
                                "Please fix this, see details below:\n"
                                ) ))
-    problem_vars %>%
-      dplyr::bind_rows() %>%
-      insight::format_table(use_symbols = T, digits = 0) %>%
-      insight::export_table() %>%
+    problem_vars |>
+      dplyr::bind_rows() |>
+      insight::format_table(use_symbols = T, digits = 0) |>
+      insight::export_table() |>
       message()
     
     # print()

@@ -90,7 +90,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   # custom cols
   cv_spec <- data.frame(fold_type = fold_type[fold_type != "Custom"],
                         fold_col = fold_type[fold_type != "Custom"],
-                        stringsAsFactors = F) %>%
+                        stringsAsFactors = F) |>
     dplyr::mutate(fold_col = dplyr::case_when(fold_type == "Random-2" ~ "fold_id",
                                               fold_type == "Random-3" ~ "fold_id",
                                               fold_type == "Random-5" ~ "fold_id",
@@ -103,7 +103,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     cv_spec <- bind_rows(cv_spec,
                          expand.grid(fold_type = c("Custom"),
                                      fold_col = custom_col,
-                                     stringsAsFactors = F) %>%
+                                     stringsAsFactors = F) |>
                            as.data.frame()
     )
   }
@@ -155,7 +155,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   cv_idx <- purrr::map(cv_out,
                        function(x){
                          x$n_folds > 1
-                       }) %>% 
+                       }) |> 
     unlist()
   cv_out <- cv_out[cv_idx]
   
@@ -195,7 +195,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     # Drop iid random effects
     rand_vars <- all.vars(mod_obj$user_formula$random)
     
-    stk_te$effects$data <- stk_te$effects$data %>% 
+    stk_te$effects$data <- stk_te$effects$data |> 
       dplyr::mutate_at(rand_vars, ~ NA)
 
     # print(head(stk_te$effects$data))
@@ -237,7 +237,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     insample_df$prediction_q2.5 <- tmp_pred$`0.025quant`
     insample_df$prediction_q97.5 <- tmp_pred$`0.975quant`
     # Drop y - will be regenerated below for error estimation etc
-    insample_df <- insample_df %>% 
+    insample_df <- insample_df |> 
       dplyr::select(-y)
     # %%%%%
     # # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -250,7 +250,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     
     tmp_pred <- fitted(mod_obj$model,
                        insample_df,
-                       re_form = NA) %>%
+                       re_form = NA) |>
       as.data.frame()
     insample_df$prediction <- tmp_pred$Estimate
     insample_df$prediction_q2.5 <- tmp_pred$Q2.5
@@ -263,17 +263,17 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   
   # backtransform prediction, y as resp term, 
   if (!is.null(backtransform)){
-    insample_df <- insample_df %>%
+    insample_df <- insample_df |>
       dplyr::mutate(prediction = backtransform(prediction),
                     y = !!dplyr::sym(all.vars(orig_form[[2]])))
   }
   # or convert resp value to y - based on eqn, and don't backtransform prediction
   if (is.null(backtransform)){
-    insample_df <- insample_df %>%
+    insample_df <- insample_df |>
       dplyr::mutate(y = !!orig_form[[2]] )
   }
   
-  insample_df <- insample_df %>%
+  insample_df <- insample_df |>
     dplyr::mutate(error = y - prediction)
   
   insample_metrics <- calc_cv_metrics(insample_df$prediction, 
@@ -404,7 +404,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
         all(unlist(lapply(db_obj, function(x){fold_col %in% colnames(x$sites)})))
       )
       
-      fold_df <- lapply(db_obj, function(x){x$sites[,c("SSBS", fold_col)]}) %>%
+      fold_df <- lapply(db_obj, function(x){x$sites[,c("SSBS", fold_col)]}) |>
         dplyr::bind_rows()
       
       # TODO: what if model is of beta diversity - need to use SSBS1?
@@ -570,7 +570,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
                                 by = c("SSBS1" = "SSBS"))
   }
   
-  fold_ids <- unique(cv_data %>% dplyr::pull(!!fold_col))
+  fold_ids <- unique(cv_data |> dplyr::pull(!!fold_col))
   n_folds <- length(fold_ids)
   # print(n_folds)
   # Make a list to store output - length = length(unique(new_df[,fold_var]))
@@ -604,30 +604,30 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   for (i in 1:n_folds){
     
-    tr <- cv_data %>%
+    tr <- cv_data |>
       dplyr::filter(!!dplyr::sym(fold_col) != fold_ids[i])
-    te <- cv_data %>%
+    te <- cv_data |>
       dplyr::filter(!!dplyr::sym(fold_col) == fold_ids[i])
     
     
     # Make a fold_id/fold_idx column for te...
-    te <- te %>%
+    te <- te |>
       dplyr::mutate(fold_id = !!dplyr::sym(fold_col))
     
     # Adjust weights in tr so sum per data type - dataset_modelling_id
     # sum to same value as in orig data...
     if (incl_weights == T){
-      weight_df <- orig_data %>%
-        dplyr::group_by(dataset_modelling_id) %>%
+      weight_df <- orig_data |>
+        dplyr::group_by(dataset_modelling_id) |>
         dplyr::summarise(prop_weight = sum(data_weight))
       
-      tr <- tr %>%
+      tr <- tr |>
         dplyr::select(-data_weight)
-      te <- te %>%
+      te <- te |>
         dplyr::select(-data_weight)
       
-      tr <- dplyr::left_join(tr, weight_df) %>%
-        dplyr::group_by(dataset_modelling_id) %>%
+      tr <- dplyr::left_join(tr, weight_df) |>
+        dplyr::group_by(dataset_modelling_id) |>
         dplyr::mutate(data_weight = prop_weight/dplyr::n())
     }
     
@@ -691,14 +691,14 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       # %%%%%%%%%%
       
       # Make X_tr and X_te
-      X_tr <- tr %>% 
+      X_tr <- tr |> 
         dplyr::select(-y)
       
       # Drop iid random effects from te
       rand_vars <- all.vars(orig_form_user_ls$random)
     
-      X_te <- te %>% 
-        dplyr::select(-y) %>%
+      X_te <- te |> 
+        dplyr::select(-y) |>
         dplyr::mutate_at(rand_vars, ~ NA)
       
       # print(dim(X_tr))
@@ -836,12 +836,12 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       te$prediction_q2.5 <- tmp_pred$`0.025quant`
       te$prediction_q97.5 <- tmp_pred$`0.975quant`
       # Drop y from te - will be regenerated below for error estimation etc
-      te <- te %>% 
+      te <- te |> 
         dplyr::select(-y)
       
       # Get coefficients from model
-      fixef_df <- tmp_m$summary.fixed %>%
-        tibble::rownames_to_column("Coefficient_name") %>%
+      fixef_df <- tmp_m$summary.fixed |>
+        tibble::rownames_to_column("Coefficient_name") |>
         dplyr::rename(Coefficient_value = mean,
                       loCI = `0.025quant`,
                       median = `0.5quant`,
@@ -866,9 +866,9 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
                        tmp_args)
       
       # predict or fitted??
-      # tmp_pred <- predict(tmp_m, te, re_form = NA)%>%
+      # tmp_pred <- predict(tmp_m, te, re_form = NA)|>
       #   as.data.frame()
-      tmp_pred <- fitted(tmp_m, te, re_form = NA) %>%
+      tmp_pred <- fitted(tmp_m, te, re_form = NA) |>
         as.data.frame()
       te$prediction <- tmp_pred$Estimate
       te$prediction_q2.5 <- tmp_pred$Q2.5
@@ -905,17 +905,17 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   # backtransform prediction, y as resp term, 
   if (!is.null(backtransform)){
-    cv_out_df <- cv_out_df %>%
+    cv_out_df <- cv_out_df |>
       dplyr::mutate(prediction = backtransform(prediction),
                     y = !!dplyr::sym(all.vars(orig_form[[2]])))
   }
   # or convert resp value to y - based on eqn, and don't backtransform prediction
   if (is.null(backtransform)){
-    cv_out_df <- cv_out_df %>%
+    cv_out_df <- cv_out_df |>
       dplyr::mutate(y = !!orig_form[[2]] )
   }
   
-  cv_out_df <- cv_out_df %>%
+  cv_out_df <- cv_out_df |>
     dplyr::mutate(error = y - prediction)
   
   # cv metrics
@@ -1065,7 +1065,7 @@ calc_cv_metrics <- function(pred, obs, error){
                                         "smape", 
                                         "mse", "rmse", "nrmse", 
                                         "rrmse", "rmsle", "rse", 
-                                        "rsq")) %>%
+                                        "rsq")) |>
     dplyr::mutate(Metric_fct = factor(Metric,
                                       levels = c("Correlation",
                                                  "Correlation_squared",
@@ -1134,8 +1134,8 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                     error   = error, 
                     fold_id = fold_id)
   
-  metr_df <- tmp %>%
-    dplyr::group_by(fold_id) %>%
+  metr_df <- tmp |>
+    dplyr::group_by(fold_id) |>
     dplyr::summarise(pred_mean = mean(pred, na.rm = T),
                      obs_mean  = mean(obs, na.rm = T),
                      
@@ -1160,16 +1160,16 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      rae = sum(abs(error), na.rm = T) / sum((obs - obs_mean), na.rm = T),
                      rse = sum(error^2, na.rm = T) / sum( (obs - obs_mean)^2 , na.rm = T),
                      rsq = 1- rse 
-                     ) %>%
+                     ) |>
     dplyr::select(fold_id, cor_out, cor_sq, me, mae, mape, smape, mse, rmse, nrmse,
                   rrmse, rmsle,
-                  rae, rse, rsq) %>%
+                  rae, rse, rsq) |>
     tidyr::pivot_longer(!fold_id, 
                         names_to = "Metric_shrt", 
-                        values_to = "Metric_val") %>%
+                        values_to = "Metric_val") |>
     dplyr::mutate(Metric_shrt = dplyr::case_when(Metric_shrt == "cor_out" ~ "cor",
                                                   Metric_shrt == "cor_sq" ~ "corsq",
-                                                  T ~ Metric_shrt)) %>%
+                                                  T ~ Metric_shrt)) |>
     dplyr::mutate(Metric = dplyr::case_when(Metric_shrt == "cor"   ~ "Correlation",
                                             Metric_shrt == "corsq" ~ "Correlation_squared",
                                             Metric_shrt == "me"    ~ "Mean_error", 

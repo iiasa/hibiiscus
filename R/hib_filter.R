@@ -21,10 +21,10 @@ hib_filter_sites <- function(obj, condition){
 
   # TODO: Is there a way to check the condition is a condition
 
-  str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] %>%
-    rlang::quo_get_expr() %>%
-    deparse() %>%
-    trimws() %>%
+  str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] |>
+    rlang::quo_get_expr() |>
+    deparse() |>
+    trimws() |>
     paste(., collapse = " ")
   
   str_cond <- gsub("\"", "'", str_cond)
@@ -89,10 +89,10 @@ hib_filter_species <- function(obj, condition){
     )
   # TODO: Is there a way to check the condition is a condition
 
-  str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] %>%
-    rlang::quo_get_expr() %>%
-    deparse() %>%
-    trimws() %>%
+  str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] |>
+    rlang::quo_get_expr() |>
+    deparse() |>
+    trimws() |>
     paste(., collapse = " ")
   
   str_cond <- gsub("\"", "'", str_cond)
@@ -108,17 +108,17 @@ hib_filter_species <- function(obj, condition){
   # TODO: any need for further assertions??
   
   # Re-calculate site summary stats...
-  sites_upd <- species_upd %>%
-    dplyr::group_by(SSBS) %>%
+  sites_upd <- species_upd |>
+    dplyr::group_by(SSBS) |>
     dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
-                     N_samples = dplyr::n()) %>%
+                     N_samples = dplyr::n()) |>
     dplyr::ungroup()
   
   sites_orig_sub <- dplyr::filter(obj$sites, SSBS %in% sites_upd$SSBS)
   
   # TODO: what if Higher_taxa/N_samples are not in sites, 
-  sites_upd <- sites_orig_sub %>%
-    dplyr::select(-c(Higher_taxa, N_samples)) %>%
+  sites_upd <- sites_orig_sub |>
+    dplyr::select(-c(Higher_taxa, N_samples)) |>
     dplyr::left_join(sites_upd, by = "SSBS")
   
   # Update obj
