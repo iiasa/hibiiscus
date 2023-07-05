@@ -43,7 +43,7 @@ library(hibiiscus)
 ## Citation
 
 <code>
-[XXX,..., Jung M] (2022). hibiiscus - Modelling framework for hierachical ecological impact analysis. R package version 0.1, https://github.com/iiasa/hibiiscus.
+Cornford, R & Jung, Martin (2022). hibiiscus - Modelling framework for hierachical ecological impact analysis. R package version 0.1, https://github.com/iiasa/hibiiscus.
 </code>
 
 ## Acknowledgement
