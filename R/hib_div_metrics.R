@@ -545,7 +545,7 @@ hib_calc_rsr <- function(obj){
   rsr_df <- purrr::map_dfr(seq(1,100),
                            function(x, df = rsr_df){
                              tmp <- df %>%
-                               dplyr::group_by(SSBS) %>%
+                               dplyr::group_by(SSBS, SS) %>%
                                dplyr::summarise(sr = rarefy_comm(!!dplyr::sym(measure_var), 
                                                                  min_abund[1]),
                                                 min_abund = min_abund[1],
@@ -555,7 +555,7 @@ hib_calc_rsr <- function(obj){
                              # print(head(tmp))
                              tmp
                            }) %>%
-    dplyr::group_by(SSBS) %>%
+    dplyr::group_by(SSBS, SS) %>%
     dplyr::summarise(Rarefied_species_richness = mean(sr),
                      min_abund = min_abund[1])
   close(pb)
@@ -1050,8 +1050,10 @@ hib_calc_pie <- function(obj){
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
-#' @param metrics A [`character`] vector, any of "Total_abundance", "Species_richness", 
-#' "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness"
+#' @param metrics A [`character`] vector, any/all of "Total_abundance", "Species_richness", 
+#' "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
+#' "Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
+#' "HillShannon_diversity", "HillSimpson_diversity", "PIE"
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{

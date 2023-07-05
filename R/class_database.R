@@ -45,7 +45,7 @@ Database <- R6Class("Database",
                         )
 
                       species <- readr::read_rds(paths$species)
-                      
+
                       species$version <- version
                       
                       # If predicts2022 column names, rename to align with 2016...
@@ -438,18 +438,18 @@ Database <- R6Class("Database",
                       }
                       
                       if (!dir.exists(dirname(output_path))){
-                        message(crayon::yellow(paste0("Warning: '", dirname(output_path), "' doesn't exist.",
+                        message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
                                                       "\n",
                                                       "This folder will be created.\n")))
                         dir.create(dirname(output_path), recursive = T)
                       }
                       if (file.exists(output_path)){
-                        message(crayon::yellow(paste0("Warning: '", output_path, "' already exists.",
+                        message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
                                                       "\n",
                                                       "This file will be updated.\n")))
                       }
                       
-                      message(crayon::green(paste0("Saving hib database to: '", output_path, "' ...\n")) )
+                      message(crayon::green(paste0("Saving hib database to: '", output_path, "'\n")) )
                       
                       # Note: currently doesn't make the folder or check parent folders exist...
                       # Could include - with a warning...

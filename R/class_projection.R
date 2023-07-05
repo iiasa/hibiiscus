@@ -240,19 +240,19 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   }
                                   
                                   if (!dir.exists(dirname(output_path))){
-                                    message(crayon::yellow(paste0("Warning: '", dirname(output_path), "' doesn't exist.",
+                                    message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
                                                                   "\n",
                                                                   "This folder will be created.\n")))
                                     dir.create(dirname(output_path), recursive = T)
                                   }
                                   
                                   if (file.exists(output_path)){
-                                    message(crayon::yellow(paste0("Warning: '", output_path, "' already exists.",
+                                    message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
                                                                   "\n",
                                                                   "This file will be updated.\n")))
                                   }
                                   
-                                  message(crayon::green(paste0("Saving projection to: '", output_path, "' ...\n")) )
+                                  message(crayon::green(paste0("Saving projection to: '", output_path, "'\n")) )
                                   
                                   saveRDS(self, output_path)
                                   assertthat::assert_that(file.exists(output_path),

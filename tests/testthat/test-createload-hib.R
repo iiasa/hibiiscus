@@ -3,6 +3,7 @@
 # %%%%%%%%%%
 # create_hib 
 # %%%%%%%%%%
+# TODO: group all into a single test_that call: test_that("create_hib converts data to hib database correctly",{})
 # - check that passing an incorrect file path returns an error
 test_that("create_hib returns an error if file does not exist", {
   expect_error(create_hib("../not_a_file.rds"),
@@ -36,6 +37,7 @@ test_that("create_hib returns an error if file is not PREDICTS-like", {
 })
 
 # - check that only if correct files, and version  are included will it work - conditional on class_database.
+# TODO: drop real data...
 tmp_db <- create_hib(path_species = "../raw_data/millard_et_al_2021/PREDICTS_pollinators_8_exp.rds",
                      version = "custom")
 test_that("create_hib returns a 'Database'", {
@@ -65,6 +67,7 @@ test_that("save_hib returns an error if file path is numeric", {
 # %%%%%%%%%%
 # load_hib
 # %%%%%%%%%%
+# TODO: group into single test_that("load_hib correclty loads a previously saved hib database", {})
 # - fails if no path
 test_that("load_hib returns an error if no file path is provided", {
   expect_error(load_hib(),
