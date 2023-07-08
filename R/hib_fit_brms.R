@@ -72,6 +72,9 @@ hib_fit_brms <- function(obj,
   # %%%%%
   # if weights is not null, ensure sum to 1 (just rescale)
   if (!is.null(dataset_weights)){
+    assertthat::assert_that(
+      length(dataset_weights) == length(obj)
+    )
     if (sum(dataset_weights) != 1){
       dataset_weights <- dataset_weights/sum(dataset_weights)  
     }

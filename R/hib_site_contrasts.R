@@ -54,10 +54,26 @@ hib_calc_site_contrasts <- function(obj,
     cols_of_interest <- c(cols_of_interest, "Latitude", "Longitude")
   }
   
+  
+  # assert that cols of interest are in obj$sites
+  # subset of c("SSBS", "SSB", "SS", "LUI", "Latitude", "Longitude")
+  assertthat::assert_that(
+    all(cols_of_interest %in% colnames(obj$sites))
+  )
   site_df <- obj$sites[, cols_of_interest]
   
   # %%%
   # Get site contrasts
+
+  # assert that specific cols are in obj$species 
+  # c(Predominant_land_use, Diversity_metric_type, SS, Sampling_effort, Taxon_name_entered)
+  
+  assertthat::assert_that(
+    all(c("Predominant_land_use", "LUI", "Diversity_metric_type", "SS", 
+          "SSBS", "Sampling_effort", "Taxon_name_entered") %in% colnames(obj$species))
+  )
+  # NOTE: they should be anyway based on hib database self checks...
+
   spp_tmp <- obj$species
   
   spp_tmp <- spp_tmp |>
@@ -141,7 +157,7 @@ hib_calc_site_contrasts <- function(obj,
         dplyr::select(SSBS, base_lui)
       
       baseline_sites <- site_data |>
-        dplyr::filter(base_lui == 1) |>
+        dplyr::filter(base_lui == T) |>
         dplyr::pull(SSBS)
     } else if (is.null(baseline_lui)){
       site_data <- dplyr::filter(site_tmp, SS == x)

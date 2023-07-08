@@ -91,6 +91,8 @@ Database <- R6Class("Database",
                           assertthat::has_name(sites, "SSBS"),
                           assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
                           assertthat::has_name(sites, "Use_intensity")
+                        #   assertthat::has_name(sites, "Longitude"), 
+                          # assertthat::has_name(sites, "Latitude")
                         )
                       }
                       
@@ -104,8 +106,6 @@ Database <- R6Class("Database",
                           assertthat::has_name(species, "Higher_taxon"),
                           assertthat::has_name(species, "Predominant_land_use"),
                           assertthat::has_name(species, "Use_intensity")
-                          # Predominant land use
-                          # Use intensity
                           )
                         message(crayon::green("Generating sites dataframe..."))
                         
@@ -169,6 +169,7 @@ Database <- R6Class("Database",
                       
                       # Add LUI column - 
                       # TODO: Only if no LUI already??
+
                       sites <- sites |>
                         dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
                                            sep = "_"))
@@ -323,18 +324,41 @@ Database <- R6Class("Database",
                         assertthat::has_name(sites, "SSBS"),
                         assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
                         assertthat::has_name(sites, "Use_intensity"),
-                        
+                        # TODO: extra essential columns
+                        assertthat::has_name(sites, "SSB"), 
+                        assertthat::has_name(sites, "LUI"), 
+                        assertthat::has_name(sites, "Longitude"), 
+                        assertthat::has_name(sites, "Latitude"),
+
+
                         # And the species data
                         assertthat::has_name(species, "Source_ID"),
                         assertthat::has_name(species, "SS"),
                         assertthat::has_name(species, "SSBS"),
                         assertthat::has_name(species, "Best_guess_binomial"),
-                        assertthat::has_name(species, "Measurement")
+                        assertthat::has_name(species, "Measurement"),
+                        # Predominant_land_use, Use_intensity, LUI - optional, if present in sites,
+                        # can be added from there... - could even be added later... via set_lu_legend
+                        
+                        assertthat::has_name(species, "Predominant_land_use"), 
+                        assertthat::has_name(species, "Use_intensity"), 
+                        assertthat::has_name(species, "LUI"), 
+
+                        assertthat::has_name(species, "Diversity_metric_type"), 
+
+                        # Should cols needed for div metrics be enforced here...
+                        # What use is the database if metrics can't be calculated..?!
+                        # Taxon_name_entered, Best_guess_binomial, Sampling_effort
+                        assertthat::has_name(species, "Taxon_name_entered"), 
+                        # assertthat::has_name(species, "Best_guess_binomial"), 
+                        assertthat::has_name(species, "Sampling_effort")
+                        # Diversity_metric_is_effort_sensitive
+
                       )
                       # Finally, check that all sites are in species
                       # NOTE RC - source ID is just the paper...
                       assertthat::assert_that(
-                        nrow(sites)>0, nrow(species)>0,
+                        nrow(sites) > 0, nrow(species) > 0,
                         all( unique(sites$Source_ID) %in% unique(species$Source_ID) )
                       )
                       invisible()
@@ -466,7 +490,8 @@ Database <- R6Class("Database",
                       assertthat::assert_that(
                         assertthat::has_name(self$species, "Sampling_effort"),
                         assertthat::has_name(self$species, "SS"),
-                        assertthat::has_name(self$species, "Measurement")
+                        assertthat::has_name(self$species, "Measurement"),
+                        assertthat::has_name(self$species, "Diversity_metric_is_effort_sensitive")
                       )
 
                       # add a message...

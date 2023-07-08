@@ -25,7 +25,7 @@ hib_filter_sites <- function(obj, condition){
     rlang::quo_get_expr() |>
     deparse() |>
     trimws() |>
-    paste(., collapse = " ")
+    paste(collapse = " ")
   
   str_cond <- gsub("\"", "'", str_cond)
   str_cond <- gsub("  ", "", str_cond)
@@ -93,7 +93,7 @@ hib_filter_species <- function(obj, condition){
     rlang::quo_get_expr() |>
     deparse() |>
     trimws() |>
-    paste(., collapse = " ")
+    paste(collapse = " ")
   
   str_cond <- gsub("\"", "'", str_cond)
   str_cond <- gsub("  ", "", str_cond)

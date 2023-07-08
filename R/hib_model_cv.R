@@ -173,7 +173,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   # TODO:
   if (inherits(mod_obj, "hib_inla_model")){
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    message(crayon::yellow("Warning: INLA insample prediction in development, current output is preliminary!"))
+    # message(crayon::yellow("Warning: INLA insample prediction in development, current output is preliminary!"))
     
     # In-sample preds
     insample_df <- mod_obj$data

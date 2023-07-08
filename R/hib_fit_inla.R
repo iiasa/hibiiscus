@@ -101,12 +101,20 @@ hib_fit_inla <- function(obj,
 
     # NOTE, not all covars are in sites, (Intercept)
     covars_sub <- all_covars[all_covars %in% colnames(obj$sites)]
-    
+    missing_covars <- all_covars[!all_covars %in% colnames(obj$sites)]
+    missing_covars <- missing_covars[!missing_covars == "Intercept"]
+    if (length(missing_covars) > 0){
+      message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
+                                    "formula are missing; ",
+                                    paste(missing_covars, colapse = ", "),
+                                    "\n")))
+    }
+
     # Only need lon/lat if incl_spatial_term is TRUE
     if (incl_spatial_term){
-      mod_df <- obj$sites[,unique(c(covars_sub, c("SS", "SSB", "SSBS", "Longitude", "Latitude")))]
+      mod_df <- obj$sites[,unique(c(covars_sub, c("SSBS", "Longitude", "Latitude")))] # "SS", "SSB", 
     } else {
-      mod_df <- obj$sites[,unique(c(covars_sub, c("SS", "SSB", "SSBS")))]
+      mod_df <- obj$sites[,unique(c(covars_sub, c("SSBS")))] # "SS", "SSB", 
     }
     
     # find relevant obj$diversity$Data[[]] - which one contains the response...
@@ -121,7 +129,8 @@ hib_fit_inla <- function(obj,
     )
     
     mod_df <- mod_df |>
-      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
+      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")],
+                        by = "SSBS")
     
     mod_df <- na.omit(mod_df)
     
@@ -132,21 +141,30 @@ hib_fit_inla <- function(obj,
     # NOTE, not all covars are in sites, (Intercept)
     covars_sub <- all_covars[all_covars %in% colnames(obj$site_contrasts)]
     
+    missing_covars <- all_covars[!all_covars %in% colnames(obj$site_contrasts)]
+    missing_covars <- missing_covars[!missing_covars == "Intercept"]
+    if (length(missing_covars) > 0){
+      message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
+                                    "formula are missing; ",
+                                    paste(missing_covars, colapse = ", "),
+                                    "\n")))
+    }
+
     # Only need lon/lat if incl_spatial_term is TRUE
     if (incl_spatial_term){
       if (("Latitude_midpoint" %in% colnames(obj$site_contrasts)) &
           ("Longitude_midpoint" %in% colnames(obj$site_contrasts))){
-        mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB", 
+        mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", #"SS", "SSB", 
                                                              "Longitude_midpoint", 
                                                              "Latitude_midpoint")))]
       } else {
         message(crayon::yellow("Warning: coordinate information unavailable, spatial random effect cannot be fitted.\n"))
-        mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB")))]
+        mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2")))] # "SS", "SSB"
         incl_spatial_term <- F
       }
 
     } else {
-      mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2", "SS", "SSB")))]
+      mod_df <- obj$site_contrasts[,unique(c(covars_sub, c("SSBS1", "SSBS2")))] # , "SS", "SSB"
     }
     
     # find relevant obj$diversity$Data[[]] - which one contains the response...
@@ -161,7 +179,8 @@ hib_fit_inla <- function(obj,
     )
     
     mod_df <- mod_df |>
-      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
+      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")],
+                      by = c("SSBS1", "SSBS2"))
     
     mod_df <- na.omit(mod_df)
     

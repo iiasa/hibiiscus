@@ -167,7 +167,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                                                 .y = m_summ$random.model,
                                                 function(.x, .y){paste0("\t", .x, "\t ", .y)}) |>
                                       unlist() |>
-                                      paste0(., collapse = "\n")
+                                      paste0(collapse = "\n")
                               
                               
                               message(
@@ -311,7 +311,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 
                                 # Check inla summary.random - what if random slopes??
                                 rand_df <- self$model$summary.random[rand_vars] |>
-                                  dplyr::bind_rows(., .id = "Covar") |>
+                                  dplyr::bind_rows(.id = "Covar") |>
                                   # order from small to large?
                                   dplyr::group_by(Covar) |>
                                   dplyr::arrange(mean, .by_group = T) |>

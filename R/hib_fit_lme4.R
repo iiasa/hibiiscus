@@ -344,8 +344,20 @@ get_model_data <- function(obj,
     # brms model, this will fail!!
     # Could subset to those covars available in sites - as in INLA
     # And throw a warning?!
-    
-    mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
+    # TODO: - only include available columns!!!
+    # 
+    all_covars <- unique(c(mod_covars, "SSBS"))
+    missing_covars <- all_covars[!all_covars %in% colnames(obj$sites)]
+    if (length(missing_covars) > 0){
+      message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
+                                    "formula are missing; ",
+                                    paste(missing_covars, colapse = ", "),
+                                    "\n")))
+    }
+    all_covars_sub <- all_covars[all_covars %in% colnames(obj$sites)]
+    mod_df <- obj$sites[,all_covars_sub]
+
+    # mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
     # find relevant obj$diversity$Data[[i]] 
     div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,
                                         function(x, resp){
@@ -358,10 +370,23 @@ get_model_data <- function(obj,
     )
     
     mod_df <- mod_df |>
-      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")])
+      dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")],
+                      by = "SSBS")
     
   } else if (mod_resp %in% between_site_resp){
-    mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]
+
+    all_covars <- unique(c(mod_covars, c("SSBS1", "SSBS2") ))
+    missing_covars <- all_covars[!all_covars %in% colnames(obj$site_contrasts)]
+    if (length(missing_covars) > 0){
+      message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
+                                    "formula are missing; ",
+                                    paste(missing_covars, colapse = ", "),
+                                    "\n")))
+    }
+    all_covars_sub <- all_covars[all_covars %in% colnames(obj$site_contrasts)]
+    mod_df <- obj$site_contrasts[,all_covars_sub]
+
+    # mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]
     
     # find relevant obj$diversity$Data[[]] - which one contains the response...
     div_data_idx <- which(unlist(lapply(obj$diversity_between$Data,
@@ -375,7 +400,8 @@ get_model_data <- function(obj,
     )
     
     mod_df <- mod_df |>
-      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")])
+      dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")],
+                      by = c("SSBS1", "SSBS2"))
     
   } else {
     message(crayon::magenta("Error: response variable specified is not available.\n"))

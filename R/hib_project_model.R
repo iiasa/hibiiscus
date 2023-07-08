@@ -284,7 +284,7 @@ hib_mod_project <- function(obj,
                             fix_vars = fix_vars) |>
         # TODO: is ".," needed?
         # TODO: better term for id
-        dplyr::bind_rows(., .id = "Year")
+        dplyr::bind_rows(.id = "Year")
     }
     
     # With data_df...
@@ -1172,7 +1172,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     if (input_type == "non-binary"){
       lyr <- lyr |>
         terra::as.factor() |>
-        terra::categories(., value = lev_df)
+        terra::categories(value = lev_df)
       # %%%
     }
     return(lyr)
@@ -1191,7 +1191,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     r <- r |>
       max() |>
       terra::as.factor() |>
-      terra::categories(.,
+      terra::categories(
                         # layer = 0,
                         value = fac_lev_df)
     

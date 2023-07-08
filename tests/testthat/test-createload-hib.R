@@ -4,9 +4,10 @@
 # create_hib 
 # %%%%%%%%%%
 # TODO: group all into a single test_that call: test_that("create_hib converts data to hib database correctly",{})
+# RM all relative paths...
 # - check that passing an incorrect file path returns an error
 test_that("create_hib returns an error if file does not exist", {
-  expect_error(create_hib("../not_a_file.rds"),
+  expect_error(create_hib("data/not_a_file.rds"),
                regexp = "does not exist")
 })
 

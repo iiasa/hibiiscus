@@ -19,6 +19,7 @@ calc_N_spp <- function(obj,
                        mod_df,
                        mod_resp){
   
+
   # TODO: what if abundance is zero - currently, included, but do these "species"
   # actually count?? 
   # dplyr::filter(Measurement > 0) |>
@@ -29,6 +30,11 @@ calc_N_spp <- function(obj,
                       "Mean_abundance", "Geometric_mean_abundance",
                       "Shannon_diversity",
                       "HillShannon_diversity", "HillSimpson_diversity")){
+
+    # TODO: assertions
+    # obj$species contains:
+    #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement
+    
     n_spp <- obj$species |>
       dplyr::filter(Diversity_metric_type == "Abundance") |>
       dplyr::filter(SSBS %in% mod_df$SSBS) |>
@@ -60,11 +66,6 @@ calc_N_spp <- function(obj,
       dplyr::n_distinct()
   }
   
-  # TODO:
-  # Add "Mean_abundance", "Geometric_mean_abundance",
-  # "Shannon_diversity",
-  # "HillShannon_diversity", "HillSimpson_diversity"
-  
   
   # Or for between site metrics
   if (mod_resp %in% tools::toTitleCase(c("manhattan", "euclidean", "canberra", "clark", "bray", 
@@ -76,7 +77,11 @@ calc_N_spp <- function(obj,
                                          "hypervolumne", "cosine",
                                          "baselga_bray_balanced", "baselga_bray_gradient",
                                          "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"))){
-    
+    # TODO: assertions
+    # obj$species contains:
+    #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement
+    #   Sampling_effort, Taxon_name_entered
+
     n_spp <- obj$species |>
       dplyr::filter(!is.na(Predominant_land_use) &
                       Diversity_metric_type == "Abundance") |>

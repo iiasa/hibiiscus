@@ -21,7 +21,8 @@ hib_calc_ta <- function(obj){
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -98,8 +99,10 @@ hib_calc_sr <- function(obj){
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SSBS"),
+    assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -214,8 +217,10 @@ hib_calc_simpson <- function(obj){
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SSBS"),
+    assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -326,8 +331,9 @@ hib_calc_chao1 <- function(obj){
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Diversity_metric_is_suitable_for_Chao"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -508,7 +514,9 @@ hib_calc_rsr <- function(obj){
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Diversity_metric_is_suitable_for_Chao"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   rarefy_comm <- function(abund_distr, N){
@@ -703,7 +711,8 @@ hib_calc_ma <- function(obj){
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -794,7 +803,8 @@ hib_calc_gma <- function(obj){
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -895,7 +905,8 @@ hib_calc_shannon <- function(obj){
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -1001,8 +1012,10 @@ hib_calc_pie <- function(obj){
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SSBS"),
+    assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type")
+    assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
   # %%%%%
@@ -1067,6 +1080,7 @@ hib_calc_div_within <- function(obj, metrics){
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
     assertthat::has_name(obj$species, "Diversity_metric_type"),
+    assertthat::has_name(obj$species, "Best_guess_binomial"),
     is.character(metrics)
   )
   
@@ -1607,7 +1621,10 @@ hib_calc_div_between <- function(obj,
     assertthat::has_name(obj$species, "Predominant_land_use"),
     assertthat::has_name(obj$species, "Use_intensity"),
     assertthat::has_name(obj$species, "LUI"),
+    # TODO: if not present, they have to be in obj$sites, hib_create...
+    # Can left join in - LUI is essential
     assertthat::has_name(obj$species, "Taxon_name_entered"),
+    assertthat::has_name(obj$species, "Best_guess_binomial"),
     
     assertthat::has_name(obj$sites, "SSBS"),
     assertthat::has_name(obj$sites, "SS")
@@ -1656,8 +1673,9 @@ hib_calc_div_between <- function(obj,
   # Get site comparisons
   spp_tmp <- obj$species
   
+
   spp_tmp <- spp_tmp |>
-    dplyr::filter(!is.na(Predominant_land_use) &
+    dplyr::filter(!is.na(Predominant_land_use) & # ??
                     Diversity_metric_type == "Abundance") |>
     dplyr::group_by(SS) |>
     dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
