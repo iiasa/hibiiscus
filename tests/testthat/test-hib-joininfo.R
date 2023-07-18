@@ -1,86 +1,41 @@
 # Testthat checks for hib_joininfo.R
 
 
-tmp_db <- create_hib(path_species = "../raw_data/millard_et_al_2021/PREDICTS_pollinators_8_exp.rds",
-                     version = "custom")
-tmp_db <- hib_filter_sites(tmp_db, Country == "United Kingdom")
-
-tmp <- "hello"
-
 # %%%%%%%%%%
 # hib_join_sites
 # %%%%%%%%%%
-# - 
 
-tmp_db <- hib_join_sites(tmp_db,
-                         data.frame(Predominant_land_use = c("Primary vegetation",                       
-                                                             "Mature secondary vegetation",
-                                                             "Young secondary vegetation",    
-                                                             "Secondary vegetation (indeterminate age)", 
-                                                             "Pasture",
-                                                             "Cropland", 
-                                                             "Urban"),
-                                    Simplified_land_use = c("Natural",
-                                                            "Natural",
-                                                            "Semi-natural",
-                                                            "Semi-natural",
-                                                            "Human",
-                                                            "Human",
-                                                            "Human"))
-                         )
-
-# - function works correctly
-test_that("hib_join_sites returns a hib database", {
+test_that("Check that hib_join_sites works correctly.", {
+  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db$sites$Predominant_land_use |> unique()
+  # Default levels of dummy data are: "Primary" "Secondary" "Cropland" "Urban"
+  # Simplified levels: "Natural/Semi-natural" "Human"
+  
+  df <- data.frame(Predominant_land_use = c("Primary", "Secondary", "Cropland", "Urban"),
+                   Simplified_land_use = c("Natural/Semi-natural",
+                                           "Natural/Semi-natural",
+                                           "Human",
+                                           "Human"))
+  
+  tmp_db <- hib_join_sites(tmp_db,
+                           df)
+  # -Successful join
   expect_true(inherits(tmp_db, 
                        "Database")
   )
-})
-
-
-# - function fails if no shared columns
-test_that("hib_join_sites returns an error if no shared columns", {
+  # -No compatible columns
   expect_error(hib_join_sites(tmp_db,
-                              data.frame(Not_a_column = c("Primary vegetation",                       
-                                                                  "Mature secondary vegetation",
-                                                                  "Young secondary vegetation",    
-                                                                  "Secondary vegetation (indeterminate age)", 
-                                                                  "Pasture",
-                                                                  "Cropland", 
-                                                                  "Urban"),
-                                         Not_a_land_use = c("Natural",
-                                                                 "Natural",
-                                                                 "Semi-natural",
-                                                                 "Semi-natural",
-                                                                 "Human",
-                                                                 "Human",
-                                                                 "Human"))),
+                              df |>
+                                dplyr::rename(Not_a_column = Predominant_land_use,
+                                              Not_a_landuse = Simplified_land_use)),
                regexp = "Columns in site_info are not compatible with the current site data"
-  )
-})
-
-# - function fails if obj is not a database
-test_that("hib_join_sites fails if obj is not a database", {
-  expect_error(hib_join_sites(tmp,
-                              data.frame(Predominant_land_use = c("Primary vegetation",                       
-                                                                  "Mature secondary vegetation",
-                                                                  "Young secondary vegetation",    
-                                                                  "Secondary vegetation (indeterminate age)", 
-                                                                  "Pasture",
-                                                                  "Cropland", 
-                                                                  "Urban"),
-                                         New_column = c("Natural",
-                                                                 "Natural",
-                                                                 "Semi-natural",
-                                                                 "Semi-natural",
-                                                                 "Human",
-                                                                 "Human",
-                                                                 "Human"))),
+               )
+  # -Not a database for obj
+  expect_error(hib_join_sites("Hello",
+                              df),
                regexp = "obj does not inherit from class Database"
   )
-})
-
-# - function fails if site_info is not a dataframe
-test_that("hib_join_sites fails if site_info is not a data frame", {
+  # -Not a dataframe for site_info
   expect_error(hib_join_sites(tmp_db,
                               "Not a dataframe"),
                regexp = "site_info is not a data frame"
@@ -92,81 +47,37 @@ test_that("hib_join_sites fails if site_info is not a data frame", {
 # hib_join_species
 # %%%%%%%%%%
 
-tmp_db <- create_hib(path_species = "../raw_data/millard_et_al_2021/PREDICTS_pollinators_8_exp.rds",
-                     version = "custom")
-tmp_db <- hib_filter_sites(tmp_db, Country == "United Kingdom")
-
-
-# %%%
-tmp_db <- hib_join_species(tmp_db,
-                         data.frame(Predominant_land_use = c("Primary vegetation",                       
-                                                             "Mature secondary vegetation",
-                                                             "Young secondary vegetation",    
-                                                             "Secondary vegetation (indeterminate age)", 
-                                                             "Pasture",
-                                                             "Cropland", 
-                                                             "Urban"),
-                                    Simplified_land_use = c("Natural",
-                                                            "Natural",
-                                                            "Semi-natural",
-                                                            "Semi-natural",
-                                                            "Human",
-                                                            "Human",
-                                                            "Human"))
-)
-
-# - function works correctly
-test_that("hib_join_species returns a hib database", {
+test_that("Check that hib_join_species works correctly.", {
+  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db$sites$Predominant_land_use |> unique()
+  # Default levels of dummy data are: "Primary" "Secondary" "Cropland" "Urban"
+  # Simplified levels: "Natural/Semi-natural" "Human"
+  
+  df <- data.frame(Predominant_land_use = c("Primary", "Secondary", "Cropland", "Urban"),
+                   Simplified_land_use = c("Natural/Semi-natural",
+                                           "Natural/Semi-natural",
+                                           "Human",
+                                           "Human"))
+  
+  tmp_db <- hib_join_species(tmp_db,
+                             df)
+  # -Successful join
   expect_true(inherits(tmp_db, 
                        "Database")
   )
-})
-
-
-# - function fails if no shared columns
-test_that("hib_join_species returns an error if no shared columns", {
+  # -No compatible columns
   expect_error(hib_join_species(tmp_db,
-                              data.frame(Not_a_column = c("Primary vegetation",                       
-                                                          "Mature secondary vegetation",
-                                                          "Young secondary vegetation",    
-                                                          "Secondary vegetation (indeterminate age)", 
-                                                          "Pasture",
-                                                          "Cropland", 
-                                                          "Urban"),
-                                         Not_a_land_use = c("Natural",
-                                                            "Natural",
-                                                            "Semi-natural",
-                                                            "Semi-natural",
-                                                            "Human",
-                                                            "Human",
-                                                            "Human"))),
+                              df |>
+                                dplyr::rename(Not_a_column = Predominant_land_use,
+                                              Not_a_landuse = Simplified_land_use)),
                regexp = "Columns in spp_info are not compatible with the current species data"
   )
-})
-
-# - function fails if obj is not a database
-test_that("hib_join_species fails if obj is not a database", {
-  expect_error(hib_join_species(tmp,
-                              data.frame(Predominant_land_use = c("Primary vegetation",                       
-                                                                  "Mature secondary vegetation",
-                                                                  "Young secondary vegetation",    
-                                                                  "Secondary vegetation (indeterminate age)", 
-                                                                  "Pasture",
-                                                                  "Cropland", 
-                                                                  "Urban"),
-                                         New_column = c("Natural",
-                                                        "Natural",
-                                                        "Semi-natural",
-                                                        "Semi-natural",
-                                                        "Human",
-                                                        "Human",
-                                                        "Human"))),
+  # -Not a database for obj
+  expect_error(hib_join_species("Hello",
+                              df),
                regexp = "obj does not inherit from class Database"
   )
-})
-
-# - function fails if site_info is not a dataframe
-test_that("hib_join_species fails if site_info is not a data frame", {
+  # -Not a dataframe for site_info
   expect_error(hib_join_species(tmp_db,
                               "Not a dataframe"),
                regexp = "spp_info is not a data frame"

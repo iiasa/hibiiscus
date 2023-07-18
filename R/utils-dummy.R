@@ -12,10 +12,12 @@
 #' projection or integration
 #' 
 #' @param what [`character`] stating what exactly to create. Available options are
-#' \code{"sites"} to emulate a PREDICTS site database and \code{"species"} for a species database.
+#' \code{"sites"} to emulate a PREDICTS site database and \code{"species"} for a 
+#' species database.
 #' @param n_studies [`numeric`] on the number of studies to be created.
 #' @param n_sites [`numeric`] Number of sites per study to be created.
-#' @param lulegend [`character`] of the land use legend to be generated for the dummy data.
+#' @param lulegend [`character`] of the land use legend to be generated for the 
+#' dummy data.
 #' @examples
 #' \dontrun{
 #'   out <- create_dummy_data()
@@ -27,10 +29,11 @@
 #' @author Martin Jung
 #' @noRd
 create_dummy_data <- function(what = "sites",
-                              n_studies = 20, n_sites = 10,
+                              n_studies = 20, 
+                              n_sites   = 10,
                               lu_legend = c("Primary", "Secondary", "Cropland", "Urban"),
-                              # TODO:
                               ui_legend = c("Minimal_use", "Light_use", "Intense_use")
+                              # TODO:
                               # lu_effects = c(1, 0.8, 0.5, 0.6),
                               # ui_effects = c(1, 0.75, 0.4)
                               # UN_region?
@@ -47,6 +50,7 @@ create_dummy_data <- function(what = "sites",
   # Match to available options
   what <- match.arg(what, c("sites", "species"), several.ok = FALSE)
   
+  # print(what)
   # Make the land-use legend an factor, with the first level being the reference
   lu_legend <- factor(lu_legend, levels = c(lu_legend[1], lu_legend[2:length(lu_legend)]))
   
@@ -137,10 +141,10 @@ create_dummy_data <- function(what = "sites",
     # stop("Not yet implemented!")
     # %%%%%%%%%%%%%%%%
     # for dev testing
-    n_studies <- 20
-    n_sites = 10
-    lu_legend = c("Primary", "Secondary", "Cropland", "Urban")
-    ui_legend = c("Minimal_use", "Light_use", "Intense_use")
+    # n_studies <- 20
+    # n_sites = 10
+    # lu_legend = c("Primary", "Secondary", "Cropland", "Urban")
+    # ui_legend = c("Minimal_use", "Light_use", "Intense_use")
     # %%%%%%%%%%%%%%%%
     # Create ids of studies
     ns <- stringi::stri_rand_strings(n = n_studies, length = 7)
@@ -199,7 +203,36 @@ create_dummy_data <- function(what = "sites",
                               dplyr::bind_rows() |>
                               dplyr::rename(Latitude = Y,
                                             Longitude = X))
-    
+    # %%%%%%%%%%
+    # TODO
+    # Intersect each data point with the map (and get country, +)
+    # continent, region_un, formal_en, admin
+
+    map_samp_idx <- ssbs_samp |> 
+      dplyr::bind_rows() |>
+      sf::st_as_sf(coords = c(1:2), crs = sf::st_crs(map)) |>
+      sf::st_intersects(map, sparse = F) |>
+      apply(1, which)
+      
+    # Extract some geographic info, note that region_un and subregion are not 
+    # qute aligned with UN_region/UN_subregion
+    extra_dat <- as.data.frame(map)[map_samp_idx,
+                                    c(#"continent", 
+                                      "region_un", 
+                                      "subregion",  
+                                      "formal_en"
+                                      # "region_wb",
+                                      # "admin", 
+                                      # "sovereignt"
+                                      ) ] |>
+      dplyr::rename(UN_region = region_un,
+                    UN_subregion = subregion,
+                    Country = formal_en)
+
+    out <- dplyr::bind_cols(out,
+                            extra_dat)
+    # message(head(out))
+    # %%%%%%%%%%
     
     # spp abund sampling...
     spp_ls <- vector("list", n_studies)
