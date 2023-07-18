@@ -96,7 +96,7 @@ hib_mod_project <- function(obj,
       lme4_specs <- list(bootstrap = F, n_boot = NA)
     }
     
-    print(lme4_specs)
+    # print(lme4_specs)
     # %%%%%
     
     # Get baseline value for optional rescaling

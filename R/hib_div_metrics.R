@@ -1257,7 +1257,7 @@ hib_calc_veg <- function(spp_site_data,
                         "hellinger", "aitchison", "robust.aitchison"), 
                       several.ok = FALSE)
   
-  message(metric)
+  # message(metric)
   # if ((rel_abund) & (metric == "euclidean")){
   #   row_abund <- rowSums(spp_site_data)
   #   row_abund[row_abund==0] <- 1
@@ -1762,13 +1762,13 @@ hib_calc_div_between <- function(obj,
     site_comparisons <- expand.grid(baseline_sites, site_list) |>
       # rename the columns so they will be what the compositional similarity function expects for ease
       dplyr::rename(s1 = Var1, s2 = Var2) |>
-      # remove the comparisons where the same site is being compared to itself
-      dplyr::filter(s1 != s2) |>
       # make the values characters rather than factors
       dplyr::mutate(s1 = as.character(s1),
-                    s2 = as.character(s2),
+                    s2 = as.character(s2)) |>
+      # remove the comparisons where the same site is being compared to itself
+      dplyr::filter(s1 != s2) |>      
                     # add the full name
-                    contrast = paste(s1, s2, sep = "_"),
+      dplyr::mutate(contrast = paste(s1, s2, sep = "_"),
                     # add the study id
                     SS = as.character(x))
     
@@ -1929,10 +1929,18 @@ hib_calc_div_between <- function(obj,
     # pivot so that each column is a species and each row is a site
     tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
                        values_fill = 0) |>
-    tibble::column_to_rownames("SSBS") |>
-    dplyr::mutate(SSBS1_is_empty = (rowSums(.) == 0)) |>
+    tibble::column_to_rownames("SSBS") #|>
+    # dplyr::mutate(SSBS1_is_empty = (rowSums(.) == 0)) |>
+    # tibble::rownames_to_column("SSBS1") |>
+    # dplyr::select(SSBS1, SSBS1_is_empty)
+    # %%%%%
+  empty_sites1$SSBS1_is_empty <- rowSums(empty_sites1) == 0
+
+  empty_sites1 <- empty_sites1 |>
     tibble::rownames_to_column("SSBS1") |>
     dplyr::select(SSBS1, SSBS1_is_empty)
+    # %%%%%
+    
   
   empty_sites2 <- empty_sites1 |>
     dplyr::rename(SSBS2 = SSBS1,

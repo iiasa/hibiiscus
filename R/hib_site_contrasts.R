@@ -80,7 +80,7 @@ hib_calc_site_contrasts <- function(obj,
     dplyr::filter(!is.na(Predominant_land_use) &
                     Diversity_metric_type == "Abundance") |>
     dplyr::group_by(SS) |>
-    dplyr::mutate(n_sample_effort = n_distinct(Sampling_effort),
+    dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
            # Taxon_name_entered v best_guess_binomial ??
            n_species = dplyr::n_distinct(Taxon_name_entered)) |>
     dplyr::ungroup() |>
@@ -108,6 +108,8 @@ hib_calc_site_contrasts <- function(obj,
   #     droplevels()
   # }
   if (!is.null(baseline_lui)){
+    assertthat::assert_that(baseline_lui %in% unique(spp_tmp$LUI))
+
     spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
     
     spp_tmp <- spp_tmp |>
@@ -174,15 +176,13 @@ hib_calc_site_contrasts <- function(obj,
     site_comparisons <- expand.grid(baseline_sites, site_list) |>
       # rename the columns so they will be what the compositional similarity function expects for ease
       dplyr::rename(SSBS1 = Var1, SSBS2 = Var2) |>
-      # remove the comparisons where the same site is being compared to itself
-      dplyr::filter(SSBS1 != SSBS2) |>
       # make the values characters rather than factors
       dplyr::mutate(SSBS1 = as.character(SSBS1),
-                    SSBS2 = as.character(SSBS2),
-                    # add the full name
-                    # contrast = paste(SSBS1, SSBS2, sep = "_"),
-                    # add the study id
-                    SS = as.character(x)) 
+                    SSBS2 = as.character(SSBS2)) |>
+      # remove the comparisons where the same site is being compared to itself
+      dplyr::filter(SSBS1 != SSBS2) |>
+      # add the study id
+      dplyr::mutate(SS = as.character(x)) 
     
     return(site_comparisons)
   })

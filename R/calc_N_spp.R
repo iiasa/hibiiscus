@@ -29,12 +29,13 @@ calc_N_spp <- function(obj,
                       "Simpson_diversity", 
                       "Mean_abundance", "Geometric_mean_abundance",
                       "Shannon_diversity",
-                      "HillShannon_diversity", "HillSimpson_diversity")){
+                      "HillShannon_diversity", "HillSimpson_diversity",
+                      "PIE")){
 
     # TODO: assertions
     # obj$species contains:
     #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement
-    
+
     n_spp <- obj$species |>
       dplyr::filter(Diversity_metric_type == "Abundance") |>
       dplyr::filter(SSBS %in% mod_df$SSBS) |>
@@ -74,7 +75,7 @@ calc_N_spp <- function(obj,
                                          "chao", "cao", "mahalanobis", "chisq", "chord", 
                                          "hellinger", "aitchison", "robust.aitchison",
                                          
-                                         "hypervolumne", "cosine",
+                                         "hypervolumne", "cosine", "theta",
                                          "baselga_bray_balanced", "baselga_bray_gradient",
                                          "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"))){
     # TODO: assertions
@@ -86,7 +87,7 @@ calc_N_spp <- function(obj,
       dplyr::filter(!is.na(Predominant_land_use) &
                       Diversity_metric_type == "Abundance") |>
       dplyr::group_by(SS) |>
-      dplyr::mutate(n_sample_effort = n_distinct(Sampling_effort),
+      dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
                     # Taxon_name_entered v best_guess_binomial ??
                     n_species = dplyr::n_distinct(Taxon_name_entered)) |>
       dplyr::ungroup() |>
