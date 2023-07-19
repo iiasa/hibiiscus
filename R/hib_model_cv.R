@@ -121,7 +121,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
     
     m_form <- as.character(mod_obj$user_formula$full)
-    m_form <- paste(form_chr[2], form_chr[1], form_chr[3])
+    m_form <- paste(m_form[2], m_form[1], m_form[3])
     if (mod_obj$inla_incl_spatial_term){
       m_form <- paste(m_form,
                       "+ f(s, model = site.spde)")
