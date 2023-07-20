@@ -1163,6 +1163,7 @@ hib_calc_div_within <- function(obj, metrics){
                          if (metric == "PIE"){
                            return(hib_calc_pie(db_obj))
                          }
+                         # TODO: S_PIE (1 / (1 – PIE); OR 1/ sum(p^2))
                          # %%%
                          }
                        ) |> dplyr::bind_rows()
