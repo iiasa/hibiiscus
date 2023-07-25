@@ -15,6 +15,12 @@
 #' The data_weight variable will be generated within the function call so as to 
 #' assign each observation per dataset an equal fraction of that dataset's weight -
 #' total weight sums to the total number of observations across all datasets.
+#' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
+#' covars_to_scale is a [`character`] vector of numeric covariates that should be 
+#' scaled prior to modelling. scale_func is a function that will be used to scale 
+#' the specified covariates - if NULL, base::scale() will be used.
+#' @param relevel_specs A named [`vector`] where each item is:
+#' "<covar_to_relevel_name>" = "<base_level>".
 #' @param ... Any other named arguments that can be passed to brms::brm(), e.g. prior, data2
 #' @keywords model, fitting
 #' @examples 
@@ -26,6 +32,9 @@ hib_fit_brms <- function(obj,
                          form,
                          family = gaussian,
                          dataset_weights = NULL,
+                         scale_specs = list(covars_to_scale = NULL,
+                                            scale_func = NULL),
+                         relevel_specs = c(NULL),
                          ...
                          ){
   
@@ -37,7 +46,9 @@ hib_fit_brms <- function(obj,
     # form can be a formula,
     inherits(form, "formula") || inherits(form, "brmsformula") || inherits(form, "mvbrmsformula"),
     is.function(family) || is.character(family), # family is character or function
-    is.numeric(dataset_weights) || is.null(dataset_weights)
+    is.numeric(dataset_weights) || is.null(dataset_weights),
+    is.list(scale_specs),
+    is.vector(relevel_specs) || is.null(relevel_specs)
   )
   
   message(crayon::green("Collating data for model fitting...\n"))
@@ -158,6 +169,14 @@ hib_fit_brms <- function(obj,
                              mod_covars)
     n_spp <- calc_N_spp(obj, mod_df, mod_resp)
   }
+  
+  # %%%
+  mod_df <- prep_model_data(mod_df,
+                            scale_specs$covars_to_scale,
+                            scale_specs$scale_func,
+                            names(relevel_specs),
+                            unname(relevel_specs))
+  # %%%
 
   message(crayon::green("Fitting model (this may take some time) ..."))
   

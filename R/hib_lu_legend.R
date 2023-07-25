@@ -28,7 +28,8 @@ create_lu_legend <- function(input){
   # ------ #
   message("Creating land-use legend...\n")
   
-  leg <- lu_legend$new(input = input)
+  leg <- lu_legend$new(input = input,
+                      input_chr = deparse(substitute(input)) )
   
   return(leg)
   # %%%
@@ -130,6 +131,11 @@ set_lu_legend <- function(obj, leg){
     dplyr::select(!dplyr::all_of(cols_to_drop_spp)) |>
     # left join new legend info
     dplyr::left_join(leg$lu_df)
+
+  # %%%
+  # Add in a legend flag
+  obj$processing_flags$lu_legend_source <- leg$input_data
+  # %%%
   
   return(obj)
   

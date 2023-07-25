@@ -21,6 +21,12 @@
 #' supplied formula should have a response of the form [`y | weights(data_weight) ~`]
 #' The data_weight variable will be generated within the function call so as to 
 #' assign each observation per dataset an equal fraction of that dataset's weight.
+#' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
+#' covars_to_scale is a [`character`] vector of numeric covariates that should be 
+#' scaled prior to modelling. scale_func is a function that will be used to scale 
+#' the specified covariates - if NULL, base::scale() will be used.
+#' @param relevel_specs A named [`vector`] where each item is:
+#' "<covar_to_relevel_name>" = "<base_level>".
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{
@@ -35,7 +41,10 @@ hib_fit_lme4 <- function(obj,
                          optimise_ranefs = F,
                          model_dredge = F,
                          model_average = F,
-                         dataset_weights = NULL
+                         dataset_weights = NULL,
+                         scale_specs = list(covars_to_scale = NULL,
+                                            scale_func = NULL),
+                         relevel_specs = c(NULL)
                          ){
   
   # TODO:
@@ -59,7 +68,9 @@ hib_fit_lme4 <- function(obj,
     is.function(family) || is.character(family), # family is character or function
     is.logical(REML), # REML is bool
     is.null(calc_CIs) || is.character(calc_CIs),   # calc_CIs is null or chr
-    is.null(dataset_weights) || is.numeric(dataset_weights)
+    is.null(dataset_weights) || is.numeric(dataset_weights),
+    is.list(scale_specs),
+    is.vector(relevel_specs) || is.null(relevel_specs)
   )
 
 
@@ -117,76 +128,13 @@ hib_fit_lme4 <- function(obj,
   }
 
   
-  # TODO:
-  # Re-level LU/UI/LUI columns - optional... what if they include cannot decide... 
-  # - or have other, groupings - primary, secondary...
-  # lu_levels_vec <- c(
-  #   "Primary vegetation",
-  #   "Primary forest",
-  #   "Primary non-forest",
-  #   "Young secondary vegetation",
-  #   "Intermediate secondary vegetation",
-  #   "Mature secondary vegetation",
-  #   "Secondary vegetation (indeterminate age)", 
-  #   "Plantation forest",
-  #   "Pasture",
-  #   "Cropland",
-  #   "Urban" ,
-  #   "Cannot decide"
-  # )
-  # ui_levels_vec <- c(
-  #   "Minimal use",
-  #   "Light use",
-  #   "Intense use",
-  #   "Cannot decide"
-  # )
-  # lui_levels_vec <- c(
-  #   "Primary vegetation_Minimal use",
-  #   "Primary vegetation_Light use",
-  #   "Primary vegetation_Intense use",
-  #   
-  #   "Primary forest_Minimal use",
-  #   "Primary forest_Light use",
-  #   "Primary forest_Intense use",
-  #   
-  #   "Primary non-forest_Minimal use",
-  #   "Primary non-forest_Light use",
-  #   "Primary non-forest_Intense use",
-  #   
-  #   "Mature secondary vegetation_Minimal use",
-  #   "Mature secondary vegetation_Light use",
-  #   "Mature secondary vegetation_Intense use",  
-  #   
-  #   "Intermediate secondary vegetation_Minimal use",
-  #   "Intermediate secondary vegetation_Light use",
-  #   "Intermediate secondary vegetation_Intense use",
-  #   
-  #   "Young secondary vegetation_Minimal use",
-  #   "Young secondary vegetation_Light use",
-  #   "Young secondary vegetation_Intense use",
-  #   
-  #   "Secondary vegetation (indeterminate age)_Minimal use",
-  #   "Secondary vegetation (indeterminate age)_Light use",
-  #   "Secondary vegetation (indeterminate age)_Intense use",
-  #   
-  #   "Plantation forest_Minimal use",
-  #   "Plantation forest_Light use",
-  #   "Plantation forest_Intense use",
-  #   
-  #   "Pasture_Minimal use",
-  #   "Pasture_Light use",
-  #   "Pasture_Intense use",
-  #   
-  #   "Cropland_Minimal use", 
-  #   "Cropland_Light use",
-  #   "Cropland_Intense use",
-  #   
-  #   "Urban_Minimal use",
-  #   "Urban_Light use",                                                     
-  #   "Urban_Intense use" 
-  # )
-  
-  
+  # %%%
+  mod_df <- prep_model_data(mod_df,
+                            scale_specs$covars_to_scale,
+                            scale_specs$scale_func,
+                            names(relevel_specs),
+                            unname(relevel_specs))
+  # %%%
   
   # get_all_vars(test_formula)
   # rlang::f_lhs(test_formula)
@@ -313,7 +261,7 @@ hib_fit_lme4 <- function(obj,
 #' Collate model data for mod_df
 #' 
 #' @description 
-#' This function collest the data needed for the model fitting process, based on 
+#' This function collects the data needed for the model fitting process, based on 
 #' the supplied response and covariables
 #' @details 
 #' Expects a database object...
@@ -340,6 +288,7 @@ get_model_data <- function(obj,
     unique() 
   
   if (mod_resp %in% within_site_resp){
+    
     # If not all covars are in obj$sites, as in a possible phylogenetically corr
     # brms model, this will fail!!
     # Could subset to those covars available in sites - as in INLA
@@ -365,6 +314,7 @@ get_model_data <- function(obj,
                                           any(grepl(resp, tmp))
                                         },
                                         resp = mod_resp)))
+
     assertthat::assert_that(
       length(div_data_idx) == 1
     )
@@ -423,3 +373,102 @@ get_model_data <- function(obj,
   return(mod_df)
   
 }
+
+
+
+# TODO:
+# Prep data -scale options, relevel factor columns
+
+#' Prepare model data for modelling
+#' 
+#' @description 
+#' This function prepares the data for the model fitting based on user supplied
+#' flags indicating the scaling of continuous variables and/or the releveling
+#' of categroical covariates
+#' @details 
+#' Expects a dataframe object...
+#' @param df A [`dataframe`].
+#' @param covars_to_scale A [`character`] vector indicating the response variables to scale.
+#' @param scale_func A [`function`] to scale specified continuous variables.
+#' @param covars_to_relevel A [`character`] vector containing categorical variables
+#' to relevel.
+#' @param base_levels A [`character`] vector containing baseline levels
+#' @keywords data processing
+#' @examples 
+#' \dontrun{
+#'   mod_df <- prep_model_data(mod_df, 
+#'                             c(""),
+#'                             scale,
+#'                             c(""),
+#'                             c("")
+#' } 
+#' @noRd
+prep_model_data <- function(df, 
+                            covars_to_scale, scale_func, 
+                            covars_to_relevel, base_levels){
+  assertthat::assert_that(
+    is.data.frame(df),
+    is.character(covars_to_scale) || is.null(covars_to_scale),
+    is.function(scale_func) || is.null(scale_func),
+    is.character(covars_to_relevel) || is.null(covars_to_relevel),
+    is.character(base_levels) || is.null(base_levels)
+  )
+  
+  # Check that covars are present
+  if (!is.null(covars_to_scale)){
+    assertthat::assert_that(
+      # Covars exist
+      all(covars_to_scale %in% colnames(df)),
+      # check that scale_covars are numeric
+      all(unlist(lapply(covars_to_scale, function(x, df_ = df){
+        is.numeric(df[[x]])
+      })))
+    )
+
+    # - check scale_func is not null
+    if (is.null(scale_func)){
+      message(crayon::yellow("Warning: scale_func not provided, using baser R scale()."))
+      scale_func <- scale
+    }
+    # scale,
+    for (c in covars_to_scale){
+      df[c] <- scale_func(df[[c]])
+    }
+  }
+  if (!is.null(covars_to_relevel)){
+    assertthat::assert_that(
+      # Covars exist
+      all(covars_to_relevel %in% colnames(df)),
+      length(covars_to_relevel) == length(base_levels),
+      # check that covars_to_relevel are chr/factor
+      all(unlist(lapply(covars_to_relevel, function(x, df_ = df){
+        ( is.character(df[[x]]) || is.factor(df[[x]]) )
+      }))),
+      # check factors exist for assoc covar
+      all(unlist(purrr::map2(covars_to_relevel,
+                             base_levels,
+                             function(x, y, df_ = df){
+                               y %in% df_[[x]]
+                             })))
+    )
+    
+    # relevel
+    for (i in 1:length(covars_to_relevel)){
+      if (is.character(df[[covars_to_relevel[i]]])){
+        df[[covars_to_relevel[i]]] <- factor(df[[covars_to_relevel[i]]])
+      }
+      df[[covars_to_relevel[i]]] <- relevel(df[[covars_to_relevel[i]]],
+                                             base_levels[i])
+    }
+  }
+  
+  return(df)
+  
+}
+
+# prep_model_data(tmp_db$sites[,c("LUI", "Sampling_effort")],
+#                 c("Sampling_effort"),
+#                 scale,
+#                 c("LUI"), 
+#                 c("Cropland_Intense_use"))
+

@@ -402,6 +402,11 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         }
                         
                         (plt)
+                      },
+                      check_model = function(){
+                        m <- self$model
+                        # print(m)
+                        performance::check_model(m)
                       }
                     ),
                     private = list()

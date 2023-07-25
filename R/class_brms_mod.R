@@ -422,6 +422,11 @@ hib_brms_model <- R6Class("hib_brms_model",
                               }
                               
                               (plt)
+                            },
+                            check_model = function(){
+                              m <- self$model
+                              # print(m)
+                              performance::check_model(m)
                             }
                           ),
                           private = list()

@@ -22,7 +22,9 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # ignore warnings...
   suppressWarnings(mod_w <- hib_fit_lme4(tmp_db,
                                          log(Total_abundance + 1) ~ LUI + (1 | SS),
-                                         calc_CIs = "Wald"))
+                                         calc_CIs = "Wald"
+                                         # relevel_specs = c("LUI" = "Cropland_Intense_use")
+                                         ))
   
   expect_true(inherits(mod_w,
                        "hib_lme4_model"))
@@ -143,3 +145,4 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # proj_w_$projection
   # proj_b_$projection
 })
+

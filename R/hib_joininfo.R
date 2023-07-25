@@ -30,15 +30,30 @@ hib_join_species <- function(obj, spp_info){
   )
   
   obj$species <- dplyr::left_join(obj$species,
-                           spp_info)
+                           spp_info)  
   
-  # TODO: add checkself... - ensure data merge hasen't broken anything in db
   obj$last_update <- lubridate::today()
   
+  # %%%
+  # TODO: would be useful to flag addition of data - source name/an id..
+  spp_info_chr <- deparse(substitute(spp_info))
+  new_cols_chr <- info_cols[!info_cols %in% obj_spp_cols]
+
+  # Append filtering flag to database object
+  join_idx <- length(obj$processing_flags$joined_information) + 1
+  
+  obj$processing_flags$joined_information[[join_idx]] <- paste0(as.character(join_idx),
+                                                                  ": ",
+                                                                  "Added species data - '",
+                                                                  paste(new_cols_chr, collapse = "', '"),
+                                                                  "' - from '",
+                                                                  spp_info_chr,
+                                                                  "'.")
+  # %%%
+
   obj$checkself()
   
-  # TODO: would be useful to flag addition of data - source name/an id..
-
+  
   return(obj)
 }
 
@@ -77,12 +92,28 @@ hib_join_sites <- function(obj, site_info){
   obj$sites <- dplyr::left_join(obj$sites,
                          site_info)
 
-  # TODO: add checkself... - ensure data merge hasen't broken anything in db
   obj$last_update <- lubridate::today()
   
+
+  
+  # %%%
+  # TODO: would be useful to flag addition of data - source name/an id..
+  site_info_chr <- deparse(substitute(site_info))
+  new_cols_chr <- info_cols[!info_cols %in% obj_site_cols]
+
+  # Append filtering flag to database object
+  join_idx <- length(obj$processing_flags$joined_information) + 1
+  
+  obj$processing_flags$joined_information[[join_idx]] <- paste0(as.character(join_idx),
+                                                                  ": ",
+                                                                  "Added site data - '",
+                                                                  paste(new_cols_chr, collapse = "', '"),
+                                                                  "' - from '",
+                                                                  site_info_chr, 
+                                                                  "'.")
+  # %%%
+
   obj$checkself()
 
-  # TODO: would be useful to flag addition of data - source name/an id..
-  
   return(obj)
 }

@@ -164,7 +164,7 @@ create_dummy_data <- function(what = "sites",
     # Other study settings
     out$Sampling_effort <- rexp(nrow(out),rate = 2)
     # Randomly sample some studies (SS) and keep effort constant (1)
-    const_effort_SS <- sample(unique(out$SS), length(unique(out$SS))/3)
+    const_effort_SS <- sample(unique(out$SS), round(length(unique(out$SS))/3*2))
     out$Sampling_effort[out$SS %in% const_effort_SS] <- 1
     
     out$Diversity_metric_type <- "Abundance"

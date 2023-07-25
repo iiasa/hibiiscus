@@ -1094,6 +1094,22 @@ hib_calc_div_within <- function(obj, metrics){
                          "PIE"),
                        several.ok = T)
   
+  # %%%
+  # TODO: if metric is already in hib$diversity_within,
+  if (!is.null(obj$diversity_within)){
+    metrics_tc <- tools::toTitleCase(metrics)
+    new_metrics_idx <- which(!(metrics_tc %in% obj$diversity_within$Metric))
+    # drop from metrics and print the dropped metrics...
+    metrics <- metrics[new_metrics_idx]
+    dropped_metrics <- metrics_tc[metrics_tc %in% obj$diversity_within$Metric]
+    message(crayon::yellow(paste0("Warning: the following metrics have already been ",
+                                  "added to the hib database and so will not be ",
+                                  "recalculted; ",
+                                  paste(dropped_metrics, collapse = ", "),
+                                  "\n")))
+  }
+  # %%%
+
   message(crayon::green("Calculating within-site diversity metrics ...\n"))
   
   out_tib <- purrr::map(.x = metrics, 
@@ -1201,6 +1217,9 @@ hib_calc_div_within <- function(obj, metrics){
 # c("jaccard", "bray")
 
 # what about sorensen - what is this?? - binary bray...
+# Sorensen similarity presented by Santini et al 2018 is equivalent to 1 - bray,
+# when bray is calculated by vegan::vegdist()
+
 # ruzika - equivalent to quantitative jaccard??
 
 # also need to record if one site has 0 total abundance...
@@ -1648,6 +1667,8 @@ hib_calc_div_between <- function(obj,
   
   metrics_ <- c(veg_metrics, non_veg_metrics)
   
+
+
   # first, combine metrics, binary, rel_abund and rescale into a df
   metrics_spec_df <- data.frame(metric    = metrics,
                                 binary    = binary,
@@ -1665,6 +1686,22 @@ hib_calc_div_between <- function(obj,
                                        metrics_,
                                        several.ok = T)
   
+  # %%%
+  # TODO: if metric is already in hib$diversity_between,
+  if (!is.null(obj$diversity_between)){
+    metrics_tc <- tools::toTitleCase(metrics_spec_df$metric)
+    new_metrics_idx <- which(!(metrics_tc %in% obj$diversity_between$Metric))
+    # drop from metrics and print the dropped metrics...
+    metrics_spec_df <- metrics_spec_df[new_metrics_idx, ]
+    dropped_metrics <- metrics_tc[metrics_tc %in% obj$diversity_between$Metric]
+    message(crayon::yellow(paste0("Warning: the following metrics have already been ",
+                                  "added to the hib database and so will not be ",
+                                  "recalculted: ",
+                                  paste(dropped_metrics, collapse = ", "),
+                                  "\n")))
+  }
+  # %%%
+
   # split to veg and non_veg spec dfs
   veg_metrics_df <- subset(metrics_spec_df,
                            metric %in% veg_metrics)

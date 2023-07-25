@@ -22,7 +22,9 @@ test_that("Check brms modelling pipeline works as desired.", {
   suppressWarnings(mod_w <- hib_fit_brms(tmp_db,
                                          log(Total_abundance + 1) ~ LUI + (1 | SS),
                                          iter = 200,
-                                         chains = 1))
+                                         chains = 1
+                                         # relevel_specs = c("LUI" = "Cropland_Intense_use")
+                                         ))
   expect_true(inherits(mod_w,
                        "hib_brms_model"))
   
@@ -30,7 +32,10 @@ test_that("Check brms modelling pipeline works as desired.", {
   suppressWarnings(mod_b <- hib_fit_brms(tmp_db,
                                          Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
                                          iter = 200,
-                                         chains = 1))
+                                         chains = 1 #,
+                                         # scale_specs = list(covars_to_scale = "Geogr_dist_hav",
+                                         #                    scale_func = NULL)
+                                         ))
   expect_true(inherits(mod_b,
                        "hib_brms_model"))
   

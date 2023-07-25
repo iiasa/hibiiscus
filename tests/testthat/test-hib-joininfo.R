@@ -7,7 +7,7 @@
 
 test_that("Check that hib_join_sites works correctly.", {
   tmp_db <- load_hib("data/dummy_database.rds")
-  tmp_db$sites$Predominant_land_use |> unique()
+  # tmp_db$sites$Predominant_land_use |> unique()
   # Default levels of dummy data are: "Primary" "Secondary" "Cropland" "Urban"
   # Simplified levels: "Natural/Semi-natural" "Human"
   
@@ -15,10 +15,12 @@ test_that("Check that hib_join_sites works correctly.", {
                    Simplified_land_use = c("Natural/Semi-natural",
                                            "Natural/Semi-natural",
                                            "Human",
-                                           "Human"))
+                                           "Human"),
+                   Another_new_column = c("Blahhh"))
   
   tmp_db <- hib_join_sites(tmp_db,
                            df)
+  # tmp_db$processing_flags
   # -Successful join
   expect_true(inherits(tmp_db, 
                        "Database")
@@ -49,7 +51,7 @@ test_that("Check that hib_join_sites works correctly.", {
 
 test_that("Check that hib_join_species works correctly.", {
   tmp_db <- load_hib("data/dummy_database.rds")
-  tmp_db$sites$Predominant_land_use |> unique()
+  # tmp_db$sites$Predominant_land_use |> unique()
   # Default levels of dummy data are: "Primary" "Secondary" "Cropland" "Urban"
   # Simplified levels: "Natural/Semi-natural" "Human"
   
@@ -61,6 +63,7 @@ test_that("Check that hib_join_species works correctly.", {
   
   tmp_db <- hib_join_species(tmp_db,
                              df)
+  # tmp_db$processing_flags
   # -Successful join
   expect_true(inherits(tmp_db, 
                        "Database")

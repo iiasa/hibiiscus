@@ -14,6 +14,12 @@
 #' random effect
 #' @param input_mesh Optionally provide an inla mesh object
 #' @param mesh_settings Optionally specify inla mash settings, e.g., max.edge
+#' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
+#' covars_to_scale is a [`character`] vector of numeric covariates that should be 
+#' scaled prior to modelling. scale_func is a function that will be used to scale 
+#' the specified covariates - if NULL, base::scale() will be used.
+#' @param relevel_specs A named [`vector`] where each item is:
+#' "<covar_to_relevel_name>" = "<base_level>".
 #' @param prior_list In development
 #' @keywords model, fitting
 #' @examples 
@@ -36,6 +42,10 @@ hib_fit_inla <- function(obj,
                                               max.edge = c(75,100),
                                               cutoff = 1e-12,
                                               offset = NULL),
+                         scale_specs = list(covars_to_scale = NULL,
+                                            scale_func = NULL),
+                         relevel_specs = c(NULL),
+                         
                          prior_list){
 
 
@@ -57,7 +67,9 @@ hib_fit_inla <- function(obj,
     is.character(family), # family is character
     is.logical(incl_spatial_term),
     inherits(input_mesh,'inla.mesh') || is.null(input_mesh),
-    is.list(mesh_settings) || is.null(mesh_settings)
+    is.list(mesh_settings) || is.null(mesh_settings),
+    is.list(scale_specs),
+    is.vector(relevel_specs) || is.null(relevel_specs)
   )
   # TODO:
   # maybe rename random_covar to random_form?
@@ -209,6 +221,14 @@ hib_fit_inla <- function(obj,
   mod_df <- mod_df |>
     dplyr::mutate(y = !!response_fixed_form[[2]] )
     # dplyr::mutate(y = !!as.formula(paste0(response, "~ 1"))[[2]] )
+  
+  # %%%
+  mod_df <- prep_model_data(mod_df,
+                            scale_specs$covars_to_scale,
+                            scale_specs$scale_func,
+                            names(relevel_specs),
+                            unname(relevel_specs))
+  # %%%
   
   X <- mod_df |>
     dplyr::select(all_covars)

@@ -36,7 +36,8 @@ Database <- R6Class("Database",
                       # Note RC: But the species data has all the sites
                       # And the 2022 data is just the full spp data
                       
-            
+                      # TODO: option to make a hib db from a species df... - useful for simul data
+
                       # %%%%%
                       # Load species data
                       # ensure paths$species is RDS
@@ -311,7 +312,10 @@ Database <- R6Class("Database",
                       # Add some data processing flags
                       self$processing_flags <- list(measures_effort_corrected = F,
                                                     abundance_rescaled = F,
-                                                    filtering_steps = list())
+                                                    filtering_steps = list(),
+                                                    joined_information = list(),
+                                                    lu_legend_source = "Original LU/I legend."
+                                                    )
                     },
                     # Self check function that everything is in order
                     checkself = function(sites = self$sites, species = self$species){
@@ -381,6 +385,9 @@ Database <- R6Class("Database",
                                     filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
                                     # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
                                     
+                                    joined_information = paste(self$processing_flags$joined_information, collapse = "; "),
+                                    lu_legend_source = self$processing_flags$lu_legend_source,
+
                                     div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
                                     div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", "),
                                     # TODO: site contrast info
@@ -426,14 +433,22 @@ Database <- R6Class("Database",
                       if (length(self$processing_flags$filtering_steps) == 0){
                         stats$filters_applied <- "NA"
                       }
+
+                      if (length(self$processing_flags$joined_information) == 0){
+                        stats$joined_information <- "NA"
+                      }
                       message(
-                        paste0("Hibiiscus PREDICTS database (including versions: ", crayon::bold(self$version),")","\n",
+                        paste0("Hibiiscus PREDICTS database (including version/s: ", crayon::bold(self$version),")","\n",
                                "(Last updated: ", crayon::green( self$last_update ), ")",
                                "\n",
                                "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
+                               "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+
                                "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                                                      crayon::green(stats$number_lui), "\n",
-                               "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+
+                               "\t LU/I legend sourced from:      ", crayon::green(stats$lu_legend_source), "\n",
+                               
                                "\n",
                                
                                "\t Effort-correction applied:     ", crayon::green(self$processing_flags$measures_effort_corrected), "\n",
@@ -441,6 +456,13 @@ Database <- R6Class("Database",
                                "\t Filtering conducted:           ", crayon::green(gsub("; ", 
                                                                                         ";\n\t                                ",
                                                                                         stats$filters_applied)), "\n",
+
+                               "\t Data added to database:        ", crayon::green(gsub("; ", 
+                                                                                        ";\n\t                                ",
+                                                                                        stats$joined_information)), "\n",
+
+                               "\n",
+
                                "\t Within-site diversity metrics calculated:   ", crayon::green(stats$div_within_metrics), "\n",
                                "\t Between-site diversity metrics calculated:  ", crayon::green(stats$div_between_metrics), "\n",
                                "\t Site-site contrast metrics calculated:      ", crayon::green(stats$site_contrast_metrics), "\n"

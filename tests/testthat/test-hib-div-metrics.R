@@ -27,6 +27,10 @@ test_that("Check that within-sample diversity metrics work.", {
   
   expect_true(is.data.frame(tmp_db$diversity_within))
   expect_true(nrow(tmp_db$diversity_within) == length(within_site_metrics))
+  
+  # tmp_db <- hib_calc_div_within(tmp_db,
+  #                               c("Total_abundance", "Species_richness",
+  #                                 "Geometric_mean_abundance"))
 
 })
 
@@ -59,4 +63,8 @@ test_that("Check that between-sample diversity metrics work.", {
   expect_true(is.data.frame(tmp_db$diversity_between))
   expect_true(nrow(tmp_db$diversity_between) == length(within_site_metrics))
   
+  # tmp_db <- hib_calc_div_between(tmp_db,
+  #                                c("euclidean", "theta",
+  #                                  "hypervolume", "cosine"), 
+  #                                baseline_lui = "Primary_Minimal_use")
 })

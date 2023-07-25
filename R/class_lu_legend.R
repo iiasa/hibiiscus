@@ -37,11 +37,12 @@ lu_legend <- R6Class("lu_legend",
                       # processing_flags = NULL,
                       
                       # Executed when created
-                      initialize = function(input){
+                      initialize = function(input, input_chr){
                         # Check that input is either a character filepath
                         # Or dataframe/tibble
                         assertthat::assert_that(
-                          (is.character(input) || is.data.frame(input))
+                          (is.character(input) || is.data.frame(input)),
+                          is.character(input_chr)
                           )
                         
                         if (is.character(input)){
@@ -54,7 +55,9 @@ lu_legend <- R6Class("lu_legend",
                           message(crayon::green(paste0("Initializing land-use legend from file: ",
                                                        input)) )
                           lu_df <- readr::read_rds(input)
-                          self$input_data <- input
+                          self$input_data <- paste0("file ('", 
+                                                    input,
+                                                    "')")
                             
                         }
                         if (is.data.frame(input)){
@@ -63,7 +66,10 @@ lu_legend <- R6Class("lu_legend",
                           # deparse(substitute(input))
                           
                           lu_df <- input
-                          self$input_data <- "dataframe" #deparse(substitute(input))
+                          self$input_data <- paste0("dataframe ('", 
+                                                    input_chr,
+                                                    # deparse(substitute(input)),
+                                                    "')")
                         }
                         
                         
@@ -130,10 +136,6 @@ lu_legend <- R6Class("lu_legend",
                         # Outsourced security checks
                         self$checkself()
                         
-                        # Add some data processing flags
-                        # self$processing_flags <- list(measures_effort_corrected = F,
-                        #                               abundance_rescaled = F,
-                        #                               filtering_steps = list())
                       },
                       # Self check function that everything is in order
                       checkself = function(df = self$lu_df){
