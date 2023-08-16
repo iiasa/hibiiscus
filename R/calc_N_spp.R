@@ -30,7 +30,7 @@ calc_N_spp <- function(obj,
                       "Mean_abundance", "Geometric_mean_abundance",
                       "Shannon_diversity",
                       "HillShannon_diversity", "HillSimpson_diversity",
-                      "PIE")){
+                      "PIE", "Evenness")){
 
     # TODO: assertions
     # obj$species contains:
@@ -75,7 +75,7 @@ calc_N_spp <- function(obj,
                                          "chao", "cao", "mahalanobis", "chisq", "chord", 
                                          "hellinger", "aitchison", "robust.aitchison",
                                          
-                                         "hypervolumne", "cosine", "theta",
+                                         "hypervolume", "cosine", "theta",
                                          "baselga_bray_balanced", "baselga_bray_gradient",
                                          "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"))){
     # TODO: assertions

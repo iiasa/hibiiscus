@@ -79,7 +79,7 @@ hib_fit_lme4 <- function(obj,
     calc_CIs <- match.arg(calc_CIs, c("Wald", "profile", "boot"), several.ok = F)  
   }
   
-  message(crayon::green("Collating data for model fitting...\n"))
+  message(crayon::green("\nCollating data for model fitting...\n"))
   # Collate data from database - based on columns specified in the formula
   
   # %%%%%
@@ -308,10 +308,15 @@ get_model_data <- function(obj,
 
     # mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
     # find relevant obj$diversity$Data[[i]] 
+
+    # TODO: BUG, Shannon_diversity, and Simpson_diversity also match HillXXX
+    # Need to check for exact matches, not grepl matches
+    # grepl(paste0("^", resp, "$"), tmp) ??
     div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,
                                         function(x, resp){
                                           tmp <- colnames(x)
-                                          any(grepl(resp, tmp))
+                                          # any(grepl(resp, tmp))
+                                          any(grepl(paste0("^", resp, "$"), tmp))
                                         },
                                         resp = mod_resp)))
 
@@ -342,7 +347,8 @@ get_model_data <- function(obj,
     div_data_idx <- which(unlist(lapply(obj$diversity_between$Data,
                                         function(x, resp){
                                           tmp <- colnames(x)
-                                          any(grepl(resp, tmp))
+                                          # any(grepl(resp, tmp))
+                                          any(grepl(paste0("^", resp, "$"), tmp))
                                         },
                                         resp = mod_resp)))
     assertthat::assert_that(

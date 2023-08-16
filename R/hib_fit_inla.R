@@ -75,7 +75,7 @@ hib_fit_inla <- function(obj,
   # maybe rename random_covar to random_form?
   
   # Add progress messages
-  message(crayon::green("Collating data for model fitting...\n"))
+  message(crayon::green("\nCollating data for model fitting...\n"))
   
   mod_resp <- all.vars(response_fixed_form[[2]])
   fixed_covars <- all.vars(response_fixed_form[[3]])

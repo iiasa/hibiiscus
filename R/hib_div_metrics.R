@@ -924,7 +924,8 @@ hib_calc_shannon <- function(obj){
     dplyr::ungroup() |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
-    dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ) ) |>
+    dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ), #) |> 
+                    logN = log(sum(!!dplyr::sym(measure_var) > 0)) ) |>
     dplyr::ungroup()
   # %%%%%
   
@@ -1008,7 +1009,6 @@ hib_calc_shannon <- function(obj){
 #' @export
 hib_calc_pie <- function(obj){
   message(crayon::green("Calculating within-site Probability of Interspecific Encounter (PIE) ...\n"))
-  # TODO:
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SSBS"),
@@ -1089,7 +1089,7 @@ hib_calc_div_within <- function(obj, metrics){
                        c("Total_abundance", "Species_richness", "Chao1_diversity",  
                          "Simpson_diversity", "Rarefied_species_richness", #),
                          "Mean_abundance", "Geometric_mean_abundance",
-                         "Shannon_diversity",
+                         "Shannon_diversity", "Evenness",
                          "HillShannon_diversity", "HillSimpson_diversity",
                          "PIE"),
                        several.ok = T)
@@ -1137,14 +1137,26 @@ hib_calc_div_within <- function(obj, metrics){
                            return(hib_calc_gma(db_obj))
                          }
                          if (metric == "Shannon_diversity"){
-                           return(hib_calc_shannon(db_obj))
+                           return(hib_calc_shannon(db_obj) |>
+                             dplyr::select(SSBS, SS, Shannon_diversity))
+                         }
+                         # %%%
+                         # Evenness (Shannon/log(N_spp))
+                         if (metric == "Evenness"){
+                           message(crayon::green("Calculating Evenness ...\n"))
+                           tmp <- hib_calc_shannon(db_obj)
+                           tmp$Metric <- "Evenness"
+                           tmp$Data[[1]]$Evenness <- tmp$Data[[1]]$Shannon_diversity / tmp$Data[[1]]$logN
+                           tmp$Data[[1]] <- tmp$Data[[1]] |>
+                             dplyr::select(SSBS, SS, Evenness, logN)
+                           return(tmp)
                          }
                          # %%%
                          # Hill-Shannon: exp(shannon)
                          if (metric == "HillShannon_diversity"){
+                           message(crayon::green("Calculating Hill-Shannon diversity ...\n"))
                            tmp <- hib_calc_shannon(db_obj)
                            tmp$Metric <- "HillShannon_diversity"
-                           
                            tmp$Data[[1]]$HillShannon_diversity <- exp(tmp$Data[[1]]$Shannon_diversity)
                            
                            # tmp$Data[[1]] <- tmp$Data[[1]] |> 
@@ -1160,9 +1172,9 @@ hib_calc_div_within <- function(obj, metrics){
                          
                          # Hill-Simpson: 1/simpson 
                          if (metric == "HillSimpson_diversity"){
+                           message(crayon::green("Calculating Hill-Simpson diversity ...\n"))
                            tmp <- hib_calc_simpson(db_obj)
                            tmp$Metric <- "HillSimpson_diversity"
-                           
                            tmp$Data[[1]]$HillSimpson_diversity <- 1 / ( 1 - tmp$Data[[1]]$Simpson_diversity )
                            
                            # tmp$Data[[1]] <- tmp$Data[[1]] |> 
@@ -1319,6 +1331,11 @@ hib_calc_veg <- function(spp_site_data,
   if (rescale & !is.na(max_dist)){
     dist_df$Distance <- dist_df$Distance / max_dist
   }
+  # Adding rescaling of euclidian if using relative abundance
+  if (rescale & rel_abund & metric == "euclidean"){
+    dist_df$Distance <- dist_df$Distance / sqrt(2)
+  }
+
   # Ideally, if rescale is T and max_dist is NA, edit rescale to be F in output
   
   
@@ -1468,6 +1485,9 @@ hib_calc_nonveg <- function(spp_site_data,
     x2 <- x[2,]
 
     out <- data.frame("Cosine" = calc_cosine_sim(x1, x2))
+    
+    # TODO - convert cosine to cosine dissimilarity : 1 - Cosine
+    out$Cosine <- 1 - out$Cosine
 
     # cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
     
@@ -1841,9 +1861,20 @@ hib_calc_div_between <- function(obj,
                                                spp_data = spp_tmp,
                                                comp_df = site_comp_df,
                                                metric_df = veg_metrics_df){
-                                   # TODO: add other processing flags too!!
-                                   # binary, rel_abund, rescale
                                    
+                                   # print( spp_data |>
+                                   #   # filter out the SS that matches the SS we're interested in
+                                   #   dplyr::filter(SS == ss) |>
+                                   #   # pull out the site name, species name and abundance information
+                                   #   dplyr::select(SSBS, Taxon_name_entered, Measurement) |>
+                                   #   # pivot so that each column is a species and each row is a site
+                                   #   tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
+                                   #                      values_fill = 0) )
+                                     # TODO: fix values_fill bug...
+                                     # tidyr::pivot_wider(names_from = Taxon_name_entered, 
+                                     #                    values_from = Measurement) )
+
+
                                    spp_site_data <- spp_data |>
                                      # filter out the SS that matches the SS we're interested in
                                      dplyr::filter(SS == ss) |>
@@ -1852,11 +1883,12 @@ hib_calc_div_between <- function(obj,
                                      # pivot so that each column is a species and each row is a site
                                      tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
                                                         values_fill = 0) |>
+                                     
                                      # set the rownames to the SSBS and then remove that column
                                      tibble::column_to_rownames("SSBS")
                                    
                                    # TODO: check at least 2 species are present (i.e 2 cols or more)
-                                   
+                                   # TODO: return max_dist value - if NA, set rescale to F...
                                    # Depending on metric_vec values, calc metrics of interest
                                    # %%%
                                    out_df <- purrr::pmap(.l = metric_df,
@@ -2024,6 +2056,62 @@ hib_calc_div_between <- function(obj,
   out_tib <- out_tib |>
     dplyr::left_join(metrics_spec_df_)
   
+  # %%%%%
+  # TODO: add in max_distance/max_values
+  # Based on veg and non-veg...
+
+  # veg
+  # if(method %in% c(3,4,5,7,8,10,11,13,17)) # index in 0..1
+  #           1
+  #       else if (method %in% c(19,20)) # chord, hellinger
+  #           sqrt(2)
+  #       else if (method == 9) # Mountford
+  #           log(2)
+  #       else # no fixed upper limit
+  #           NA
+  veg_max_df <- data.frame(Metric = tools::toTitleCase(c("manhattan", "euclidean", "canberra", "bray", # 4
+                                                        "kulczynski", "gower", "morisita", "horn", #8
+                                                        "mountford", "jaccard", "raup", "binomial", "chao", #13
+                                                        "altGower", "cao", "mahalanobis", "clark", "chisq", "chord", #19
+                                                        "hellinger", "aitchison", "robust.aitchison")),
+                          Theoretical_max = c(NA, NA, 1, 1, 
+                                             1,  NA, 1, 1,
+                                             log(2), 1, 1, NA, 1,
+                                             NA, NA, NA, 1, NA, sqrt(2), 
+                                             sqrt(2), NA, NA))
+  
+  if (rel_abund == T){
+    veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
+  }
+
+
+  # non-veg
+  # c("hypervolume", "cosine", "theta",
+                        # "baselga_bray_balanced", "baselga_bray_gradient", 
+                        # "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")
+  # hypervol = NA, or 0.5 if rel_abund
+  # cosine = 0-1 (set 1 as max, convert to dissim)
+  # theta  = pi/2
+  # all others, 0-1 - check with baselga...
+  non_veg_max_df <- data.frame(Metric = tools::toTitleCase(c("hypervolume", "cosine", "theta",
+                                                             "baselga_bray_balanced", "baselga_bray_gradient", 
+                                                             "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")),
+                              Theoretical_max = c(NA, 1, pi/2,
+                                                 1, 1,
+                                                 1, 1))
+  if (rel_abund == T){
+    non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 0.5
+  }
+
+  max_df <- dplyr::bind_rows(veg_max_df,
+                             non_veg_max_df)
+
+  out_tib <- out_tib |>
+    dplyr::left_join(max_df) |>
+    dplyr::mutate(Rescale = dplyr::case_when(is.na(Theoretical_max) ~ FALSE,
+                                              T ~ TRUE))
+
+  # %%%%%
   
   div_empty <- is.null(obj$diversity_between)
   

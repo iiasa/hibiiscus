@@ -42,7 +42,7 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # cv
   suppressWarnings(cv_w <- hib_mod_cv(mod_w,
                                       tmp_db,
-                                      c("Random-2"),
+                                      c("Random-2", "Random-5"),
                                       backtransform = function(x){exp(x) - 1}))
   expect_true(inherits(cv_w,
                        "hib_cv_res"))
@@ -73,12 +73,25 @@ test_that("Check lme4 modelling pipeline works as desired.", {
                                         dplyr::n(), T),
                   Geogr_dist_hav = 0)
   
+  # %%%%
+  # AOA TESTING
+  # devtools::load_all()
+  # aoa_w <- hib_calc_aoa(mod_w, cv_w, proj_df_w)
+  suppressWarnings(
+    proj_w_aoa <- hib_mod_project(mod_w,
+                                proj_df_w,
+                                backtransform = function(x){exp(x) - 1},
+                                calc_aoa = T,
+                                cv_obj = cv_w)
+  )
+  # %%%%
+  
   
   # project for df, ?and terra rast?
-  proj_w <- hib_mod_project(mod_w,
-                            proj_df_w,
-                            backtransform = function(x){exp(x) - 1})
-  expect_true(inherits(proj_w,
+  # proj_w <- hib_mod_project(mod_w,
+  #                           proj_df_w,
+  #                           backtransform = function(x){exp(x) - 1})
+  expect_true(inherits(proj_w_aoa,
                        "hib_mod_projection"))  
   
   proj_b <- hib_mod_project(mod_b,
@@ -105,10 +118,19 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   )
   names(proj_rast_w) <- "LUI"
   
-  proj_w_ <- hib_mod_project(mod_w,
-                             proj_rast_w,
-                             backtransform = function(x){exp(x) - 1})
-  expect_true(inherits(proj_w_,
+  # proj_w_ <- hib_mod_project(mod_w,
+  #                            proj_rast_w,
+  #                            backtransform = function(x){exp(x) - 1})
+  
+  suppressWarnings(
+    proj_w_aoa_ <- hib_mod_project(mod_w,
+                                 proj_rast_w,
+                                 backtransform = function(x){exp(x) - 1},
+                                 calc_aoa = T,
+                                 cv_obj = cv_w)
+  )
+    
+  expect_true(inherits(proj_w_aoa_,
                        "hib_mod_projection"))  
   
   
@@ -127,6 +149,12 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   )
   names(proj_rast_b) <- "LUI_contrast"
   
+  
+  # %%%%
+  # AOA TESTING
+  # devtools::load_all()
+  # aoa_w <- hib_calc_aoa(mod_w, cv_w, proj_rast_w)
+  # %%%%
   
   proj_rast_b_ <- proj_df_b |>
     dplyr::select(x, y, Geogr_dist_hav) |>

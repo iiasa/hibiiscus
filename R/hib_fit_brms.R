@@ -51,7 +51,7 @@ hib_fit_brms <- function(obj,
     is.vector(relevel_specs) || is.null(relevel_specs)
   )
   
-  message(crayon::green("Collating data for model fitting...\n"))
+  message(crayon::green("\nCollating data for model fitting...\n"))
   
   
   # Collate data from database - based on columns specified in the formula

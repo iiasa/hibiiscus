@@ -5,7 +5,7 @@
 #' data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 #' @details 
 #' Expects a [`Database`] object.
-#' @param obj A [`hib_model`] object - either lme4 or inla.
+#' @param obj A [`hib_model`] object - either lme4, inla, or brms.
 #' @param data Either a dataframe-like object or a raster stack that can be used
 #' to project onto
 #' @param backtransform A [`function`] that will backtransform the model response
@@ -27,6 +27,7 @@
 #'   proj <- hib_mod_project(obj, data)
 #' } 
 #' @export
+# TODO: replace obj with mod_obj
 hib_mod_project <- function(obj, 
                             data,
                             backtransform = NULL,
@@ -37,8 +38,10 @@ hib_mod_project <- function(obj,
                             # TODO: collate model type arguments into: - fix argument documentation
                             lme4_specs = NULL, #list(bootstrap = F, n_boot = NA),
                             inla_specs = NULL, #list(),
-                            brms_specs = NULL #list(incl_obs_uncert = F)
+                            brms_specs = NULL, #list(incl_obs_uncert = F)
                             # more scope for adjustment, and neater
+                            calc_aoa = F,
+                            cv_obj = NULL
                             ){
   # Assertions 
   # is data a df/tibble/ raster/stack 
@@ -52,9 +55,26 @@ hib_mod_project <- function(obj,
     # is.numeric(n_boot) || is.null(n_boot)
     is.list(lme4_specs) || is.null(lme4_specs),
     is.list(inla_specs) || is.null(inla_specs),
-    is.list(brms_specs) || is.null(brms_specs)
+    is.list(brms_specs) || is.null(brms_specs),
+    is.logical(calc_aoa),
+    inherits(cv_obj, "hib_cv_res") || is.null(cv_obj)
   )
   
+
+  # %%%%%
+  # TODO: - incl calculation of DI/AOA
+  # Need to also incl cv res
+  if (calc_aoa){
+    assertthat::assert_that(inherits(cv_obj, "hib_cv_res"))  
+    message(crayon::green("Estimating Area-of-Applicability...\n"))
+    aoa_res <- hib_calc_aoa(obj, cv_obj, data)
+  }
+  if (!calc_aoa){
+    aoa_res <- NULL
+  }
+  # %%%%%
+
+
   # Check type of model
   # %%%%%
   # LME4
@@ -661,7 +681,8 @@ hib_mod_project <- function(obj,
                                  rescale_pred = rescale_pred,
                                  lme4_specs = lme4_specs,
                                  inla_specs = inla_specs,
-                                 brms_specs = brms_specs)
+                                 brms_specs = brms_specs,
+                                 aoa_res    = aoa_res)
   return(proj)
 }
 

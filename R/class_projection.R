@@ -22,7 +22,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                 projection_specs = NULL,
                                 # Other things to add
                                 # aoa, metric of dissimilarity
-                                
+                                aoa = NULL,
                                 # processing_flags = NULL,
                                 
                                 # Executed when created
@@ -32,7 +32,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                                       rescale_pred,
                                                       lme4_specs,
                                                       inla_specs,
-                                                      brms_specs){
+                                                      brms_specs,
+                                                      aoa_res){
                                   # Check that input is either a character filepath
                                   # Or dataframe/tibble
                                   assertthat::assert_that(
@@ -42,7 +43,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     is.logical(rescale_pred),
                                     is.list(lme4_specs) || is.null(lme4_specs),
                                     is.list(inla_specs) || is.null(inla_specs),
-                                    is.list(brms_specs) || is.null(brms_specs)
+                                    is.list(brms_specs) || is.null(brms_specs),
+                                    is.list(aoa_res) || is.null(aoa_res)
                                   )
                                   
                                   # ------ #
@@ -76,6 +78,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     self$projection_specs <- c(proj_specs, brms_specs)
                                   }
                                   
+                                  self$aoa <- aoa_res
                                   # And check 
                                   # Outsourced security checks
                                   # self$checkself()
@@ -269,13 +272,17 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     is.character(response_var) || is.null(response_var),
                                     is.character(uncertainty_var) || is.null(uncertainty_var)
                                   )
-                                  # TODO:
+                                  
                                   # add response_var, and error_var (or uncert_var) - for specifying plot details
                                   type <- match.arg(type,
                                                     c("response-map", "uncertainty-map", "bivariate-map",
                                                       "response-distr", "uncertainty-distr", "bivariate-distr"))
                                   
                                   
+                                  # TODO: incorporate aoa info
+                                  # Mask "-map" plots
+                                  # Colour "-distr" plots - or rm from plot??
+                                  # Which aoa - i.e. which cv type...
                                   
                                   basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
                                                               axis.title = ggplot2::element_text(size = 20),
