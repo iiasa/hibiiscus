@@ -4,8 +4,8 @@
 #' This function projects a fitted hib model using the supplied model object and
 #' data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`hib_model`] object - either lme4, inla, or brms.
+#' Expects a [`hib_model`] object.
+#' @param mod_obj A [`hib_model`] object - either lme4, inla, or brms.
 #' @param data Either a dataframe-like object or a raster stack that can be used
 #' to project onto
 #' @param backtransform A [`function`] that will backtransform the model response
@@ -24,11 +24,11 @@
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
-#'   proj <- hib_mod_project(obj, data)
+#'   proj <- hib_mod_project(hib_model, preoj_data)
 #' } 
 #' @export
 # TODO: replace obj with mod_obj
-hib_mod_project <- function(obj, 
+hib_mod_project <- function(mod_obj, 
                             data,
                             backtransform = NULL,
                             rescale_pred = F,
@@ -46,7 +46,7 @@ hib_mod_project <- function(obj,
   # Assertions 
   # is data a df/tibble/ raster/stack 
   assertthat::assert_that(
-    inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model") || inherits(obj, "hib_brms_model"), # obj is a hib model
+    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"), # obj is a hib model
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
@@ -67,7 +67,7 @@ hib_mod_project <- function(obj,
   if (calc_aoa){
     assertthat::assert_that(inherits(cv_obj, "hib_cv_res"))  
     message(crayon::green("Estimating Area-of-Applicability...\n"))
-    aoa_res <- hib_calc_aoa(obj, cv_obj, data)
+    aoa_res <- hib_calc_aoa(mod_obj, cv_obj, data)
   }
   if (!calc_aoa){
     aoa_res <- NULL
@@ -79,7 +79,7 @@ hib_mod_project <- function(obj,
   # %%%%%
   # LME4
   # %%%%%
-  if (inherits(obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "hib_lme4_model")){
     message(crayon::green("lme4 model detected! Projection in progress...\n"))
     # TODO: wrap in hib_mod_proj_lme4??
     
@@ -123,10 +123,10 @@ hib_mod_project <- function(obj,
     
     # %%%%
     # get model intercept
-    if ("(Intercept)" %in% obj$fixedef_coefficients$Coefficient_name){
-      base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
+    if ("(Intercept)" %in% mod_obj$fixedef_coefficients$Coefficient_name){
+      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
     } else {
-      base_val <- obj$fixedef_coefficients$Coefficient_value[1]
+      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
     }
     # %%%%
     # get model intercept
@@ -138,9 +138,9 @@ hib_mod_project <- function(obj,
     
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
-    all_covars <- all.vars(formula(delete.response(terms(formula(obj$model)))))
+    all_covars <- all.vars(formula(delete.response(terms(formula(mod_obj$model)))))
     # But what about random effects... - 
-    rand_vars <- names(lme4::ranef(obj$model))
+    rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     
     # TODO: lme4_spec checks
@@ -159,10 +159,10 @@ hib_mod_project <- function(obj,
       # model fitting data
       # for each fix_vars, check if chr or fct
       # if it is, check all data[,var] are in obj$data[,var]
-      check_covar_levels(obj$model, data, fix_vars)
+      check_covar_levels(mod_obj$model, data, fix_vars)
       
       message(crayon::green("Projecting model...\n"))
-      pred_df <- as.data.frame(predict(obj$model,
+      pred_df <- as.data.frame(predict(mod_obj$model,
                                        data,
                                        re.form = NA))
       colnames(pred_df) <- "prediction_mean" # prediction
@@ -176,7 +176,7 @@ hib_mod_project <- function(obj,
       if (lme4_specs$bootstrap == T){
       # if (lme4_boot == T){
         message(crayon::green("Bootstrapping model predictions...\n"))
-        boot_obj <- lme4::bootMer(obj$model, 
+        boot_obj <- lme4::bootMer(mod_obj$model, 
                                   function(mod, df = data){predict(mod, df, re.form = NA)}, 
                                   nsim = lme4_specs$n_boot)
         
@@ -208,7 +208,7 @@ hib_mod_project <- function(obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
-      data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars,
+      data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
                          lme4_specs = lme4_specs)
                          # lme4_boot = lme4_boot,
                          # n_boot = n_boot)
@@ -219,7 +219,7 @@ hib_mod_project <- function(obj,
       # Apply individual terra proj to each item of list...
       data <- purrr::map(data,
                          terra_proj,
-                         obj = obj, 
+                         obj = mod_obj, 
                          backtransform = backtransform, 
                          rescale_pred = rescale_pred, 
                          base_val = base_val, 
@@ -233,7 +233,7 @@ hib_mod_project <- function(obj,
   # %%%%%
   # INLA
   # %%%%%
-  else if (inherits(obj, "hib_inla_model")){
+  else if (inherits(mod_obj, "hib_inla_model")){
 
     # Package check
     if (!requireNamespace("INLA", quietly = TRUE)) {
@@ -251,7 +251,7 @@ hib_mod_project <- function(obj,
     
     # Get baseline value for optional rescaling
     # get model intercept
-    int_id <- which(grepl("intercept", rownames(obj$model$summary.fixed), ignore.case = T))
+    int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
     # TODO: What if another covar also contains intercept...
     if (length(int_id) > 1){
       message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
@@ -261,7 +261,7 @@ hib_mod_project <- function(obj,
     if (length(int_id) == 0){
       int_id <- 1
     }
-    base_val <- obj$model$summary.fixed$mean[int_id]
+    base_val <- mod_obj$model$summary.fixed$mean[int_id]
     # if backtrans - backrans intercept to get baseline val
     if (!is.null(backtransform)){
       base_val <- backtransform(base_val)
@@ -270,7 +270,7 @@ hib_mod_project <- function(obj,
     
     # Get some basic info on model covars
     # all_covars <- all.vars(formula(delete.response(terms(obj$inla_fitted_formula))))
-    all_covars <- all.vars(formula(delete.response(terms(obj$user_formula$full))))
+    all_covars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$full))))
     # can ignore iid ranefs...
     # but covars are all needed... - can set to NA if missing though
     
@@ -285,14 +285,14 @@ hib_mod_project <- function(obj,
     
     #   get from terr_proj_prep...
     # need to know fix_vars for terra_proj style approach...
-    fix_vars <- all.vars(formula(delete.response(terms(obj$user_formula$response_fixed))))
+    fix_vars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$response_fixed))))
     # ignore "Intercept" too
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
     # TODO: check and test
     # If terra, convert rasters to dfs
     if (inherits(data, "SpatRaster")){
-      data_df <- terra_to_df_inla(data, obj, fix_vars)
+      data_df <- terra_to_df_inla(data, mod_obj, fix_vars)
     }
     # TODO
     # If list of terra, convert each raster to df, add name of item in list, bind all
@@ -300,7 +300,7 @@ hib_mod_project <- function(obj,
          all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ) ){
       data_df <- purrr::map(data,
                             terra_to_df_inla,
-                            obj = obj, 
+                            obj = mod_obj, 
                             fix_vars = fix_vars) |>
         # TODO: is ".," needed?
         # TODO: better term for id
@@ -318,10 +318,10 @@ hib_mod_project <- function(obj,
     
     # %%%%
     
-    if (obj$inla_incl_spatial_term){
+    if (mod_obj$inla_incl_spatial_term){
       # Need s.spde from original model!!
       # or just recreate!
-      site.spde <- INLA::inla.spde2.matern(obj$inla_mesh, alpha = 2)
+      site.spde <- INLA::inla.spde2.matern(mod_obj$inla_mesh, alpha = 2)
       
       # A <- inla.spde.make.A(input_mesh, 
       #                       loc = coords)
@@ -344,7 +344,7 @@ hib_mod_project <- function(obj,
         coords <- as.matrix(data_df[,c("X", "Y")])
       }
       
-      if (obj$inla_mesh_settings$mesh_dim == "3d"){
+      if (mod_obj$inla_mesh_settings$mesh_dim == "3d"){
         coords <- INLA::inla.mesh.map(coords,  
                                       projection = "longlat")
       }
@@ -352,7 +352,7 @@ hib_mod_project <- function(obj,
       #   
       # }
       
-      pred_A <- INLA::inla.spde.make.A(obj$inla_mesh,
+      pred_A <- INLA::inla.spde.make.A(mod_obj$inla_mesh,
                                        loc = coords)
       
     } 
@@ -383,12 +383,12 @@ hib_mod_project <- function(obj,
     # model fitting data (or NA)
     # for each fix_vars, check if chr or fct
     # if it is, check all data[,var] are in obj$data[,var
-    check_covar_levels(obj$model, pred_X, fix_vars)
+    check_covar_levels(mod_obj$model, pred_X, fix_vars)
     
     # print(missing_covars)
     # print(head(pred_X))
     # Combine data etc into stack
-    if (obj$inla_incl_spatial_term){
+    if (mod_obj$inla_incl_spatial_term){
       pred_stk <- INLA::inla.stack(tag = "pred",
                                    data = list(y = rep(NA, nrow(pred_X))),
                                    A = list(pred_A, 1),
@@ -402,12 +402,12 @@ hib_mod_project <- function(obj,
     }
     # Get original model fitting stack..
     # And combine with pred for refitting
-    comb_stk <- INLA::inla.stack(obj$inla_stack,
+    comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
                                  pred_stk)
     message(crayon::green("Re-fitting INLA model to make projection (this may take a while)...\n"))
     # re-fit/ Project
-    m0 <- INLA::inla(formula = obj$inla_fitted_formula,
-                     family = obj$model$.args$family,
+    m0 <- INLA::inla(formula = mod_obj$inla_fitted_formula,
+                     family = mod_obj$model$.args$family,
                      data= INLA::inla.stack.data(comb_stk),
                      control.fixed = list(expand.factor.strategy='inla'),
                      # control.inla = list(strategy = "", int.strategy = ""), 
@@ -520,7 +520,7 @@ hib_mod_project <- function(obj,
     # %%%%%
     # BRMS
     # %%%%%
-  } else if (inherits(obj, "hib_brms_model")){
+  } else if (inherits(mod_obj, "hib_brms_model")){
     message(crayon::green("brms model detected! Projection in progress...\n"))
     
     # %%%%
@@ -543,10 +543,10 @@ hib_mod_project <- function(obj,
     # %%%%
     
     # Get baseline value for optional rescaling
-    if ("Intercept" %in% obj$fixedef_coefficients$Coefficient_name){
-      base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "Intercept"]
+    if ("Intercept" %in% mod_obj$fixedef_coefficients$Coefficient_name){
+      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "Intercept"]
     } else {
-      base_val <- obj$fixedef_coefficients$Coefficient_value[1]
+      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
     }
     
     # if backtrans - backrans intercept to get baseline val
@@ -556,11 +556,11 @@ hib_mod_project <- function(obj,
     
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
-    all_covars <- all.vars(formula(delete.response(terms(obj$model$formula$formula))))
+    all_covars <- all.vars(formula(delete.response(terms(mod_obj$model$formula$formula))))
     # all_covars <- all.vars(formula(obj$model)[[3]])
     # print(all_covars)
     # But what about random effects... - 
-    rand_vars <- names(brms::ranef(obj$model))
+    rand_vars <- names(brms::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     # print(fix_vars)
     
@@ -575,16 +575,16 @@ hib_mod_project <- function(obj,
       # model fitting data
       # for each fix_vars, check if chr or fct
       # if it is, check all data[,var] are in obj$data[,var
-      check_covar_levels(obj$model, data, fix_vars)
+      check_covar_levels(mod_obj$model, data, fix_vars)
       
       # %%%%%
       if (brms_specs$incl_obs_uncert == T){
       # if (incl_obs_uncert == T){
-        mean_df <- predict(obj$model,
+        mean_df <- predict(mod_obj$model,
                            data,
                            re_form = NA) |>
           as.data.frame()
-        med_df <- predict(obj$model,
+        med_df <- predict(mod_obj$model,
                           data,
                           re_form = NA,
                           robust = T) |>
@@ -592,11 +592,11 @@ hib_mod_project <- function(obj,
       }
       if (brms_specs$incl_obs_uncert == F){
       # if (incl_obs_uncert == F){
-        mean_df <- fitted(obj$model,
+        mean_df <- fitted(mod_obj$model,
                           data,
                           re_form = NA) |>
           as.data.frame()
-        med_df <- fitted(obj$model,
+        med_df <- fitted(mod_obj$model,
                          data,
                          re_form = NA,
                          robust = T) |>
@@ -652,7 +652,7 @@ hib_mod_project <- function(obj,
     # Single raster object
     if (inherits(data, "SpatRaster")){
       # print(brms_specs)
-      data <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars,
+      data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
                          brms_specs = brms_specs)
                          # incl_obs_uncert)
     }
@@ -662,7 +662,7 @@ hib_mod_project <- function(obj,
       # Apply individual terra proj to each item of list...
       data <- purrr::map(data,
                          terra_proj,
-                         obj = obj,
+                         obj = mod_obj,
                          backtransform = backtransform,
                          rescale_pred = rescale_pred,
                          base_val = base_val,
@@ -675,7 +675,7 @@ hib_mod_project <- function(obj,
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
   # message(crayon::green"Creating projection object...\n"))
-  proj <- hib_mod_projection$new(obj = obj,
+  proj <- hib_mod_projection$new(obj = mod_obj,
                                  proj = data,
                                  backtransform = backtransform,
                                  rescale_pred = rescale_pred,
@@ -716,7 +716,7 @@ hib_mod_project <- function(obj,
 #' \dontrun{
 #'   tmp_proj <- terra_proj(obj, data, backtransform, rescale_pred, base_val, fix_vars)
 #' } 
-#' @export
+#' @noRd
 terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars,
                        lme4_specs = NULL,
                        brms_specs = NULL){
@@ -1125,7 +1125,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 #' \dontrun{
 #'   r <- terra_covar_prep(covar_nm, covar_df, data_rast, mod_data, input_type = "binary")
 #' } 
-#' @export
+#' @noRd
 terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type = "binary"){
   # TODO: maybe change to @NoRd
   # TODO: better term than binary
@@ -1245,7 +1245,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' \dontrun{
 #'   pred <- terra_proj_lme4_pred(mod, data, backtransform)
 #' } 
-#' @export
+#' @noRd
 terra_proj_lme4_pred <- function(mod, data, backtransform, 
                                  lme4_specs){
                                  # lme4_boot, n_boot){
@@ -1380,7 +1380,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 #' \dontrun{
 #'   pred <- terra_proj_brms_pred(mod, data, backtransform)
 #' } 
-#' @export
+#' @noRd
 terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs_uncert){
   # TODO: maybe change to @NoRd
   
@@ -1531,7 +1531,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
 #' \dontrun{
 #'   tmp_df <- terra_to_df_inla(obj, data, fix_vars)
 #' } 
-#' @export
+#' @noRd
 terra_to_df_inla <- function(data, obj, fix_vars){
   # TODO: maybe change to @NoRd
   # TODO: maybe co-opt to use fitted for brms rather then predict - for terra input
@@ -1899,10 +1899,6 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
 # or throw a warning/erorr
 
 
-# TODO:
-# Sub functions:
-# hib_mod_proj_lme4
-# hib_mod_proj_inla
 
 
 

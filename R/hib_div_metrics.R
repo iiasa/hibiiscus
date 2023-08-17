@@ -1137,8 +1137,10 @@ hib_calc_div_within <- function(obj, metrics){
                            return(hib_calc_gma(db_obj))
                          }
                          if (metric == "Shannon_diversity"){
-                           return(hib_calc_shannon(db_obj) |>
-                             dplyr::select(SSBS, SS, Shannon_diversity))
+                          tmp <- hib_calc_shannon(db_obj)
+                          tmp$Data[[1]] <- tmp$Data[[1]] |>
+                             dplyr::select(SSBS, SS, Shannon_diversity)
+                           return(tmp)
                          }
                          # %%%
                          # Evenness (Shannon/log(N_spp))
