@@ -265,12 +265,18 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                 
                                 plot = function(type = "response-map",
                                                 response_var = NULL,
-                                                uncertainty_var = NULL){
+                                                uncertainty_var = NULL,
+                                                aoa_mask = FALSE,
+                                                aoa_var = NULL
+                                                # aoa_clr ??
+                                                ){
                                   
                                   assertthat::assert_that(
                                     is.character(type),
                                     is.character(response_var) || is.null(response_var),
-                                    is.character(uncertainty_var) || is.null(uncertainty_var)
+                                    is.character(uncertainty_var) || is.null(uncertainty_var),
+                                    is.logical(aoa_mask),
+                                    is.character(aoa_var) || is.null(aoa_var)
                                   )
                                   
                                   # add response_var, and error_var (or uncert_var) - for specifying plot details
@@ -283,6 +289,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   # Mask "-map" plots
                                   # Colour "-distr" plots - or rm from plot??
                                   # Which aoa - i.e. which cv type...
+                                  
                                   
                                   basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
                                                               axis.title = ggplot2::element_text(size = 20),
@@ -297,7 +304,21 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   # Get projection info - self$projection
                                   proj <- self$projection
+                                  if (aoa_mask){
+                                    aoa_exists <- !is.null(self$aoa)
+                                    if (!aoa_exists){
+                                      message(crayon::yellow(paste0("\nWarning: AOA result does not exist, ",
+                                                                  "AOA cannot be plotted.")))
+                                      aoa_mask <- F
+                                      aoa_var <- NULL
+                                    }
+
+                                    if (aoa_exists){
+                                      aoa <- self$aoa$proj_aoa  
+                                    }
+                                  }
                                   
+
                                   # TODO - incl respnse var/error var in args
                                   # get these from data accordingly...
                                   
@@ -444,6 +465,11 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     }
                                     
                                     proj <- terra::as.data.frame(proj[[vars_]], xy = T)
+
+                                    if (aoa_mask){
+                                      aoa <- terra::as.data.frame(aoa, xy = T)  
+                                    }
+                                    
                                   }
                                   if ((is.list(proj) & !is.data.frame(proj))){
                                     proj <- purrr::map(proj,
@@ -459,9 +485,40 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                                          
                                                          terra::as.data.frame(z[[vars_]], xy = T)}) |>
                                       dplyr::bind_rows(.id = "Year")
+
+                                    if (aoa_mask){
+                                      aoa <- purrr::map(aoa,
+                                                         function(z){
+                                                          terra::as.data.frame(z, xy = T)
+                                                          }) |>
+                                        dplyr::bind_rows(.id = "Year")
+                                    }
                                   }
                                   
                                   
+                                  # TODO:
+                                  # check that aoa_var is in colnames(proj_df)
+                                  if (aoa_mask & !is.null(aoa_var)){
+                                    assertthat::assert_that(
+                                      assertthat::has_name(aoa, aoa_var)
+                                    )
+                                  }
+                                  if (aoa_mask & is.null(aoa_var)){
+                                    # get a vector of possible aoa cols
+                                    aoa_cols <- colnames(aoa)
+                                    aoa_cols <- aoa_cols[grepl("AOA_", aoa_cols)]
+                                    assertthat::assert_that(
+                                      length(aoa_cols) > 0
+                                    )
+                                    # randomly use 1...
+                                    aoa_var <- aoa_cols[1]
+                                    message(crayon::yellow(paste0("\nWarning: 'aoa_var' not specified, ",
+                                                                  "using '", 
+                                                                  aoa_var,
+                                                                  "'.")))
+                                  }
+
+
                                   # TODO: make use of tidyterra??
                                   # print(head(proj))
                                   
@@ -533,7 +590,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     
                                     plt <- ggplot2::ggplot() +
                                       ggplot2::geom_tile(ggplot2::aes(x = x, y = y, fill = bi_class),
-                                                         data = proj) +
+                                                         data = proj,
+                                                         show.legend = F) +
                                       biscale::bi_theme(base_size = 16) +
                                       biscale::bi_scale_fill(pal = "GrPink2", na.value = "transparent") +
                                       # ggplot2::labs(
@@ -543,7 +601,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                       # ) +
                                       ggplot2::theme_bw() +
                                       basic_thm +
-                                      ggplot2::theme(legend.position = "none",
+                                      ggplot2::theme(#legend.position = "none",
                                                      aspect.ratio = 1)
                                     
                                     if ("Year" %in% colnames(proj)){
@@ -551,45 +609,25 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                         ggplot2::facet_wrap(~Year)
                                     }
                                     
+                                    # print(grepl("-map", type) && aoa_mask)
+                                    if (aoa_mask){
+                                      aoa <- aoa |>
+                                        dplyr::filter(!!dplyr::sym(aoa_var) == 0)
+                                      plt <- plt + 
+                                        ggplot2::geom_tile(ggplot2::aes(x = x, y = y,
+                                                                        alpha = "1"),
+                                                          fill = "#FF00FF",# "purple",#"grey10",
+                                                          colour = "#FF00FF",
+                                                          data = aoa) +
+                                        ggplot2::scale_alpha_manual(values = c("1" = 1),
+                                                          labels = c("1" = gsub("AOA_", "CV type: ", aoa_var))) +
+                                        ggplot2::labs(alpha = "Outside AOA") +
+                                        ggplot2::theme(legend.position = "bottom")
+                                    }
+
                                     plt <- cowplot::ggdraw() +
                                       cowplot::draw_plot(plt, 0, 0, 0.75, 1) +
                                       cowplot::draw_plot(legend, 0.75, .4, 0.25, 0.25)
-                                  }
-                                  
-                                  # distribution of response... - histogram
-                                  if (type == "response-distr"){
-                                    plt <- ggplot2::ggplot(proj) +
-                                      ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(response_var))) +
-                                      ggplot2::labs(x = resp_lab,
-                                                    y = "Count") +
-                                      ggplot2::theme_bw() +
-                                      basic_thm
-                                    
-                                    if ("Year" %in% colnames(proj)){
-                                      plt <- plt +
-                                        ggplot2::facet_wrap(~Year)
-                                    }
-                                  }
-                                  
-                                  # distribution of response x sd... - heatmap
-                                  if (type == "bivariate-distr"){
-                                    plt <- ggplot2::ggplot(proj) +
-                                      ggplot2::geom_hex(ggplot2::aes(x = !!dplyr::sym(response_var),
-                                                                     y = !!dplyr::sym(uncertainty_var))) +
-                                      ggplot2::labs(x = resp_lab,
-                                                    y = uncert_lab,
-                                                    fill = "Count") +
-                                      ggplot2::scale_fill_gradient(low = "gainsboro",
-                                                                   high = "dodgerblue3") +
-                                      # ggplot2::scale_colour_gradient(low = "gainsboro",
-                                      #                                high = "dodgerblue3")
-                                      ggplot2::theme_bw() +
-                                      basic_thm
-                                    
-                                    if ("Year" %in% colnames(proj)){
-                                      plt <- plt +
-                                        ggplot2::facet_wrap(~Year)
-                                    }
                                   }
                                   
                                   # "uncertainty-map"
@@ -646,21 +684,165 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     # %%%
                                     
                                   }
+
+                                  if (type %in% c("response-map", "uncertainty-map") & 
+                                      aoa_mask){
+                                    aoa <- aoa |>
+                                      dplyr::filter(!!dplyr::sym(aoa_var) == 0)
+                                    plt <- plt + 
+                                      ggplot2::geom_tile(ggplot2::aes(x = x, y = y,
+                                                                      alpha = "1"),
+                                                        fill = "#FF00FF",
+                                                        colour = "#FF00FF",
+                                                        data = aoa) +
+                                      ggplot2::scale_alpha_manual(values = c("1" = 1),
+                                                        labels = c("1" = gsub("AOA_", "CV type: ", aoa_var))) +
+                                      ggplot2::labs(alpha = "Outside AOA") +
+                                      ggplot2::guides(alpha = ggplot2::guide_legend(order = 2),
+                                                      fill = ggplot2::guide_colourbar(order = 1),
+                                                      colour = ggplot2::guide_colourbar(order = 1))
+                                  }
                                   
-                                  # "uncertainty-distr",
-                                  if (type == "uncertainty-distr"){
-                                    plt <- ggplot2::ggplot(proj) +
-                                      ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(uncertainty_var))) +
-                                      ggplot2::labs(x = uncert_lab,
-                                                    y = "Count") +
+                                  # distribution of response... - histogram
+                                  if (type == "response-distr"){
+                                    # TODO: replicate this in each -distr plt
+                                    if (aoa_mask){
+                                      df <- proj |>
+                                        dplyr::left_join(aoa,
+                                                          by = c("x", "y"))
+                                      plt <- ggplot2::ggplot(df) +
+                                        ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(response_var), 
+                                                                             fill = as.character(!!dplyr::sym(aoa_var)) ),
+                                                                alpha = 0.7) +
+                                        ggplot2::scale_fill_manual(values = c("0" = "#FF00FF",
+                                                                     "1" = "grey35"),
+                                                          labels = c("0" = "Outside",
+                                                                     "1" = "Inside")) +
+                                        ggplot2::labs(x = resp_lab,
+                                                    y = "Count",
+                                                    fill = paste0("AOA ",
+                                                                  gsub("AOA_", "\nCV type: ", aoa_var)) ) +
                                       ggplot2::theme_bw() +
                                       basic_thm
+
+                                    } else { 
+                                      plt <- ggplot2::ggplot(proj) +
+                                        ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(response_var)),
+                                                                alpha = 0.7) +
+                                        ggplot2::labs(x = resp_lab,
+                                                      y = "Count") +
+                                        ggplot2::theme_bw() +
+                                        basic_thm
+                                    }
                                     
                                     if ("Year" %in% colnames(proj)){
                                       plt <- plt +
                                         ggplot2::facet_wrap(~Year)
                                     }
                                   }
+                                  
+                                  # distribution of response x sd... - heatmap
+                                  if (type == "bivariate-distr"){
+                                    # if (aoa_mask){...}
+                                    # AOA - maybe have side-by side plots? - facet by inside/outside AOA
+                                    if (aoa_mask){
+                                      df <- proj |>
+                                        dplyr::left_join(aoa,
+                                                          by = c("x", "y")) |>
+                                        dplyr::mutate(AOA = !!dplyr::sym(aoa_var))
+
+                                      plt <- ggplot2::ggplot(df) +
+                                        ggplot2::geom_hex(ggplot2::aes(x = !!dplyr::sym(response_var),
+                                                                       y = !!dplyr::sym(uncertainty_var))) +
+                                                                       # colour = as.character(AOA))) +
+                                        ggplot2::labs(x = resp_lab,
+                                                      y = uncert_lab,
+                                                      fill = "Count") +
+                                        ggplot2::scale_fill_gradient(low = "gainsboro",
+                                                                     high = "dodgerblue3") +
+                                        # ggplot2::scale_colour_manual(values = c("0" = "#FF00FF",
+                                        #                                         "1" = NA)) +
+                                        # ggplot2::scale_colour_gradient(low = "gainsboro",
+                                        #                                high = "dodgerblue3")
+                                        ggplot2::facet_wrap(~AOA,
+                                                            labeller = ggplot2::labeller("AOA" = c("0" = "Outside AOA",
+                                                                                                    "1" = "Inside AOA"))) +
+                                        ggplot2::theme_bw() +
+                                        basic_thm
+
+                                      if ("Year" %in% colnames(df)){
+                                        plt <- plt +
+                                          ggplot2::facet_wrap(AOA~Year,
+                                                              labeller = ggplot2::labeller("AOA" = c("0" = "Outside AOA",
+                                                                                                    "1" = "Inside AOA")))
+                                      }
+
+                                    } else {
+                                      plt <- ggplot2::ggplot(proj) +
+                                        ggplot2::geom_hex(ggplot2::aes(x = !!dplyr::sym(response_var),
+                                                                       y = !!dplyr::sym(uncertainty_var))) +
+                                        ggplot2::labs(x = resp_lab,
+                                                      y = uncert_lab,
+                                                      fill = "Count") +
+                                        ggplot2::scale_fill_gradient(low = "gainsboro",
+                                                                     high = "dodgerblue3") +
+                                        # ggplot2::scale_colour_gradient(low = "gainsboro",
+                                        #                                high = "dodgerblue3")
+                                        ggplot2::theme_bw() +
+                                        basic_thm
+                                    
+                                      if ("Year" %in% colnames(proj)){
+                                        plt <- plt +
+                                          ggplot2::facet_wrap(~Year)
+                                      }
+                                    }
+                                  }
+
+                                  # "uncertainty-distr",
+                                  if (type == "uncertainty-distr"){
+                                    # TODO: replicate this in each -distr plt
+                                    if (aoa_mask){
+                                      df <- proj |>
+                                        dplyr::left_join(aoa,
+                                                          by = c("x", "y"))
+                                      plt <- ggplot2::ggplot(df) +
+                                        ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(uncertainty_var), 
+                                                                             fill = as.character(!!dplyr::sym(aoa_var)) ),
+                                                                alpha = 0.7) +
+                                        ggplot2::scale_fill_manual(values = c("0" = "#FF00FF",
+                                                                     "1" = "grey35"),
+                                                          labels = c("0" = "Outside",
+                                                                     "1" = "Inside")) +
+                                        ggplot2::labs(x = uncert_lab,
+                                                    y = "Count",
+                                                    fill = paste0("AOA ",
+                                                                  gsub("AOA_", "\nCV type: ", aoa_var)) ) +
+                                      ggplot2::theme_bw() +
+                                      basic_thm
+
+                                    } else { 
+                                      plt <- ggplot2::ggplot(proj) +
+                                        ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(uncertainty_var)),
+                                                                alpha = 0.7) +
+                                        ggplot2::labs(x = uncert_lab,
+                                                      y = "Count") +
+                                        ggplot2::theme_bw() +
+                                        basic_thm
+                                    }
+                                    # plt <- ggplot2::ggplot(proj) +
+                                    #   ggplot2::geom_histogram(ggplot2::aes(x = !!dplyr::sym(uncertainty_var))) +
+                                    #   ggplot2::labs(x = uncert_lab,
+                                    #                 y = "Count") +
+                                    #   ggplot2::theme_bw() +
+                                    #   basic_thm
+                                    
+                                    if ("Year" %in% colnames(proj)){
+                                      plt <- plt +
+                                        ggplot2::facet_wrap(~Year)
+                                    }
+                                  }
+
+                                  
                                   
                                   (plt)
                                   
