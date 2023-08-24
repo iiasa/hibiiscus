@@ -167,6 +167,8 @@ hib_mod_project <- function(mod_obj,
                                        re.form = NA))
       colnames(pred_df) <- "prediction_mean" # prediction
       
+      # TODO: current approach to backtransforming/rescaling sd doesn't make sense...
+      
       # %%%
       # Use bootMer to get uncertainty
       # TODO: optional - slow...
@@ -188,6 +190,7 @@ hib_mod_project <- function(mod_obj,
         # CI.lower1 <- pred - std.err*1.96
         # CI.upper1 <- pred + std.err*1.96
         # %%%
+        # Should back trans and rescale here...
       }
       
       # What if we want to include  random effect??

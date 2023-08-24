@@ -206,7 +206,7 @@ hib_calc_site_contrasts <- function(obj,
       dplyr::left_join(site_df[, c("SSBS", "LUI")], 
                        by = c("SSBS2" = "SSBS")) |>
       dplyr::rename(SSBS2_LUI = LUI) |>
-      # create an lu_contrast column (what we'll use for modelling)
+      # create an lui_contrast column (what we'll use for modelling)
       dplyr::mutate(LUI_contrast = paste(SSBS1_LUI, SSBS2_LUI, sep = "_vs_"),
                     Baseline_LUI = baseline_lui)
     if (is.null(baseline_lui)){
@@ -215,6 +215,42 @@ hib_calc_site_contrasts <- function(obj,
     }
   }
   # TODO: lu contrast (Predominant_land_use), i contrast (Use_intensity)
+  # if ("lu_contrast" %in% metrics){
+  #   # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
+  #   site_comp_df <- site_comp_df |>
+  #     dplyr::left_join(site_df[, c("SSBS", "Predominant_land_use")], 
+  #                      by = c("SSBS1" = "SSBS")) |>
+  #     dplyr::rename(SSBS1_LU = Predominant_land_use) |>
+  #     # get the land use for s2
+  #     dplyr::left_join(site_df[, c("SSBS", "Predominant_land_use")], 
+  #                      by = c("SSBS2" = "SSBS")) |>
+  #     dplyr::rename(SSBS2_LU = Predominant_land_use) |>
+  #     # create an lu_contrast column (what we'll use for modelling)
+  #     dplyr::mutate(LU_contrast = paste(SSBS1_LU, SSBS2_LU, sep = "_vs_"),
+  #                   Baseline_LUI = baseline_lui) # ??
+  #   if (is.null(baseline_lui)){  # ?? Baseline_LUI isn't really needed for LU??
+  #     site_comp_df <- site_comp_df |>
+  #       dplyr::mutate(Baseline_LUI = NA)
+  #   }
+  # }
+  # if ("i_contrast" %in% metrics){
+  #   # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
+  #   site_comp_df <- site_comp_df |>
+  #     dplyr::left_join(site_df[, c("SSBS", "Use_intensity")], 
+  #                      by = c("SSBS1" = "SSBS")) |>
+  #     dplyr::rename(SSBS1_I = Use_intensity) |>
+  #     # get the land use for s2
+  #     dplyr::left_join(site_df[, c("SSBS", "Use_intensity")], 
+  #                      by = c("SSBS2" = "SSBS")) |>
+  #     dplyr::rename(SSBS2_I = Use_intensity) |>
+  #     # create an lu_contrast column (what we'll use for modelling)
+  #     dplyr::mutate(I_contrast = paste(SSBS1_I, SSBS2_I, sep = "_vs_"),
+  #                   Baseline_LUI = baseline_lui)
+  #   if (is.null(baseline_lui)){
+  #     site_comp_df <- site_comp_df |>
+  #       dplyr::mutate(Baseline_LUI = NA)
+  #   }
+  # }
 
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
   if (any(c("geogr_dist_hav", "geogr_dist_geod") %in% metrics)){
@@ -251,6 +287,7 @@ hib_calc_site_contrasts <- function(obj,
     }
       
   }
+  # Env dist? - gower dist [altitude, bioclim: maximum and minimum temperature and precipitation of wettest and driest month]
   
   # Also, by default incl SSB - either SSB or NA if sites are from different blocks
   site_comp_df <- site_comp_df |>
