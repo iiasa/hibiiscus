@@ -151,7 +151,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                             # m_form <- format(self$original_model_obj$user_formula$full)
                             # m_form <- format(self$original_model_obj$model$.args$formula)
                             m_form <- as.character(self$original_model_obj$user_formula$full)
-                            m_form <- paste(form_chr[2], form_chr[1], form_chr[3])
+                            # m_form <- paste(form_chr[2], form_chr[1], form_chr[3])
+                            m_form <- paste(m_form[2], m_form[1], m_form[3])
                             if (self$original_model_obj$inla_incl_spatial_term){
                               m_form <- paste(m_form,
                                               "+ f(s, model = site.spde)")

@@ -20,8 +20,10 @@ test_that("Check inla modelling pipeline works as desired.", {
   
   # within-site model
   suppressWarnings(mod_w <- hib_fit_inla(tmp_db,
-                                         log(Total_abundance + 1) ~ -1 + LUI,
-                                         ~ f(SS, model = "iid")))
+                                         log(Total_abundance + 1) ~ -1 + Intercept + LUI,
+                                         ~ f(SS, model = "iid")
+                                         # relevel_specs = c("LUI" = "Primary_Minimal_use")
+                                         ))
   expect_true(inherits(mod_w,
                        "hib_inla_model"))
   
@@ -73,9 +75,13 @@ test_that("Check inla modelling pipeline works as desired.", {
   # project for df, ?and terra rast?
   proj_w <- hib_mod_project(mod_w,
                             proj_df_w,
-                            backtransform = function(x){exp(x) - 1})
+                            backtransform = function(x){exp(x) - 1},
+                            calc_aoa = T,
+                            cv_obj = cv_w)
   expect_true(inherits(proj_w,
                        "hib_mod_projection"))  
+  # Check for aoa_res as a list in proj_w_aoa
+  expect_true(is.list(proj_w$aoa))
   
   # proj_b <- hib_mod_project(mod_b,
   #                           proj_df_b)
@@ -106,10 +112,13 @@ test_that("Check inla modelling pipeline works as desired.", {
   
   proj_w_ <- hib_mod_project(mod_w,
                              proj_rast_w,
-                             backtransform = function(x){exp(x) - 1})
+                             backtransform = function(x){exp(x) - 1},
+                             calc_aoa = T,
+                             cv_obj = cv_w)
   expect_true(inherits(proj_w_,
                        "hib_mod_projection"))  
-  
+  # Check for aoa_res as a list in proj_w_aoa
+  expect_true(is.list(proj_w_$aoa))
   
   # proj_rast_b <- proj_df_b |>
   #   dplyr::mutate(LUI_idx = as.numeric(as.factor(LUI_contrast))) |>

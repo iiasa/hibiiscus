@@ -35,7 +35,8 @@ model using `lme4`.
 
 * We then demonstrate the use of cross-validation to interogate model performance.
 
-* Before finishing with an example of model projection.
+* Before finishing with an example of model projection, including estimation of 
+the Area of Applicability (AOA, see Meyers and Pebesma, 2021).
 
 
 ### 1. Load package and PREDICTS-like data
@@ -48,9 +49,14 @@ devtools::load_all()
 
 ```{r Load data, cache=F, warning=FALSE}
 # PREDICTS data, 2016 release
-hib_db <- create_hib(path_species = "~/Documents/IIASA/lamasus/raw_data/PREDICTS/2016/database.rds", 
-                     path_sites   = "~/Documents/IIASA/lamasus/raw_data/PREDICTS/2016/sites.rds", 
-                     version = "2016")
+# TODO: replace this path with something else - simulated data? or just edit path to relative...
+# hib_db <- create_hib(path_species = "../../PREDICTS/2016/database.rds", 
+#                      path_sites   = "../../PREDICTS/2016/sites.rds", 
+#                      version = "2016")
+
+hib_db <- create_hib(path_species = "data/dummy_species_rc.rds",
+                       version = "custom",
+                       custom_version_name = "dummy_data")
 
 # View a summary of the hib database object
 print(hib_db)
@@ -58,12 +64,18 @@ print(hib_db)
 ```
 
 
-### 2. Filter data to focus on European sites and remove locations where land-use is unclear
+
+### 2. Filter data to remove sites in Oceania
 
 ```{r Filter data, cache=F}
+### 2. Filter data to focus on European sites and remove locations where land-use is unclear
+# hib_db <- hib_filter_sites(hib_db, 
+#                            UN_region == "Europe" &
+#                              Predominant_land_use != "Cannot decide")
+
 hib_db <- hib_filter_sites(hib_db, 
-                           UN_region == "Europe" &
-                             Predominant_land_use != "Cannot decide")
+                           UN_region != "Oceania")
+
 ```
 
 ```{r Simple plot of data, fig.width=6, fig.height=5}
@@ -71,28 +83,44 @@ hib_db$plot()
 ```
 
 ### 3. Condense land-use categories 
-Here, we will add a new column to the site data, effectively grouping land-use types into
-"Natural", "Semi-natural" and "Human".
+Here, we will add a new land-use 'legend' to the database, grouping original land-use 
+types into "Natural", "Semi-natural" and "Human".
+
 
 ```{r Group LU types, cache=F}
-alt_lu_df <- data.frame("Predominant_land_use"= c("Primary vegetation",
-                                                  "Mature secondary vegetation",
-                                                  "Intermediate secondary vegetation",
-                                                  "Young secondary vegetation",
-                                                  "Secondary vegetation (indeterminate age)",
-                                                  "Plantation forest",
-                                                  "Pasture",
-                                                  "Cropland",
-                                                  "Urban"),
-                        "Grouped_LU" = c("Natural", "Natural", 
-                                         "Semi-natural",  "Semi-natural", "Semi-natural",
-                                         "Human", "Human", "Human", "Human"))
+# alt_lu_df <- data.frame("Predominant_land_use"= c("Primary vegetation",
+#                                                   "Mature secondary vegetation",
+#                                                   "Intermediate secondary vegetation",
+#                                                   "Young secondary vegetation",
+#                                                   "Secondary vegetation (indeterminate age)",
+#                                                   "Plantation forest",
+#                                                   "Pasture",
+#                                                   "Cropland",
+#                                                   "Urban"),
+#                         "Grouped_LU" = c("Natural", "Natural", 
+#                                          "Semi-natural",  "Semi-natural", "Semi-natural",
+#                                          "Human", "Human", "Human", "Human"))
+# 
+# alt_lu_df$Grouped_LU <- factor(alt_lu_df$Grouped_LU,
+#                                levels = c("Natural", "Semi-natural", "Human"))
+# hib_db <- hib_join_sites(hib_db,
+#                          alt_lu_df)
 
-alt_lu_df$Grouped_LU <- factor(alt_lu_df$Grouped_LU,
-                               levels = c("Natural", "Semi-natural", "Human"))
-hib_db <- hib_join_sites(hib_db,
-                         alt_lu_df)
-
+# %%%
+# Make alt_lu_leg using SS, Predominant_land_use - re-align to c("Natural", "Semi-natural", "Human")
+alt_lu_df <- hib_db$sites[,c("SSBS", "Predominant_land_use")] |>
+  dplyr::mutate(Predominant_land_use = dplyr::case_when(Predominant_land_use == "Primary" ~ "Natural",
+                                                        Predominant_land_use == "Secondary" ~ "Semi-natural",
+                                                        T ~ "Human"),
+                Predominant_land_use = factor(Predominant_land_use,
+                                              levels = c("Natural", "Semi-natural", "Human")),
+                Use_intensity = "",
+                LUI = Predominant_land_use)
+# Make an lu legend
+alt_lu_leg <- create_lu_legend(alt_lu_df)
+# Set the lu legend on the database
+hib_db <- set_lu_legend(hib_db, alt_lu_leg)
+# %%%
 
 # Save the database object for future use
 # save_hib(hib_db, 
@@ -116,11 +144,11 @@ print(hib_db)
 Note: other metrics of within-site diversity include; "Species_richness", "Chao1_diversity", "Simpson_diversity", "Shannon_diversity", "Mean_abundance", "Geometric_mean_abundance", "HillShannon_diversity", "HillSimpson_diversity" and "PIE".
 
 
-### 5. Fit a simple model of total abundance in response to land-use
+### 5. Fit a simple model of (rescaled) total abundance in response to land-use
 
 ```{r Fit model, cache=F}
 hib_ta_mod <- hib_fit_lme4(hib_db,
-                           sqrt(Rescaled_total_abundance) ~ Grouped_LU + (1 | SS) + (1 | SSB),
+                           sqrt(Rescaled_total_abundance) ~ LUI + (1 | SS) + (1 | SSB),
                            REML = F,
                            calc_CIs = "Wald")
 
@@ -144,7 +172,7 @@ hib_ta_mod$plot("random-effects")
 # on the scale of Rescaled_total_abundance
 hib_cv <- hib_mod_cv(hib_ta_mod,
                      hib_db,
-                     fold_type = c("Random-5", "Biome"),
+                     fold_type = c("Random-5", "UN_region"),
                      backtransform = function(x){x^2})
 
 print(hib_cv)
@@ -152,7 +180,7 @@ print(hib_cv)
 ```
 
 Note: other cross-validation approaches include; "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", "Country", "UN_subregion", "UN_region", "Biome", "Realm" and "Custom". 
-When using "Custom", any grouping variable can be specified, as long as it is present in the site data.
+When using "Custom", any grouping variable can be specified, provided it is present in the site data.
 
 
 ```{r Simple plot of cross-validation folds, fig.width=8, fig.height=5}
@@ -179,7 +207,7 @@ proj_df <- expand.grid(x = 1:10,
             y = 1:10) %>%
   as.data.frame() %>%
   dplyr::mutate(Forest_cover = runif(dplyr::n()),
-                Grouped_LU = dplyr::case_when(Forest_cover <= 0.3 ~ "Human",
+                LUI = dplyr::case_when(Forest_cover <= 0.3 ~ "Human",
                                               Forest_cover > 0.3 & Forest_cover <= 0.7 ~ "Semi-natural",
                                               Forest_cover > 0.7 ~ "Natural",
                                               T ~ NA))
@@ -190,8 +218,15 @@ hib_proj <- hib_mod_project(hib_ta_mod,
                 proj_df, 
                 backtransform = function(x){x^2},
                 rescale_pred = T,
-                lme4_boot = T, n_boot = 50)
+                lme4_specs = list(bootstrap = T, n_boot = 50),
+                calc_aoa = T, 
+                cv_obj = hib_cv)
+ 
 ```
+
+Note: In the above, although we have included a calculation of the AOA (calc_aoa = T), all
+locations within the projection data have LUI values that are within the set of values
+used to fit the model. There are therefore no locations outside the AOA in this example.
 
 ```{r Simple plot of projection, fig.width=6, fig.height=5}
 hib_proj$plot(response_var = "rescaled_prediction_mean")

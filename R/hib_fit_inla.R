@@ -223,6 +223,21 @@ hib_fit_inla <- function(obj,
     # dplyr::mutate(y = !!as.formula(paste0(response, "~ 1"))[[2]] )
   
   # %%%
+  # mod_df <- na.omit(mod_df)
+  
+  # HERE!!!
+  # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
+  chr_cols_idx <- purrr::map(covars_sub, 
+                         function(x, df = mod_df){
+                           is.character(df[[x]])}) |> 
+    unlist()
+  chr_cols <- covars_sub[chr_cols_idx]
+  # print(chr_cols)
+  for (c in chr_cols){
+    mod_df[[c]] <- as.factor(mod_df[[c]])
+  }
+
+  # %%%
   mod_df <- prep_model_data(mod_df,
                             scale_specs$covars_to_scale,
                             scale_specs$scale_func,

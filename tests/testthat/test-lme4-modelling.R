@@ -22,8 +22,8 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # ignore warnings...
   suppressWarnings(mod_w <- hib_fit_lme4(tmp_db,
                                          log(Total_abundance + 1) ~ LUI + (1 | SS),
-                                         calc_CIs = "Wald"
-                                         # relevel_specs = c("LUI" = "Cropland_Intense_use")
+                                         calc_CIs = "Wald",
+                                         relevel_specs = c("LUI" = "Primary_Minimal_use")
                                          ))
   
   expect_true(inherits(mod_w,
@@ -32,7 +32,8 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # between-site model
   suppressWarnings(mod_b <- hib_fit_lme4(tmp_db,
                                          Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
-                                         calc_CIs = "Wald"))
+                                         calc_CIs = "Wald",
+                                         relevel_specs = c("LUI_contrast" = "Primary_Minimal_use_vs_Primary_Minimal_use")))
   expect_true(inherits(mod_b,
                        "hib_lme4_model"))
   
@@ -87,13 +88,12 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # %%%%
   
   
-  # project for df, ?and terra rast?
-  # proj_w <- hib_mod_project(mod_w,
-  #                           proj_df_w,
-  #                           backtransform = function(x){exp(x) - 1})
+  # project for df
   expect_true(inherits(proj_w_aoa,
                        "hib_mod_projection"))  
-  
+  # Check for aoa_res as a list in proj_w_aoa
+  expect_true(is.list(proj_w_aoa$aoa))
+
   proj_b <- hib_mod_project(mod_b,
                             proj_df_b)
   expect_true(inherits(proj_b,
@@ -118,10 +118,6 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   )
   names(proj_rast_w) <- "LUI"
   
-  # proj_w_ <- hib_mod_project(mod_w,
-  #                            proj_rast_w,
-  #                            backtransform = function(x){exp(x) - 1})
-  
   suppressWarnings(
     proj_w_aoa_ <- hib_mod_project(mod_w,
                                  proj_rast_w,
@@ -132,7 +128,8 @@ test_that("Check lme4 modelling pipeline works as desired.", {
     
   expect_true(inherits(proj_w_aoa_,
                        "hib_mod_projection"))  
-  
+  # Check for aoa_res as a list in proj_w_aoa_
+  expect_true(is.list(proj_w_aoa_$aoa))
   
   proj_rast_b <- proj_df_b |>
     dplyr::mutate(LUI_idx = as.numeric(as.factor(LUI_contrast))) |>
@@ -149,12 +146,6 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   )
   names(proj_rast_b) <- "LUI_contrast"
   
-  
-  # %%%%
-  # AOA TESTING
-  # devtools::load_all()
-  # aoa_w <- hib_calc_aoa(mod_w, cv_w, proj_rast_w)
-  # %%%%
   
   proj_rast_b_ <- proj_df_b |>
     dplyr::select(x, y, Geogr_dist_hav) |>

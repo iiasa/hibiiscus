@@ -56,6 +56,9 @@ hib_calc_aoa <- function(mod_obj,
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
     resp_form <- mod_obj$user_formula$response_fixed[[2]]
+
+    # print(fix_vars)
+    # print(resp_form)
   }
   
   # brms:
@@ -102,6 +105,7 @@ hib_calc_aoa <- function(mod_obj,
                                           variables = fix_vars, 
                                           weight = weight)
   
+
   train <- catupdate$train
   weight <- catupdate$weight
   
@@ -151,15 +155,18 @@ hib_calc_aoa <- function(mod_obj,
     tmp_fold_type <- cv_obj$cv_results[[i]]$fold_type
     
     # for each fold, 
-    
+    # print(tmp$fold_id)
+    tmp_fold_ids <- unique(tmp$fold_id)
+
     N_folds <- NULL
-    N_folds <- max(tmp$fold_id)
+    N_folds <- length(tmp_fold_ids)
+    # N_folds <- max(tmp$fold_id)
     tmp_di <- vector("list", N_folds)
     
     for (j in 1:N_folds){
       # subset to ssbs of interest, calc DI - euclidean
       tmp_sub <- tmp |>
-        dplyr::filter(fold_id == j)
+        dplyr::filter(fold_id == tmp_fold_ids[j])
       
       # get min/mean of rows
       tmp_dist <- tmp_sub |> 
@@ -305,9 +312,11 @@ calc_test_DI <- function(train_DI,
   # For each fix/cat_var, expand to levels using caret - 
   cat_vars <- fix_vars_in_df[which(sapply(data_df[, fix_vars_in_df, drop = F], class) %in% c("factor","character"))]
   
+  # print(cat_vars)
   
   if (length(cat_vars) > 0){
     for (cat_var in cat_vars){
+      # print(cat_var)
       data_df[, cat_var] <- factor(as.character(data_df[, cat_var, drop = T]),
                                    levels = levels(mod_data[, cat_var, drop = T]))
       
@@ -328,6 +337,7 @@ calc_test_DI <- function(train_DI,
     data_df <- data_df[, -which(names(data_df) %in% cat_vars)]
   }
   
+  # print("HERE")
   # For each non-fix var, get those that match names in weights...
   # Having expanded /collated covar-level names, check all are present (compare to names(weight))
   
@@ -414,7 +424,7 @@ calc_test_DI <- function(train_DI,
 #' - key difference is inclusion of ", drop = F" in weight collection
 #' @keywords projections, dissimilarity, weights
 #' @noRd
-aoa_get_weights_local = function(model, variables){
+aoa_get_weights_local <- function(model, variables){
   
   assertthat::assert_that(
     inherits(model, "train"),
@@ -473,15 +483,18 @@ aoa_categorial_train_local <- function(train, variables, weight){
     message("warning: predictors contain categorical variables. The integration is currently still under development. Please check results carefully!")
     
     for (catvar in catvars){
+      # print(catvar)
       # mask all unknown levels in newdata as NA (even technically no predictions can be made)
       train[,catvar]<-droplevels(train[,catvar])
       
+      # print(head(train[,catvar]))
+
       # then create dummy variables for the remaining levels in train:
       dvi_train <- predict(caret::dummyVars(paste0("~",catvar), data = train,
                                             sep = ""),
                            train)
       train <- data.frame(train,dvi_train)
-      
+      # print(head(dvi_train))
       if(!inherits(weight, "error")){
         addweights <- data.frame(t(rep(weight[,which(names(weight)==catvar)],
                                        ncol(dvi_train))))

@@ -372,6 +372,7 @@ get_model_data <- function(obj,
                            is.character(df[[x]])}) |> 
     unlist()
   chr_cols <- mod_covars[chr_cols_idx]
+  # print(chr_cols)
   for (c in chr_cols){
     mod_df[[c]] <- as.factor(mod_df[[c]])
   }
