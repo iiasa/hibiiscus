@@ -1,7 +1,7 @@
 ---
 title: "Basic usage"
 author: "Richard Cornford"
-date: "2023-06-27"
+date: "2023-08-30"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -23,8 +23,9 @@ knitr::opts_chunk$set(fig.align = "center")
 
 Below, you can find examples on how to use some of the core functions of the hibiiscus package.
 
-* First, we show how to create a hibiiscus database (based on data from the 
-PREDICTS project, see <https://www.nhm.ac.uk/our-science/our-work/biodiversity/predicts.html>).
+* First, we show how to create a hibiiscus database (based on simulated data).
+<!-- from the PREDICTS project, see <https://www.nhm.ac.uk/our-science/our-work/biodiversity/predicts.html>). -->
+
 
 * We then show various ways in which a hibiiscus database object can be manipulated,
 for example filtering to remove particular sites, or realigning land-use variables.
@@ -33,7 +34,7 @@ We follow this by saving the hibiiscus database for future use.
 * Next, diversity metrics for each site will be calculated, before fitting a mixed-effects
 model using `lme4`.
 
-* We then demonstrate the use of cross-validation to interogate model performance.
+* We then demonstrate the use of cross-validation to interrogate model performance.
 
 * Before finishing with an example of model projection, including estimation of 
 the Area of Applicability (AOA, see Meyers and Pebesma, 2021).
@@ -54,7 +55,7 @@ devtools::load_all()
 #                      path_sites   = "../../PREDICTS/2016/sites.rds", 
 #                      version = "2016")
 
-hib_db <- create_hib(path_species = "data/dummy_species_rc.rds",
+hib_db <- create_hib(path_species = "../data/dummy_species_rc.rds",
                        version = "custom",
                        custom_version_name = "dummy_data")
 
@@ -178,7 +179,6 @@ hib_cv <- hib_mod_cv(hib_ta_mod,
 print(hib_cv)
 
 ```
-
 Note: other cross-validation approaches include; "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", "Country", "UN_subregion", "UN_region", "Biome", "Realm" and "Custom". 
 When using "Custom", any grouping variable can be specified, provided it is present in the site data.
 
@@ -195,7 +195,6 @@ hib_cv$plot("coefficients")
 hib_cv$plot("metrics",
             c("corsq", "mae", "rmse", "rsq"))
 ```
-
 Note: In the above figures displaying coefficients and predictive performance, the black line and grey shading indicate the values and confidence intervals, respectively, estimated based on a model fitted to the complete dataset (In-sample).
 
 
