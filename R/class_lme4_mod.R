@@ -88,14 +88,17 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         
                         if (inherits(db_obj, "Database")){
                           self$version <- db_obj$version  
+                          loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
+
                         }
                         if (is.list(db_obj)){
                           self$version <- lapply(db_obj, function(x){x$version})
+                          loc_df <- lapply(db_obj, function(x){x$sites[, c("SSBS", "Longitude" ,"Latitude")]}) |>
+                            dplyr::bind_rows()
                         }
                         
 
                         # # TODO: store site locations
-                        loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
                         if ("SSBS" %in% colnames(mod_df)){
                           loc_df <- loc_df |> dplyr::filter(SSBS %in% mod_df$SSBS)
                         } else if ("SSBS1" %in% colnames(mod_df)){

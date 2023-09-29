@@ -29,6 +29,9 @@ hib_join_species <- function(obj, spp_info){
     msg = "Columns in spp_info are not compatible with the current species data."
   )
   
+  # TODO: joining data message
+  message(crayon::green("Joining species-related data into hib database...\n"))
+  
   obj$species <- dplyr::left_join(obj$species,
                            spp_info)  
   
@@ -88,6 +91,8 @@ hib_join_sites <- function(obj, site_info){
     n_matching_cols > 0 & n_matching_cols < length(info_cols),
     msg = "Columns in site_info are not compatible with the current site data."
   )
+  
+  message(crayon::green("Joining site-related data into hib database...\n"))
   
   obj$sites <- dplyr::left_join(obj$sites,
                          site_info)

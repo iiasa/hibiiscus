@@ -155,12 +155,10 @@ hib_calc_aoa <- function(mod_obj,
     tmp_fold_type <- cv_obj$cv_results[[i]]$fold_type
     
     # for each fold, 
-    # print(tmp$fold_id)
     tmp_fold_ids <- unique(tmp$fold_id)
 
     N_folds <- NULL
     N_folds <- length(tmp_fold_ids)
-    # N_folds <- max(tmp$fold_id)
     tmp_di <- vector("list", N_folds)
     
     for (j in 1:N_folds){

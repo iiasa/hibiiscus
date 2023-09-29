@@ -916,14 +916,24 @@ hib_calc_shannon <- function(obj){
   if (obj$processing_flags$measures_effort_corrected == F){
     measure_var <- "Measurement"
   }
+  # div_df <- obj$species |>
+  #   dplyr::filter(Diversity_metric_type == "Abundance") |>
+  #   dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+  #   dplyr::group_by(SSBS, SS) |>
+  #   dplyr::mutate(p_i = !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) ) |>
+  #   dplyr::ungroup() |>
+  #   dplyr::group_by(SSBS, SS) |>
+  #   dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
+  #   dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ), #) |> 
+  #                   logN = log(sum(!!dplyr::sym(measure_var) > 0)) ) |>
+  #   dplyr::ungroup()
+
   div_df <- obj$species |>
     dplyr::filter(Diversity_metric_type == "Abundance") |>
     dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+    dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::mutate(p_i = !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) ) |>
-    dplyr::ungroup() |>
-    dplyr::group_by(SSBS, SS) |>
-    dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
     dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ), #) |> 
                     logN = log(sum(!!dplyr::sym(measure_var) > 0)) ) |>
     dplyr::ungroup()

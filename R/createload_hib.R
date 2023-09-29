@@ -51,6 +51,11 @@ create_hib <- function(path_species, path_sites = "",
   # Check that version is correct
   version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
   
+  # TODO
+  if (version %in% c("2016", "2022")){
+    version <- paste("PREDICTS -", version)
+  }
+
   # if version == "custom", add a bit more detail
   if (version == "custom"){
     # either from custom_version_name

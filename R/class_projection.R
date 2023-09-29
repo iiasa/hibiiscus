@@ -48,7 +48,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   )
                                   
                                   # ------ #
-                                  message(crayon::green("\nInitializing model projection class") )
+                                  message(crayon::green("Initializing model projection class...") )
                                   
                                   # Store projection object (list of data)
                                   self$last_update <- lubridate::today()
@@ -524,6 +524,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   
                                   if (type == "response-map"){
+                                    # TODO: check x/y exist
+
                                     plt <- ggplot2::ggplot(proj) +
                                       ggplot2::geom_tile(ggplot2::aes(x = x, y = y,
                                                                       fill = !!dplyr::sym(response_var),
@@ -568,7 +570,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   }
                                   
                                   if (type == "bivariate-map"){
-                                    
+                                    # TODO: check x/y exist
                                     # TODO: add colour scale options...
                                     # c("Bluegill", "BlueGold", "BlueOr", "BlueYl", "Brown",
                                     #   "Brown2", "DkBlue","DkBlue2", "DkCyan","DkCyan2", "DkViolet",
@@ -632,6 +634,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   # "uncertainty-map"
                                   if (type == "uncertainty-map"){
+                                    # TODO: check x/y exist
                                     # %%%
                                     plt <- ggplot2::ggplot(proj) +
                                       ggplot2::geom_tile(ggplot2::aes(x = x, y = y,
@@ -707,6 +710,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   if (type == "response-distr"){
                                     # TODO: replicate this in each -distr plt
                                     if (aoa_mask){
+                                      # TODO: check x/y exist
                                       df <- proj |>
                                         dplyr::left_join(aoa,
                                                           by = c("x", "y"))
@@ -746,6 +750,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     # if (aoa_mask){...}
                                     # AOA - maybe have side-by side plots? - facet by inside/outside AOA
                                     if (aoa_mask){
+                                      # TODO: check x/y exist
                                       df <- proj |>
                                         dplyr::left_join(aoa,
                                                           by = c("x", "y")) |>
@@ -802,6 +807,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   if (type == "uncertainty-distr"){
                                     # TODO: replicate this in each -distr plt
                                     if (aoa_mask){
+                                      # TODO: check x/y exist
                                       df <- proj |>
                                         dplyr::left_join(aoa,
                                                           by = c("x", "y"))

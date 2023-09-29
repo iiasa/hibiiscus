@@ -30,7 +30,8 @@ Database <- R6Class("Database",
                       # Assert path$sites/species is character ?? - already checked in create_hib
     
                       # ------ #
-                      message(crayon::green(paste0("Initializing input datasets for PREDICTS version ", version, "...")) )
+
+                      message(crayon::green(paste0("Initializing input datasets for ", version, " data ...\n")) )
                       
                       # Now load both datasets
                       # Note RC: But the species data has all the sites
@@ -108,7 +109,7 @@ Database <- R6Class("Database",
                           assertthat::has_name(species, "Predominant_land_use"),
                           assertthat::has_name(species, "Use_intensity")
                           )
-                        message(crayon::green("Generating sites dataframe..."))
+                        message(crayon::green("Generating sites dataframe...\n"))
                         
                         
                         # if sample_midpoint not present and sample_strt/end are...
@@ -438,7 +439,7 @@ Database <- R6Class("Database",
                         stats$joined_information <- "NA"
                       }
                       message(
-                        paste0("Hibiiscus PREDICTS database (including version/s: ", crayon::bold(self$version),")","\n",
+                        paste0("Hibiiscus PREDICTS-like database (including version/s: ", crayon::bold(self$version),")","\n",
                                "(Last updated: ", crayon::green( self$last_update ), ")",
                                "\n",
                                "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
@@ -615,7 +616,7 @@ Database <- R6Class("Database",
                                   show.legend = F) +
                           ggplot2::xlim(x_rng) +
                           ggplot2::ylim(y_rng) +
-                          ggplot2::labs(colour = "PREDICTS\nversion",
+                          ggplot2::labs(colour = "Dataset", #"PREDICTS\nversion",
                                x = ggplot2::element_blank(),
                                y = ggplot2::element_blank()) +
                           ggplot2::guides(colour = ggplot2::guide_legend(
@@ -674,7 +675,8 @@ Database <- R6Class("Database",
                                    stat = "identity") +
                           ggplot2::labs(x = var_,
                                y = "N",
-                               fill = "PREDICTS\nversion") +
+                               fill = "Dataset" #"PREDICTS\nversion"
+                               ) +
                           ggplot2::facet_wrap(~dat_type,
                                      scales = "free_y") +
                           ggplot2::theme_bw() +
@@ -709,7 +711,8 @@ Database <- R6Class("Database",
                                    stat = "identity") +
                           ggplot2::labs(x = "Class",
                                y = "No. records",
-                               fill = "PREDICTS\nversion") +
+                               fill = "Dataset" #"PREDICTS\nversion"
+                               ) +
                           ggplot2::theme_bw() +
                           basic_thm +
                           ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 

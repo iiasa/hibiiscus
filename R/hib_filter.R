@@ -20,6 +20,15 @@ hib_filter_sites <- function(obj, condition){
     )
 
   # TODO: Is there a way to check the condition is a condition
+  # print({{condition}})
+
+  # print(is.character({{condition}}))
+  # print(substitute(condition))
+  # print(dplyr:::dplyr_quosures({{condition}})[[1]])
+  # print(deparse(condition))
+  # TODO: if condition is an expression, use deparse
+  # cond_type <- try(inherits(condition, "expression"))
+  # print(cond_type)
 
   str_cond <- dplyr:::dplyr_quosures({{condition}})[[1]] |>
     rlang::quo_get_expr() |>
@@ -43,7 +52,15 @@ hib_filter_sites <- function(obj, condition){
   )
   # TODO: any need for further assertions??
   # TODO: could compare nrow before and after - throw a warning if no reduction
-  
+  # %%%
+  nrow_site_orig <- nrow(obj$sites)
+  nrow_site_new <- nrow(sites_upd)
+
+  if (nrow_site_new == nrow_site_orig){
+    message(crayon::yellow(paste("Warning: the number of rows in the sites data",
+                                 "has not changed following filtering.")))
+  }
+  # %%%
 
   # Update obj
   obj$species <- species_upd
@@ -58,9 +75,9 @@ hib_filter_sites <- function(obj, condition){
   
   obj$checkself()
   # Print updated summary of database
-  message(crayon::green("Filtered database summary:"))
-  print(obj)
-  message("\n")
+  # message(crayon::green("Filtered database summary:"))
+  # print(obj)
+  # message("\n")
   # Re-calculate effort-adjusted measurements? - ensure users filter first..!!
   
   return(obj)
@@ -121,6 +138,14 @@ hib_filter_species <- function(obj, condition){
     dplyr::select(-c(Higher_taxa, N_samples)) |>
     dplyr::left_join(sites_upd, by = "SSBS")
   
+  nrow_spp_orig <- nrow(obj$species)
+  nrow_spp_new <- nrow(species_upd)
+  if (nrow_spp_new == nrow_spp_orig){
+    message(crayon::yellow(paste("Warning: the number of rows in the species data",
+                                 "has not changed following filtering.")))
+  }
+  # %%%
+
   # Update obj
   obj$species <- species_upd
   obj$sites <- sites_upd
@@ -134,9 +159,9 @@ hib_filter_species <- function(obj, condition){
   
   obj$checkself()
   
-  message(crayon::green("Filtered database summary:"))
-  print(obj)
-  message("\n")
+  # message(crayon::green("Filtered database summary:"))
+  # print(obj)
+  # message("\n")
   # Re-calculate effort-adjusted measurements? - ensure users filter first..!!
   
   return(obj)

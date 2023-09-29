@@ -29,6 +29,9 @@ update_hib <- function(obj, path_species, path_sites = "",
     # Check that version is correct
     version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
     
+    if (version %in% c("2016", "2022")){
+      version <- paste("PREDICTS -", version)
+    }
     # if version == "custom", add a bit more detail
     if (version == "custom"){
       # either from custom_version_name
@@ -49,7 +52,7 @@ update_hib <- function(obj, path_species, path_sites = "",
     # Checks of the existing database
     obj$checkself()
     
-    message("Updating database object...")
+    message(crayon::green("Updating database object...\n"))
     
     names(path_species) <- version
     names(path_sites) <- version

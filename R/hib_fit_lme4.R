@@ -135,7 +135,7 @@ hib_fit_lme4 <- function(obj,
                             names(relevel_specs),
                             unname(relevel_specs))
   # %%%
-  
+  # print(head(mod_df))
   # get_all_vars(test_formula)
   # rlang::f_lhs(test_formula)
   # rlang::f_rhs(test_formula)
@@ -434,7 +434,7 @@ prep_model_data <- function(df,
 
     # - check scale_func is not null
     if (is.null(scale_func)){
-      message(crayon::yellow("Warning: scale_func not provided, using baser R scale()."))
+      message(crayon::yellow("Warning: scale_func not provided, using base R scale()."))
       scale_func <- scale
     }
     # scale,
