@@ -42,6 +42,8 @@ hib_fit_lme4 <- function(obj,
                          model_dredge = F,
                          model_average = F,
                          dataset_weights = NULL,
+                         # TODO: weights can be site-level too
+                         # weight_specs = list(weights = c(a, b), weight_type = "dataset") # or "site"
                          scale_specs = list(covars_to_scale = NULL,
                                             scale_func = NULL),
                          relevel_specs = c(NULL)
@@ -71,6 +73,7 @@ hib_fit_lme4 <- function(obj,
     is.null(dataset_weights) || is.numeric(dataset_weights),
     is.list(scale_specs),
     is.vector(relevel_specs) || is.null(relevel_specs)
+    # is.list(weight_specs) || is.null(weight_specs)
   )
 
 
@@ -83,6 +86,12 @@ hib_fit_lme4 <- function(obj,
   # Collate data from database - based on columns specified in the formula
   
   # %%%%%
+  # TODO: improve weighting approach
+  # Currently only allows dataset weights - e.g. 0.5 v 0.5 for dataset a and b
+  # Could inorp site-level ratio - e.g. site in data a is equiv to site in data b or not...
+  # In the site-level approach, weights need to be calculated after mod_df is collated
+
+  
   # if weights is not null, ensure sum to 1 (just rescale)
   if (!is.null(dataset_weights)){
     if (sum(dataset_weights) != 1){
@@ -93,12 +102,19 @@ hib_fit_lme4 <- function(obj,
   if (is.list(obj) & is.null(dataset_weights)){
     dataset_weights <- rep(1/length(obj), length(obj)) 
   }
+
+  # Check weights
+  # if (is.list(obj) & is.null(weight_specs)){
+    # # Default option of equal weight per dataset
+    # weight_specs <- list(weights = rep(1/length(obj), length(obj)), weight_type = "dataset")
+  # }
   # %%%%%
   
   mod_covars <- all.vars(form[[3]])
   mod_resp <- all.vars(form[[2]])
   
-  
+  # print(mod_resp)
+
   if (is.list(obj)){
     mod_df_ls <- purrr::map(.x = obj,
                             .f = function(.x, 
@@ -107,10 +123,18 @@ hib_fit_lme4 <- function(obj,
                               get_model_data(.x, resp, covars)
                             })
     
+    # %%%
+    # TODO : call weight calc function
+    # mod_df_ls <- weight_model_data(mod_df_ls,
+    #                                weight_specs$weights,
+    #                                weight_specs$weight_type)
+    # %%%
+    
     # add weights
     for (i in 1:length(obj)){
       mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
     }
+    
     mod_df <- dplyr::bind_rows(mod_df_ls,
                               .id = "dataset_modelling_id")
     
@@ -383,7 +407,7 @@ get_model_data <- function(obj,
 
 
 
-# TODO:
+
 # Prep data -scale options, relevel factor columns
 
 #' Prepare model data for modelling
@@ -479,3 +503,113 @@ prep_model_data <- function(df,
 #                 c("LUI"), 
 #                 c("Cropland_Intense_use"))
 
+
+# TODO
+#' Calculate weights for use in integrated modelling
+#' 
+#' @description 
+#' This function calculates and assigns weights to rows in the modelling data
+#' based on the provided arguments
+#' @details 
+#' Expects a list of dataframes
+#' @param df_ls A list of [`dataframes`], each associated with a biodiversity dataset.
+#' @param weights A [`numeric`] vector indicating the 'weights' the user wants to 
+#' link to each dataset.
+#' @param weight_type A [`character`] specifying the form of weighting. Either 
+#' "dataset" or "site". 
+#' @keywords data processing
+#' @examples 
+#' \dontrun{
+#'   mod_ls <- weight_model_data(df_ls, weights = c(0.5,0.5), weight_type = "dataset") 
+#' } 
+#' @noRd
+weight_model_data <- function(df_ls,
+                              weights,
+                              weight_type){
+  assertthat::assert_that(
+    is.list(df_ls),
+    is.numeric(weights),
+    is.character(weight_type),
+    length(df_ls) == length(weights)
+  )
+  
+  assertthat::assert_that(
+    all(unlist(lapply(df_ls, function(x){
+        is.data.frame(x)
+      })))
+  )
+
+  weight_type <- match.arg(weight_type, c("dataset", "site"), several.ok = F)  
+  # Ensure weights sum to 1 (rescale)
+  if (sum(weights) != 1){
+    weights <- weights/sum(weights)  
+  }
+  
+  if (weight_type == "dataset"){
+    for (i in 1:length(df_ls)){
+      df_ls[[i]]$data_weight <- weights[i] / nrow(df_ls[[i]])
+    }
+  }
+  
+  if (weight_type == "site"){
+    # Total weight is equal to nrows of data - as above... but this is divided between
+    # datasets/sites 
+    tot_dat_n <- sum(unlist(lapply(df_ls, nrow)))
+    # weights <- weights / tot_dat_n
+    for (i in 1:length(df_ls)){
+      df_ls[[i]]$data_weight <- weights[i]
+    }
+    
+    tot_w <- sum(unlist(lapply(df_ls, function(x){sum(x$data_weight)})))
+    
+    for (i in 1:length(df_ls)){
+      df_ls[[i]]$data_weight <- df_ls[[i]]$data_weight / tot_w
+    }
+  }
+
+  return(df_ls)
+  
+}
+
+
+# # %%%%%%
+# df_ls_1 <- list(df1 = data.frame(x = runif(100)),
+#                 df2 = data.frame(x = runif(200)),
+#                 df3 = data.frame(x = runif(50)))
+# 
+# df_ls_2 <- list(df1 = data.frame(x = runif(100)),
+#                 df2 = data.frame(x = runif(400)),
+#                 df3 = data.frame(x = runif(60)))
+# 
+# test_1 <- weight_model_data(df_ls_1,
+#                             c(0.5,0.5,0.5),
+#                             "dataset")
+# 
+# 
+# test_1.1 <- weight_model_data(df_ls_1,
+#                             c(0.5,1,0.5),
+#                             "site")
+# 
+# test_2 <- weight_model_data(df_ls_2,
+#                             c(1,0.5,0.5),
+#                             "dataset")
+# 
+# 
+# test_2.1 <- weight_model_data(df_ls_2,
+#                               c(0.5,1,2),
+#                               "site")
+# 
+# lapply(test_1, function(x){sum(x$data_weight)}) |> unlist() |> sum()
+# lapply(test_1, function(x){x$data_weight[1]}) |> unlist() 
+# 
+# lapply(test_1.1, function(x){sum(x$data_weight)}) |> unlist() |> sum()
+# lapply(test_1.1, function(x){x$data_weight[1]}) |> unlist() 
+# 
+# 
+# lapply(test_2, function(x){sum(x$data_weight)}) |> unlist() |> sum()
+# lapply(test_2, function(x){x$data_weight[1]}) |> unlist() 
+# 
+# lapply(test_2.1, function(x){sum(x$data_weight)}) |> unlist() |> sum()
+# lapply(test_2.1, function(x){x$data_weight[1]}) |> unlist() 
+# c(0.000877193, 0.001754386, 0.003508772 ) / max(c(0.000877193, 0.001754386, 0.003508772 ) ) 
+# # %%%%%%
