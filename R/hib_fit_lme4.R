@@ -4,7 +4,7 @@
 #' This function fits an lme4 model using the supplied database, formula and other
 #' function arguments tuning the model fitting process
 #' @details 
-#' Expects a database object...
+#' Expects a database object and various other arguments.
 #' @param obj A [`Database`] object, or a list of databases.
 #' @param form A [`formula`] in the style of lme4 - including fixed and random 
 #' effects.
@@ -16,14 +16,16 @@
 #' @param optimise_ranefs Not currently applicable - future dev
 #' @param model_dredge Not currently applicable - future dev
 #' @param model_average Not currently applicable - future dev
-#' @param dataset_weights A [`numeric`] vector containing the relative weights to
-#' assign to each dataset, should sum to 1. Note: if using this argument, the 
-#' supplied formula should have a response of the form [`y | weights(data_weight) ~`]
-#' The data_weight variable will be generated within the function call so as to 
-#' assign each observation per dataset an equal fraction of that dataset's weight.
+#' @param weight_specs A [`list`] containing "weights" and "weight_type".
+#' weights is [`numeric`] vector containing the relative weights to
+#' assign to each dataset/site, should sum to 1. 
+#' weight_type is a character, specifying either "dataset" or "site" - i.e. should
+#' the weights argument assign relative weights to whole datasets, or for sites in
+#' each dataset.
 #' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
 #' covars_to_scale is a [`character`] vector of numeric covariates that should be 
-#' scaled prior to modelling. scale_func is a function that will be used to scale 
+#' scaled prior to modelling. 
+#' scale_func is a function that will be used to scale 
 #' the specified covariates - if NULL, base::scale() will be used.
 #' @param relevel_specs A named [`vector`] where each item is:
 #' "<covar_to_relevel_name>" = "<base_level>".
@@ -41,9 +43,9 @@ hib_fit_lme4 <- function(obj,
                          optimise_ranefs = F,
                          model_dredge = F,
                          model_average = F,
-                         dataset_weights = NULL,
-                         # TODO: weights can be site-level too
-                         # weight_specs = list(weights = c(a, b), weight_type = "dataset") # or "site"
+                         # dataset_weights = NULL,
+                         weight_specs = list(weights = NULL,
+                                             weight_type = NULL), # list(weights = c(a, b), weight_type = "dataset") # or "site"
                          scale_specs = list(covars_to_scale = NULL,
                                             scale_func = NULL),
                          relevel_specs = c(NULL)
@@ -70,10 +72,10 @@ hib_fit_lme4 <- function(obj,
     is.function(family) || is.character(family), # family is character or function
     is.logical(REML), # REML is bool
     is.null(calc_CIs) || is.character(calc_CIs),   # calc_CIs is null or chr
-    is.null(dataset_weights) || is.numeric(dataset_weights),
+    # is.null(dataset_weights) || is.numeric(dataset_weights),
     is.list(scale_specs),
-    is.vector(relevel_specs) || is.null(relevel_specs)
-    # is.list(weight_specs) || is.null(weight_specs)
+    is.vector(relevel_specs) || is.null(relevel_specs),
+    is.list(weight_specs) #|| is.null(weight_specs)
   )
 
 
@@ -92,28 +94,46 @@ hib_fit_lme4 <- function(obj,
   # In the site-level approach, weights need to be calculated after mod_df is collated
 
   
+  # %%% OLD WEIGHTING
   # if weights is not null, ensure sum to 1 (just rescale)
-  if (!is.null(dataset_weights)){
-    if (sum(dataset_weights) != 1){
-      dataset_weights <- dataset_weights/sum(dataset_weights)  
-    }
-  }
-  # if obj is a list, and weights is null, set to equal weight per dataset
-  if (is.list(obj) & is.null(dataset_weights)){
-    dataset_weights <- rep(1/length(obj), length(obj)) 
-  }
-
-  # Check weights
-  # if (is.list(obj) & is.null(weight_specs)){
-    # # Default option of equal weight per dataset
-    # weight_specs <- list(weights = rep(1/length(obj), length(obj)), weight_type = "dataset")
+  # if (!is.null(dataset_weights)){
+  #   if (sum(dataset_weights) != 1){
+  #     dataset_weights <- dataset_weights/sum(dataset_weights)  
+  #   }
   # }
-  # %%%%%
+  # # if obj is a list, and weights is null, set to equal weight per dataset
+  # if (is.list(obj) & is.null(dataset_weights)){
+  #   dataset_weights <- rep(1/length(obj), length(obj)) 
+  # }
+  # %%% OLD WEIGHTING - END
+
+  # Check weights - could move to weights func
+  # if (is.list(obj) & !is.null(weight_specs$weights)){
+  #   # Check weight_type is not null
+  #   if (is.null(weight_specs$weight_type)){
+  #     message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))
+  #     weight_specs$weight_type <- "dataset"
+  #   }
+  # }
+  
+  # if (is.list(obj) & is.null(weight_specs$weights)){
+  #   # Default option of equal weight - if weights is null
+  #   weight_specs <- list(weights = rep(1, length(obj)), weight_type = weight_specs$weight_type)
+    
+  #   # Check weight_type 
+  #   if (!is.null(weight_specs$weight_type)){
+  #     message(crayon::yellow(paste0("Warning: weights not specified, using equal weight per ",
+  #                                  weight_specs$weight_type, ".")))
+  #   }
+  #   if (is.null(weight_specs$weight_type)){
+  #     message(crayon::yellow("Warning: weights not specified and weight_type missing, using equal weight per dataset."))
+  #     weight_specs$weight_type <- "dataset"
+  #   }
+  # }
+  # # %%%%%
   
   mod_covars <- all.vars(form[[3]])
   mod_resp <- all.vars(form[[2]])
-  
-  # print(mod_resp)
 
   if (is.list(obj)){
     mod_df_ls <- purrr::map(.x = obj,
@@ -125,15 +145,16 @@ hib_fit_lme4 <- function(obj,
     
     # %%%
     # TODO : call weight calc function
-    # mod_df_ls <- weight_model_data(mod_df_ls,
-    #                                weight_specs$weights,
-    #                                weight_specs$weight_type)
+    mod_df_ls <- weight_model_data(mod_df_ls,
+                                   "lme4",
+                                   weight_specs$weights,
+                                   weight_specs$weight_type)
     # %%%
     
     # add weights
-    for (i in 1:length(obj)){
-      mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
-    }
+    # for (i in 1:length(obj)){
+    #   mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
+    # }
     
     mod_df <- dplyr::bind_rows(mod_df_ls,
                               .id = "dataset_modelling_id")
@@ -154,6 +175,7 @@ hib_fit_lme4 <- function(obj,
   
   # %%%
   mod_df <- prep_model_data(mod_df,
+                            mod_covars,
                             scale_specs$covars_to_scale,
                             scale_specs$scale_func,
                             names(relevel_specs),
@@ -391,15 +413,16 @@ get_model_data <- function(obj,
   mod_df <- na.omit(mod_df)
   
   # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
-  chr_cols_idx <- purrr::map(mod_covars, 
-                         function(x, df = mod_df){
-                           is.character(df[[x]])}) |> 
-    unlist()
-  chr_cols <- mod_covars[chr_cols_idx]
-  # print(chr_cols)
-  for (c in chr_cols){
-    mod_df[[c]] <- as.factor(mod_df[[c]])
-  }
+  # Do this in prep_model_data
+  # chr_cols_idx <- purrr::map(mod_covars, 
+  #                        function(x, df = mod_df){
+  #                          is.character(df[[x]])}) |> 
+  #   unlist()
+  # chr_cols <- mod_covars[chr_cols_idx]
+  # # print(chr_cols)
+  # for (c in chr_cols){
+  #   mod_df[[c]] <- as.factor(mod_df[[c]])
+  # }
 
   return(mod_df)
   
@@ -419,6 +442,7 @@ get_model_data <- function(obj,
 #' @details 
 #' Expects a dataframe object...
 #' @param df A [`dataframe`].
+#' @param mod_covars A [`character`] vector indicating the model covariates.
 #' @param covars_to_scale A [`character`] vector indicating the response variables to scale.
 #' @param scale_func A [`function`] to scale specified continuous variables.
 #' @param covars_to_relevel A [`character`] vector containing categorical variables
@@ -435,15 +459,27 @@ get_model_data <- function(obj,
 #' } 
 #' @noRd
 prep_model_data <- function(df, 
+                            mod_covars,
                             covars_to_scale, scale_func, 
                             covars_to_relevel, base_levels){
   assertthat::assert_that(
     is.data.frame(df),
+    is.character(mod_covars),
     is.character(covars_to_scale) || is.null(covars_to_scale),
     is.function(scale_func) || is.null(scale_func),
     is.character(covars_to_relevel) || is.null(covars_to_relevel),
     is.character(base_levels) || is.null(base_levels)
   )
+  # FOR SAFETY (esp brms), convert any chr columns to fct (mod_covars)
+  chr_cols_idx <- purrr::map(mod_covars, 
+                             function(x, tmp = df){
+                               is.character(tmp[[x]])}) |> 
+    unlist()
+  chr_cols <- mod_covars[chr_cols_idx]
+  # print(chr_cols)
+  for (c in chr_cols){
+    df[[c]] <- as.factor(df[[c]])
+  }
   
   # Check that covars are present
   if (!is.null(covars_to_scale)){
@@ -524,13 +560,14 @@ prep_model_data <- function(df,
 #' } 
 #' @noRd
 weight_model_data <- function(df_ls,
+                              model_spec,
                               weights,
                               weight_type){
   assertthat::assert_that(
     is.list(df_ls),
-    is.numeric(weights),
-    is.character(weight_type),
-    length(df_ls) == length(weights)
+    is.character(model_spec),
+    is.numeric(weights) || is.null(weights),
+    is.character(weight_type) || is.null(weight_type)
   )
   
   assertthat::assert_that(
@@ -539,11 +576,37 @@ weight_model_data <- function(df_ls,
       })))
   )
 
+  if (!is.null(weights)){
+    assertthat::assert_that(
+      length(df_ls) == length(weights)
+    )
+  }
+  
+  
+  # TODO: check weight_type - NULL, dataset, site
+  if (is.null(weight_type)){
+    message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))
+    weight_type <- "dataset"
+  }
   weight_type <- match.arg(weight_type, c("dataset", "site"), several.ok = F)  
+  
+  # TODO: check weights - NULL, numeric,.
+  if (is.null(weights)){
+    weights = rep(1, length(df_ls))
+    message(crayon::yellow(paste0("Warning: weights not specified, using equal weight per ",
+                                  weight_type, ".")))
+  }
+  
+  
+  # TODO: need to know model type... - 
+  # LME4 - weights sum to 1
+  # BRMS - weights sum to N data points
+  
   # Ensure weights sum to 1 (rescale)
   if (sum(weights) != 1){
     weights <- weights/sum(weights)  
   }
+  
   
   if (weight_type == "dataset"){
     for (i in 1:length(df_ls)){
@@ -554,7 +617,7 @@ weight_model_data <- function(df_ls,
   if (weight_type == "site"){
     # Total weight is equal to nrows of data - as above... but this is divided between
     # datasets/sites 
-    tot_dat_n <- sum(unlist(lapply(df_ls, nrow)))
+    # tot_dat_n <- sum(unlist(lapply(df_ls, nrow)))
     # weights <- weights / tot_dat_n
     for (i in 1:length(df_ls)){
       df_ls[[i]]$data_weight <- weights[i]
@@ -566,6 +629,15 @@ weight_model_data <- function(df_ls,
       df_ls[[i]]$data_weight <- df_ls[[i]]$data_weight / tot_w
     }
   }
+  
+  # If brms, just multiply above by tot_N
+  if (model_spec == "brms"){
+    tot_dat_n <- sum(unlist(lapply(df_ls, nrow)))
+    for (i in 1:length(df_ls)){
+      df_ls[[i]]$data_weight <- df_ls[[i]]$data_weight * tot_dat_n
+    }
+  }
+  
 
   return(df_ls)
   

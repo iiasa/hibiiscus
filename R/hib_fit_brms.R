@@ -9,12 +9,15 @@
 #' @param form A [`formula`] in the style of brms (as in lme4) - including fixed and random 
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by brms
-#' @param dataset_weights A [`numeric`] vector containing the relative weights to
-#' assign to each dataset, should sum to 1. Note: if using this argument, the 
-#' supplied formula should have a response of the form [`y | weights(data_weight) ~`]
-#' The data_weight variable will be generated within the function call so as to 
-#' assign each observation per dataset an equal fraction of that dataset's weight -
-#' total weight sums to the total number of observations across all datasets.
+#' @param weight_specs A [`list`] containing "weights" and "weight_type".
+#' weights is [`numeric`] vector containing the relative weights to
+#' assign to each dataset/site, should sum to 1. 
+#' weight_type is a character, specifying either "dataset" or "site" - i.e. should
+#' the weights argument assign relative weights to whole datasets, or for sites in
+#' each dataset.
+#' Note: if using this argument, the supplied formula should have a response of 
+#' the form [`y | weights(data_weight) ~`].
+#' The data_weight variable will be generated within the function call.
 #' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
 #' covars_to_scale is a [`character`] vector of numeric covariates that should be 
 #' scaled prior to modelling. scale_func is a function that will be used to scale 
@@ -31,7 +34,9 @@
 hib_fit_brms <- function(obj, 
                          form,
                          family = gaussian,
-                         dataset_weights = NULL,
+                         # dataset_weights = NULL,
+                         weight_specs = list(weights = NULL,
+                                             weight_type = NULL), # list(weights = c(a, b), weight_type = "dataset") # or "site"
                          scale_specs = list(covars_to_scale = NULL,
                                             scale_func = NULL),
                          relevel_specs = c(NULL),
@@ -46,7 +51,8 @@ hib_fit_brms <- function(obj,
     # form can be a formula,
     inherits(form, "formula") || inherits(form, "brmsformula") || inherits(form, "mvbrmsformula"),
     is.function(family) || is.character(family), # family is character or function
-    is.numeric(dataset_weights) || is.null(dataset_weights),
+    # is.numeric(dataset_weights) || is.null(dataset_weights),
+    is.list(weight_specs), #|| is.null(weight_specs)
     is.list(scale_specs),
     is.vector(relevel_specs) || is.null(relevel_specs)
   )
@@ -82,18 +88,44 @@ hib_fit_brms <- function(obj,
   
   # %%%%%
   # if weights is not null, ensure sum to 1 (just rescale)
-  if (!is.null(dataset_weights)){
-    assertthat::assert_that(
-      length(dataset_weights) == length(obj)
-    )
-    if (sum(dataset_weights) != 1){
-      dataset_weights <- dataset_weights/sum(dataset_weights)  
-    }
-  }
-  # if obj is a list, and weights is null, set to equal weight per dataset
-  if (is.list(obj) & is.null(dataset_weights)){
-    dataset_weights <- rep(1/length(obj), length(obj)) 
-  }
+  # if (!is.null(dataset_weights)){
+  #   assertthat::assert_that(
+  #     length(dataset_weights) == length(obj)
+  #   )
+  #   if (sum(dataset_weights) != 1){
+  #     dataset_weights <- dataset_weights/sum(dataset_weights)  
+  #   }
+  # }
+  # # if obj is a list, and weights is null, set to equal weight per dataset
+  # if (is.list(obj) & is.null(dataset_weights)){
+  #   dataset_weights <- rep(1/length(obj), length(obj)) 
+  # }
+  # 
+  # %%%%%
+  # Check weights - could move to weights func
+  # if (is.list(obj) & !is.null(weight_specs$weights)){
+  #   # Check weight_type is not null
+  #   if (is.null(weight_specs$weight_type)){
+  #     message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))
+  #     weight_specs$weight_type <- "dataset"
+  #   }
+  # }
+  
+  # if (is.list(obj) & is.null(weight_specs$weights)){
+  #   # Default option of equal weight - if weights is null
+  #   weight_specs <- list(weights = rep(1, length(obj)), weight_type = weight_specs$weight_type)
+    
+  #   # Check weight_type 
+  #   if (!is.null(weight_specs$weight_type)){
+  #     message(crayon::yellow(paste0("Warning: weights not specified, using equal weight per ",
+  #                                   weight_specs$weight_type, ".")))
+  #   }
+  #   if (is.null(weight_specs$weight_type)){
+  #     message(crayon::yellow("Warning: weights not specified and weight_type missing, using equal weight per dataset."))
+  #     weight_specs$weight_type <- "dataset"
+  #   }
+  # }
+
   # %%%%%
   
   # %%%%%
@@ -118,10 +150,6 @@ hib_fit_brms <- function(obj,
     mod_covars <- mod_covars[!mod_covars == "Intercept"]
   }
   
-  # TODO
-  # What if multiple vars in response - e.g weights - currently would have to be in div data...
-
-  
   # %%%%%
   if (is.list(obj)){
     mod_df_ls <- purrr::map(.x = obj,
@@ -145,14 +173,20 @@ hib_fit_brms <- function(obj,
     # }
     
     # %%%
-    n_df_vec <- lapply(mod_df_ls, nrow) |> unlist()
+    # n_df_vec <- lapply(mod_df_ls, nrow) |> unlist()
+    # 
+    # prop_weight_vec <- dataset_weights * sum(n_df_vec)
+    # df_weight_vec <- prop_weight_vec / n_df_vec
+    # 
+    # for (i in 1:length(obj)){
+    #   mod_df_ls[[i]]$data_weight <- df_weight_vec[i]
+    # }
     
-    prop_weight_vec <- dataset_weights * sum(n_df_vec)
-    df_weight_vec <- prop_weight_vec / n_df_vec
-    
-    for (i in 1:length(obj)){
-      mod_df_ls[[i]]$data_weight <- df_weight_vec[i]
-    }
+    # %%%
+    mod_df_ls <- weight_model_data(mod_df_ls,
+                                   "brms",
+                                   weight_specs$weights,
+                                   weight_specs$weight_type)
     # %%%
     
     mod_df <- dplyr::bind_rows(mod_df_ls)
@@ -172,6 +206,7 @@ hib_fit_brms <- function(obj,
   
   # %%%
   mod_df <- prep_model_data(mod_df,
+                            mod_covars,
                             scale_specs$covars_to_scale,
                             scale_specs$scale_func,
                             names(relevel_specs),
@@ -205,9 +240,6 @@ hib_fit_brms <- function(obj,
   
   metr_ls <- list("loo" = loo_metr,
                   "waic" = waic_metr)
-  
-  # TODO: store ... as extra_pars
-  # make validation easier...
 
   # instantiate a brms_mod class
   mod_obj <- hib_brms_model$new(

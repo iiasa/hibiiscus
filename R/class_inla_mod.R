@@ -125,6 +125,8 @@ hib_inla_model <- R6Class("hib_inla_model",
                                 self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
                               }
                               
+                              # TODO: allow for list dj_obj input for weighting.
+                              
                               self$version <- db_obj$version
 
                               # TODO: store site locations
