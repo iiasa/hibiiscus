@@ -86,47 +86,6 @@ hib_fit_brms <- function(obj,
   # Drop data_weights from response
   mod_resp <- mod_resp[mod_resp != "data_weight"]
   
-  # %%%%%
-  # if weights is not null, ensure sum to 1 (just rescale)
-  # if (!is.null(dataset_weights)){
-  #   assertthat::assert_that(
-  #     length(dataset_weights) == length(obj)
-  #   )
-  #   if (sum(dataset_weights) != 1){
-  #     dataset_weights <- dataset_weights/sum(dataset_weights)  
-  #   }
-  # }
-  # # if obj is a list, and weights is null, set to equal weight per dataset
-  # if (is.list(obj) & is.null(dataset_weights)){
-  #   dataset_weights <- rep(1/length(obj), length(obj)) 
-  # }
-  # 
-  # %%%%%
-  # Check weights - could move to weights func
-  # if (is.list(obj) & !is.null(weight_specs$weights)){
-  #   # Check weight_type is not null
-  #   if (is.null(weight_specs$weight_type)){
-  #     message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))
-  #     weight_specs$weight_type <- "dataset"
-  #   }
-  # }
-  
-  # if (is.list(obj) & is.null(weight_specs$weights)){
-  #   # Default option of equal weight - if weights is null
-  #   weight_specs <- list(weights = rep(1, length(obj)), weight_type = weight_specs$weight_type)
-    
-  #   # Check weight_type 
-  #   if (!is.null(weight_specs$weight_type)){
-  #     message(crayon::yellow(paste0("Warning: weights not specified, using equal weight per ",
-  #                                   weight_specs$weight_type, ".")))
-  #   }
-  #   if (is.null(weight_specs$weight_type)){
-  #     message(crayon::yellow("Warning: weights not specified and weight_type missing, using equal weight per dataset."))
-  #     weight_specs$weight_type <- "dataset"
-  #   }
-  # }
-
-  # %%%%%
   
   # %%%%%
   # TODO:
@@ -170,16 +129,6 @@ hib_fit_brms <- function(obj,
     #   #   then divide these amounts by N_data_i - THIS SEEMS MOST APPROPRIATE
     #   # - set baseline weight to 1 for lower weighted dataset..(or higher weighted dataset)
     #   #   then adjust weights of other dataset/s accordingly...
-    # }
-    
-    # %%%
-    # n_df_vec <- lapply(mod_df_ls, nrow) |> unlist()
-    # 
-    # prop_weight_vec <- dataset_weights * sum(n_df_vec)
-    # df_weight_vec <- prop_weight_vec / n_df_vec
-    # 
-    # for (i in 1:length(obj)){
-    #   mod_df_ls[[i]]$data_weight <- df_weight_vec[i]
     # }
     
     # %%%

@@ -86,52 +86,6 @@ hib_fit_lme4 <- function(obj,
   
   message(crayon::green("\nCollating data for model fitting...\n"))
   # Collate data from database - based on columns specified in the formula
-  
-  # %%%%%
-  # TODO: improve weighting approach
-  # Currently only allows dataset weights - e.g. 0.5 v 0.5 for dataset a and b
-  # Could inorp site-level ratio - e.g. site in data a is equiv to site in data b or not...
-  # In the site-level approach, weights need to be calculated after mod_df is collated
-
-  
-  # %%% OLD WEIGHTING
-  # if weights is not null, ensure sum to 1 (just rescale)
-  # if (!is.null(dataset_weights)){
-  #   if (sum(dataset_weights) != 1){
-  #     dataset_weights <- dataset_weights/sum(dataset_weights)  
-  #   }
-  # }
-  # # if obj is a list, and weights is null, set to equal weight per dataset
-  # if (is.list(obj) & is.null(dataset_weights)){
-  #   dataset_weights <- rep(1/length(obj), length(obj)) 
-  # }
-  # %%% OLD WEIGHTING - END
-
-  # Check weights - could move to weights func
-  # if (is.list(obj) & !is.null(weight_specs$weights)){
-  #   # Check weight_type is not null
-  #   if (is.null(weight_specs$weight_type)){
-  #     message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))
-  #     weight_specs$weight_type <- "dataset"
-  #   }
-  # }
-  
-  # if (is.list(obj) & is.null(weight_specs$weights)){
-  #   # Default option of equal weight - if weights is null
-  #   weight_specs <- list(weights = rep(1, length(obj)), weight_type = weight_specs$weight_type)
-    
-  #   # Check weight_type 
-  #   if (!is.null(weight_specs$weight_type)){
-  #     message(crayon::yellow(paste0("Warning: weights not specified, using equal weight per ",
-  #                                  weight_specs$weight_type, ".")))
-  #   }
-  #   if (is.null(weight_specs$weight_type)){
-  #     message(crayon::yellow("Warning: weights not specified and weight_type missing, using equal weight per dataset."))
-  #     weight_specs$weight_type <- "dataset"
-  #   }
-  # }
-  # # %%%%%
-  
   mod_covars <- all.vars(form[[3]])
   mod_resp <- all.vars(form[[2]])
 
@@ -149,12 +103,6 @@ hib_fit_lme4 <- function(obj,
                                    "lme4",
                                    weight_specs$weights,
                                    weight_specs$weight_type)
-    # %%%
-    
-    # add weights
-    # for (i in 1:length(obj)){
-    #   mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
-    # }
     
     mod_df <- dplyr::bind_rows(mod_df_ls,
                               .id = "dataset_modelling_id")

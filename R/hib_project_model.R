@@ -13,9 +13,11 @@
 #' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
 #' to the model intercept (assumes intercept is for baseline environment/LU)
 #' @param lme4_specs A list containing details relevant to projecting an lme4-style
-#' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
+#' model. Specifically, named items should consist of 'bootstrap' [`logical`] and 
 #' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
 #' estimated, and if so, how many bootstrap samples should be used.
+#' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
+#' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
 #' @param inla_specs Currently unused, but may be useful in future dev.
 #' @param brms_specs A list containing details relevant to projecting a brms-style
 #' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
@@ -31,16 +33,16 @@
 hib_mod_project <- function(mod_obj, 
                             data,
                             backtransform = NULL,
-                            rescale_pred = F,
+                            rescale_pred = FALSE,
                             # incl_obs_uncert = F,
                             # lme4_boot = T,
                             # n_boot = 100
                             # TODO: collate model type arguments into: - fix argument documentation
-                            lme4_specs = NULL, #list(bootstrap = F, n_boot = NA),
+                            lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, re_form = NA),
                             inla_specs = NULL, #list(),
                             brms_specs = NULL, #list(incl_obs_uncert = F)
                             # more scope for adjustment, and neater
-                            calc_aoa = F,
+                            calc_aoa = FALSE,
                             cv_obj = NULL
                             ){
   # Assertions 
@@ -100,6 +102,7 @@ hib_mod_project <- function(mod_obj,
       if (lme4_specs$bootstrap){
         if ("n_boot" %in% names(lme4_specs)){
           assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+          # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
         }
         # if absent, set to F
         if (!"n_boot" %in% names(lme4_specs)){
@@ -108,12 +111,27 @@ hib_mod_project <- function(mod_obj,
         }
       }
       # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-      if (lme4_specs$bootstrap == F){
+      if (lme4_specs$bootstrap == FALSE){
         lme4_specs$n_boot <- NA
       }
+
+      if ("re_form" %in% names(lme4_specs)){
+        assertthat::assert_that(
+          is.na(lme4_specs$re_form) || is.null(lme4_specs$re_form) || is.formula(lme4_specs$re_form))
+      }
+      if (!"re_form" %in% names(lme4_specs)){
+        message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+        lme4_specs$re_form <- NA
+      }
+
     }
     if (is.null(lme4_specs)){
-      lme4_specs <- list(bootstrap = F, n_boot = NA)
+      message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
+                                    "\tbootstrap = FALSE,\n",
+                                    "\tn_boot = NA,\n",
+                                    "\tre_form = NA",
+                                    " ...\n")))
+      lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA) #
     }
     
     # print(lme4_specs)
@@ -164,22 +182,17 @@ hib_mod_project <- function(mod_obj,
       message(crayon::green("Projecting model...\n"))
       pred_df <- as.data.frame(predict(mod_obj$model,
                                        data,
-                                       re.form = NA))
+                                       re.form = lme4_specs$re_form)) 
       colnames(pred_df) <- "prediction_mean" # prediction
       
       # TODO: current approach to backtransforming/rescaling sd doesn't make sense...
-      
+
       # %%%
       # Use bootMer to get uncertainty
-      # TODO: optional - slow...
-      # TODO: add lmer_boot bool, and nsim option
-      # lme4_specs$bootstrap
-      # lme4_specs$n_boot
       if (lme4_specs$bootstrap == T){
-      # if (lme4_boot == T){
         message(crayon::green("Bootstrapping model predictions...\n"))
         boot_obj <- lme4::bootMer(mod_obj$model, 
-                                  function(mod, df = data){predict(mod, df, re.form = NA)}, 
+                                  function(mod, df = data){predict(mod, df, re.form = lme4_specs$re_form)}, 
                                   nsim = lme4_specs$n_boot)
         
         pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
@@ -193,7 +206,7 @@ hib_mod_project <- function(mod_obj,
         # Should back trans and rescale here...
       }
       
-      # What if we want to include  random effect??
+      # What if we want to include a random effect?? - lme4_specs$re_form
       
       if (!is.null(backtransform)){
         pred_df <- backtransform(pred_df)
@@ -213,8 +226,6 @@ hib_mod_project <- function(mod_obj,
     if (inherits(data, "SpatRaster")){
       data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
                          lme4_specs = lme4_specs)
-                         # lme4_boot = lme4_boot,
-                         # n_boot = n_boot)
     }
     # List of raster objects
     if ((is.list(data) & !is.data.frame(data))){
@@ -1239,10 +1250,12 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' @param data A [`SpatRaster`], prepared for projection
 #' @param backtransform A [`function`] that can backtransform the response variable
 #' to its original/natual scale.
-#' #' @param lme4_specs A list containing details relevant to projecting an lme4-style
+#' @param lme4_specs A list containing details relevant to projecting an lme4-style
 #' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
 #' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
 #' estimated, and if so, how many bootstrap samples should be used.
+#' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
+#' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
 #' @keywords model, projection
 #' @examples 
 #' \dontrun{
@@ -1270,12 +1283,46 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
   
   data_pred <- terra::predict(data,
                               mod,
-                              re.form = NA,
+                              re.form = lme4_specs$re_form, 
                               na.rm = T)
   names(data_pred) <- "prediction_mean"
   
   # %%%%%
   # Get info re bootstrapping
+  # Should already be checked!!! - CHECK
+  # Maybe just include for safety
+  # if (!is.null(lme4_specs)){
+  #   # Check for bootstrap - logical
+  #   if ("bootstrap" %in% names(lme4_specs)){
+  #     assertthat::assert_that(is.logical(lme4_specs$bootstrap))
+  #   }
+  #   # if absent, set to F
+  #   if (!"bootstrap" %in% names(lme4_specs)){
+  #     lme4_specs$bootstrap <- FALSE
+  #   }
+    
+    
+  #   # Check for n_boot - NA/integer/numeric
+  #   if (lme4_specs$bootstrap){
+  #     if ("n_boot" %in% names(lme4_specs)){
+  #       assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+  #     }
+  #     # if absent, set to F
+  #     if (!"n_boot" %in% names(lme4_specs)){
+  #       message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
+  #       lme4_specs$n_boot <- 50
+  #     }
+  #   }
+  #   # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
+  #   if (lme4_specs$bootstrap == F){
+  #     lme4_specs$n_boot <- NA
+  #   }
+  # }
+  # if (is.null(lme4_specs)){
+  #   lme4_specs <- list(bootstrap = F, n_boot = NA) # , re_form = NA
+  # }
+  
+  # %%%
   if (!is.null(lme4_specs)){
     # Check for bootstrap - logical
     if ("bootstrap" %in% names(lme4_specs)){
@@ -1291,6 +1338,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     if (lme4_specs$bootstrap){
       if ("n_boot" %in% names(lme4_specs)){
         assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+        # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
       }
       # if absent, set to F
       if (!"n_boot" %in% names(lme4_specs)){
@@ -1299,14 +1347,30 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
       }
     }
     # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-    if (lme4_specs$bootstrap == F){
+    if (lme4_specs$bootstrap == FALSE){
       lme4_specs$n_boot <- NA
     }
+
+    if ("re_form" %in% names(lme4_specs)){
+      assertthat::assert_that(
+        is.na(lme4_specs$re_form) || is.null(lme4_specs$re_form) || is.formula(lme4_specs$re_form)
+      )
+    }
+    if (!"re_form" %in% names(lme4_specs)){
+      message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+      lme4_specs$re_form <- NA
+    }
+
   }
   if (is.null(lme4_specs)){
-    lme4_specs <- list(bootstrap = F, n_boot = NA)
+    message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
+                                  "\tbootstrap = FALSE,\n",
+                                  "\tn_boot = NA,\n",
+                                  "\tre_form = NA",
+                                  " ...\n")))
+    lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA) #
   }
-  
+  # %%%
   # print(lme4_specs)
   # %%%%%
   if (lme4_specs$bootstrap == T){
@@ -1322,7 +1386,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     boot_obj <- lme4::bootMer(mod, 
                           function(m, rast = data){
                             tmp <- terra::predict(rast, m, 
-                                                  re.form = NA,
+                                                  re.form = lme4_specs$re_form, 
                                                   na.rm = T) |>
                               terra::as.data.frame()
                             tmp[,1]
