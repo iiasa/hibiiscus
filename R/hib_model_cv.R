@@ -23,7 +23,7 @@
 #' @param use_original_mesh A logical value indicating whether cross-validation
 #' of spatial INLA models should use the original mesh for all cv folds. Computationally
 #' this is slightly more efficient, but may affect cv performance metrics - witheld
-#' sites will still exist in the mesh.
+#' sites will still exist in the mesh. TODO: update - lme4_specs, brms_specs, INLA_specs
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
@@ -560,14 +560,32 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   # Add important fold variable - from db_obj - based on SSBS, or, 
   # if SSBS1/SSBS2 in orig_data, use these...
   if ("SSBS" %in% colnames(orig_data)){
-    cv_data <- dplyr::left_join(orig_data,
-                                fold_df,
-                                by = "SSBS")
+    # TODO: BUG FIX NEEDED: 20231005 - if fold column is already in orig_data, 
+    # Error occurs as you then get fold_col.x and fold_col.y
+    # If only col in fold_df (other than SSBS/SSBS1) is already present, 
+    # drop and re add, or just don't add? - question re SSBS1... - ether seems okay
+    # If already present, just don't add, assume model df has correct var...
+    if (fold_col %in% colnames(orig_data)){
+      cv_data <- orig_data
+    }
+    if (!fold_col %in% colnames(orig_data)){
+      cv_data <- dplyr::left_join(orig_data,
+                                  fold_df,
+                                  by = "SSBS")
+    }
+    # cv_data <- dplyr::left_join(orig_data,
+    #                             fold_df,
+    #                             by = "SSBS")
   }
   if ("SSBS1" %in% colnames(orig_data)){
-    cv_data <- dplyr::left_join(orig_data,
-                                fold_df,
-                                by = c("SSBS1" = "SSBS"))
+    if (fold_col %in% colnames(orig_data)){
+      cv_data <- orig_data
+    }
+    if (!fold_col %in% colnames(orig_data)){
+      cv_data <- dplyr::left_join(orig_data,
+                                  fold_df,
+                                  by = c("SSBS1" = "SSBS"))
+    }
   }
   
   fold_ids <- unique(cv_data |> dplyr::pull(!!fold_col))
@@ -1027,6 +1045,10 @@ calc_cv_metrics <- function(pred, obs, error){
   mse_lo <- mse - (1.96 * se_mse)
   mse_hi <- mse + (1.96 * se_mse)
   
+  if (mse_lo < 0){
+    mse_lo <- 0
+  }
+
   rmse_lo <- sqrt(mse_lo)
   rmse_hi <- sqrt(mse_hi)
   
