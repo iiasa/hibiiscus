@@ -117,7 +117,8 @@ hib_mod_project <- function(mod_obj,
 
       if ("re_form" %in% names(lme4_specs)){
         assertthat::assert_that(
-          is.na(lme4_specs$re_form) || is.null(lme4_specs$re_form) || is.formula(lme4_specs$re_form))
+          is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
+        )
       }
       if (!"re_form" %in% names(lme4_specs)){
         message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
@@ -1353,7 +1354,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 
     if ("re_form" %in% names(lme4_specs)){
       assertthat::assert_that(
-        is.na(lme4_specs$re_form) || is.null(lme4_specs$re_form) || is.formula(lme4_specs$re_form)
+        is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
       )
     }
     if (!"re_form" %in% names(lme4_specs)){
