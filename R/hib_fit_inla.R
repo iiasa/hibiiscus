@@ -227,18 +227,19 @@ hib_fit_inla <- function(obj,
   
   # HERE!!!
   # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
-  chr_cols_idx <- purrr::map(covars_sub, 
-                         function(x, df = mod_df){
-                           is.character(df[[x]])}) |> 
-    unlist()
-  chr_cols <- covars_sub[chr_cols_idx]
-  # print(chr_cols)
-  for (c in chr_cols){
-    mod_df[[c]] <- as.factor(mod_df[[c]])
-  }
+  # chr_cols_idx <- purrr::map(covars_sub, 
+  #                        function(x, df = mod_df){
+  #                          is.character(df[[x]])}) |> 
+  #   unlist()
+  # chr_cols <- covars_sub[chr_cols_idx]
+  # # print(chr_cols)
+  # for (c in chr_cols){
+  #   mod_df[[c]] <- as.factor(mod_df[[c]])
+  # }
 
   # %%%
   mod_df <- prep_model_data(mod_df,
+                            all_covars,
                             scale_specs$covars_to_scale,
                             scale_specs$scale_func,
                             names(relevel_specs),

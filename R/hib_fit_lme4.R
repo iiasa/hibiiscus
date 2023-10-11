@@ -418,6 +418,7 @@ prep_model_data <- function(df,
     is.character(covars_to_relevel) || is.null(covars_to_relevel),
     is.character(base_levels) || is.null(base_levels)
   )
+
   # FOR SAFETY (esp brms), convert any chr columns to fct (mod_covars)
   chr_cols_idx <- purrr::map(mod_covars, 
                              function(x, tmp = df){
@@ -466,6 +467,9 @@ prep_model_data <- function(df,
                                y %in% df_[[x]]
                              })))
     )
+    
+    # drop unused factor levels
+    df <- droplevels(df)
     
     # relevel
     for (i in 1:length(covars_to_relevel)){

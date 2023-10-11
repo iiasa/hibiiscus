@@ -17,12 +17,14 @@ hib_cv_res <- R6Class("hib_cv_res",
                         original_model_obj = NULL, # All model info, except data, and functions
                         cv_results = NULL,
                         insample_results = NULL,
+                        re_form = NULL,
                         use_original_mesh = NULL,
                         
                         # Executed when created
                         initialize = function(mod_obj,
                                               cv_res,
                                               insamp_res,
+                                              re_form,
                                               use_orig_mesh
                         ){
                           # - some assertion checks
@@ -32,6 +34,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                             # Check cv outputs
                             is.list(cv_res),
                             is.list(insamp_res),
+                            is.list(re_form),
                             is.logical(use_orig_mesh) || is.null(use_orig_mesh)
                           )
                           
@@ -81,7 +84,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                           names(self$original_model_obj) <- core_items
                           
                           
-                          
+                          self$re_form <- re_form
+
                           if (is.null(use_orig_mesh)){
                             self$use_original_mesh <- NA
                           } else {
@@ -164,17 +168,45 @@ hib_cv_res <- R6Class("hib_cv_res",
                           }
                           
                           # TODO: additional metrics: cor2, me (bias)
-                          df1 <- self$insample_results$insample_metrics |>
-                            dplyr::filter(Metric_shrt %in% c("rmse", "rsq")) 
+                          # df1 <- self$insample_results$insample_metrics |>
+                          #   dplyr::filter(Metric_shrt %in% c("rmse", "rsq")) 
                           
-                          insamp_df <- data.frame(CV_type = c("In-sample"),
-                                                  N_folds = c(1),
-                                                  RMSE    = c(df1$Metric_val[df1$Metric_shrt == "rmse"]),
-                                                  RMSE_lo = c(df1$Metric_lo[df1$Metric_shrt == "rmse"]),
-                                                  RMSE_hi = c(df1$Metric_hi[df1$Metric_shrt == "rmse"]),
-                                                  Predictive_R2 = c(df1$Metric_val[df1$Metric_shrt == "rsq"]))
+                          # TODO: check nrow of cv_results[[i]]$cv_metrics
+                          # insample_results$insamp_metrics/
+
+
+                          # TODO: Incl Random_effect_form column - better approach
+                          insamp_df <- self$insample_results$insample_metrics |>
+                            dplyr::filter(Metric_shrt %in% c("rmse")) |>
+                            dplyr::rename(RMSE = Metric_val,
+                                          RMSE_lo = Metric_lo,
+                                          RMSE_hi = Metric_hi) |>
+                            dplyr::select(RMSE, RMSE_lo, RMSE_hi, Random_effect_form, N) |>
+                            dplyr::left_join(self$insample_results$insample_metrics |>
+                                               dplyr::filter(Metric_shrt %in% c("rsq")) |>
+                                               dplyr::rename(Predictive_R2 = Metric_val) |>
+                                               dplyr::select(Predictive_R2, Random_effect_form),
+                                             by = "Random_effect_form"
+                            ) |>
+                            dplyr::mutate(CV_type = "In-sample",
+                                          N_folds = 1)
                           
                           
+                          # cv_specs - expand.grid(re_from, fld_type)
+                          # Any not in cv_df - add with NAs for metrics and N = 0
+                          cv_specs <- purrr::map_dfr(self$cv_results,
+                                                     function(x, re_f = as.character(self$re_form)){
+                                                       fld_typ <- x$fold_type
+                                                       if (fld_typ == "Custom"){
+                                                         fld_typ <- paste0(fld_typ, " (", x$fold_col, ")")
+                                                       }
+                                                       n_fld <- x$n_folds
+                                                       
+                                                       return(data.frame(CV_type = fld_typ,
+                                                                         N_folds = n_fld,
+                                                                         Random_effect_form = re_f))
+                                                     })
+
                           cv_df <- purrr::map_dfr(self$cv_results,
                                                   function(x){
                                                     fld_typ <- x$fold_type
@@ -183,16 +215,37 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                     }
                                                     n_fld <- x$n_folds
                                                     
-                                                    cv_df <- x$cv_metrics |>
-                                                      dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
+                                                    if (is.null(x$cv_metrics)){
+                                                      return(NULL)
+                                                      # TODO: return and df with unavailable fold_type and re_form
+                                                    }
+                                                    if (n_fld < 2){
+                                                      return(NULL)
+                                                    }
+                                                    # cv_df <- x$cv_metrics |>
+                                                    #   dplyr::filter(Metric_shrt %in% c("rmse", "rsq"))
                                                     
-                                                    out_df <- data.frame(CV_type = c(fld_typ),
-                                                                         N_folds = c(n_fld),
-                                                                         RMSE    = c(cv_df$Metric_val[cv_df$Metric_shrt == "rmse"]),
-                                                                         RMSE_lo = c(cv_df$Metric_lo[cv_df$Metric_shrt == "rmse"]),
-                                                                         RMSE_hi = c(cv_df$Metric_hi[cv_df$Metric_shrt == "rmse"]),
-                                                                         Predictive_R2 = c(cv_df$Metric_val[cv_df$Metric_shrt == "rsq"]))
+                                                    # out_df <- data.frame(CV_type = c(fld_typ),
+                                                    #                      N_folds = c(n_fld),
+                                                    #                      Random_effect_form = c(cv_df$Random_effect_form[cv_df$Metric_shrt == "rmse"]),
+                                                    #                      RMSE    = c(cv_df$Metric_val[cv_df$Metric_shrt == "rmse"]),
+                                                    #                      RMSE_lo = c(cv_df$Metric_lo[cv_df$Metric_shrt == "rmse"]),
+                                                    #                      RMSE_hi = c(cv_df$Metric_hi[cv_df$Metric_shrt == "rmse"]),
+                                                    #                      Predictive_R2 = c(cv_df$Metric_val[cv_df$Metric_shrt == "rsq"]))
                                                     
+                                                    out_df <- x$cv_metrics |>
+                                                      dplyr::filter(Metric_shrt %in% c("rmse")) |>
+                                                      dplyr::rename(RMSE = Metric_val,
+                                                                    RMSE_lo = Metric_lo,
+                                                                    RMSE_hi = Metric_hi) |>
+                                                      dplyr::select(RMSE, RMSE_lo, RMSE_hi, Random_effect_form, N) |>
+                                                      dplyr::left_join(x$cv_metrics |>
+                                                                         dplyr::filter(Metric_shrt %in% c("rsq")) |>
+                                                                         dplyr::rename(Predictive_R2 = Metric_val) |>
+                                                                         dplyr::select(Predictive_R2, Random_effect_form),
+                                                                       by = "Random_effect_form") |>
+                                                      dplyr::mutate(CV_type = fld_typ,
+                                                                    N_folds = n_fld)
                                                     # if (n_fld > 1){
                                                     #   
                                                     # } else {
@@ -205,8 +258,6 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                     # }
                                                     
                                                   })
-                          cv_df <- cv_df |>
-                            dplyr::filter(N_folds > 1)
                           
                           df <- dplyr::bind_rows(insamp_df,
                                                  cv_df)
@@ -217,23 +268,27 @@ hib_cv_res <- R6Class("hib_cv_res",
                           df$RMSE_hi <- pad_fn(df$RMSE_hi, 3, T)
                           df$Predictive_R2 <- pad_fn(df$Predictive_R2, 3, T)
                           
-                          
                           df$RMSE <- paste0(df$RMSE, " (", df$RMSE_lo, ", ", df$RMSE_hi, ")")
                           
+                          missing_cv_specs <- dplyr::anti_join(cv_specs,
+                                                               df, 
+                                                               by = c("CV_type", "Random_effect_form"))
+                          
+                          if (nrow(missing_cv_specs) > 0){
+                            missing_cv_specs <- missing_cv_specs |>
+                              dplyr::mutate(RMSE = "N/A",
+                                            Predictive_R2 = "N/A",
+                                            N = 0)
+                            df <- df |>
+                              dplyr::bind_rows(missing_cv_specs)
+                          }
                           
                           message(
                             paste0("Cross-validated ", self$model_type, " \n\n",
                                    "(Last updated: ", crayon::green( self$last_update ), ")",
-                                   # "\n",
-                                   # "\t Cross-validation types:        ", crayon::green(stats$number_sites), "\n"
-                                   # "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
-                                   # # "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
-                                   # # crayon::green(stats$number_lui), "\n",
-                                   # "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                    "\n\n",
                                    "--------------------\n\n",
                                    "Summary of cross-validated model\n\n",
-                                   # "Formula:                  ", crayon::green( m_form ) , "\n"
                                    "Formula:\n", 
                                    crayon::green( m_form ) , "\n\n",
                                    "Performance metrics:\n"
@@ -242,10 +297,12 @@ hib_cv_res <- R6Class("hib_cv_res",
                           
                           
                           df |>
-                            dplyr::select(CV_type, N_folds, RMSE, Predictive_R2) |>
+                            dplyr::select(CV_type, N_folds, N, Random_effect_form, RMSE, Predictive_R2) |>
                             dplyr::rename(`CV type` = CV_type,
                                           `N folds` = N_folds,
-                                          `Predictive R2` = Predictive_R2) |>
+                                          # `N pr
+                                          `Predictive R2` = Predictive_R2,
+                                          `Random-effect structure` = Random_effect_form) |>
                             insight::format_table(use_symbols = T, digits = 0) |>
                             insight::export_table() |>
                             message()
@@ -566,10 +623,15 @@ hib_cv_res <- R6Class("hib_cv_res",
                             # Get obs and pred and error - across cv + insample
                             insamp_df <- self$insample_results$insample_pred_df |>
                               dplyr::mutate(cv_type = "In-sample",
-                                            fold_id = NA)
+                                            fold_id = NA,
+                                            Random_effect_form = paste("Random-effects:", Random_effect_form))
                             
                             cv_df <- purrr::map_dfr(.x = self$cv_results,
                                                     .f = function(x){
+                                                      # TODO: check nrow(x$cv_pred_df)
+                                                      if (is.null(x$cv_pred_df)){
+                                                        return(NULL)
+                                                      }
                                                       tmp_df <- x$cv_pred_df
                                                       
                                                       cv_type <- x$fold_type
@@ -583,17 +645,28 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       
                                                       tmp_df
                                                     })
+                            if (nrow(cv_df) > 0){
+                              cv_df <- cv_df |>
+                              # TODO: only if nrow(cv_df) > 0 do we mutate...
+                                dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
                             
                             
-                            # Add cv_type that isn't in base_cv_levs to cv_levs
-                            add_cv_levs <- unique(cv_df$cv_type)
-                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
-                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                              # Add cv_type that isn't in base_cv_levs to cv_levs
+                              add_cv_levs <- unique(cv_df$cv_type)
+                              add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                              cv_levs <- c(base_cv_levs, add_cv_levs)
+                              
+                              insamp_df$fold_id <- 1
+                            } else {
+                              message(crayon::yellow("Warning: values from cross-valiation not avaliable."))
+                              cv_levs <- base_cv_levs
+                            }
                             
                             df <- dplyr::bind_rows(insamp_df,
                                                    cv_df) |>
                               dplyr::mutate(cv_type = factor(cv_type,
-                                                             levels = cv_levs))
+                                                             levels = cv_levs)) |>
+                              droplevels()
                             
                             
                             if (type == "obs-v-pred"){
@@ -646,9 +719,16 @@ hib_cv_res <- R6Class("hib_cv_res",
                             plt <- plt +
                               ggplot2::theme_bw() +
                               basic_thm +
-                              ggplot2::facet_wrap(~cv_type) +
+                              # ggplot2::facet_wrap(~cv_type) +
+                              ggplot2::facet_grid(Random_effect_form~cv_type) +
+                              
                               ggplot2::theme(legend.position = "none")
                             
+                            if (nrow(cv_df) ==  0){
+                              plt <- plt +
+                                ggplot2::scale_colour_manual(values = c("1" = "#999999"))
+                              
+                            }
                           }
                           
                           if (type == "metrics"){
@@ -693,6 +773,10 @@ hib_cv_res <- R6Class("hib_cv_res",
                             
                             cv_df <- purrr::map_dfr(.x = self$cv_results,
                                                     .f = function(x){
+                                                      # TODO: check nrow
+                                                      if (is.null(x$cv_metrics)){
+                                                        return(NULL)
+                                                      }
                                                       tmp_df <- x$cv_metrics
                                                       
                                                       cv_type <- x$fold_type
@@ -702,13 +786,26 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       tmp_df$cv_type <- cv_type
                                                       
                                                       tmp_df
-                                                    }) |>
-                              dplyr::filter(Metric_shrt %in% metrics)
+                                                    }) 
+                            if (nrow(cv_df) > 0){
+                              cv_df <- cv_df |>
+                                # TODO: only if nrow(cv_df) > 0 do we filter/mutate...
+                                dplyr::filter(Metric_shrt %in% metrics) |>
+                                # dplyr::mutate(Random_effect_form = dplyr::case_when(Random_effect_form %in% c("NA", "NULL") ~ paste("Random-effects:", tolower(Random_effect_form)),
+                                #                                                     T ~ paste("Random-effects:", Random_effect_form) ))
+                                dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
+                              
+                            }
+                              
                             
                             
                             # %%%%
                             cv_fold_df <- purrr::map_dfr(.x = self$cv_results,
                                                     .f = function(x){
+                                                      # TODO: check nrow
+                                                      if (is.null(x$cv_fold_metrics)){
+                                                        return(NULL)
+                                                      }
                                                       tmp_df <- x$cv_fold_metrics
                                                       
                                                       cv_type <- x$fold_type
@@ -720,30 +817,164 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                       tmp_df$fold_id <- as.numeric(tmp_df$fold_id)
                                                       
                                                       tmp_df
-                                                    }) |>
-                              dplyr::filter(Metric_shrt %in% metrics)
+                                                    })
+                            if (nrow(cv_fold_df) > 0){
+                              cv_fold_df <- cv_fold_df |>
+                                # TODO: only if nrow(cv_df) > 0 do we filter/mutate...
+                                dplyr::filter(Metric_shrt %in% metrics)|>
+                                # dplyr::mutate(Random_effect_form = dplyr::case_when(Random_effect_form %in% c("NA", "NULL") ~ paste("Random-effects:", tolower(Random_effect_form)),
+                                #                                                     T ~ paste("Random-effects:", Random_effect_form) ))
+                                dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
+                            }
+                            
                             # %%%%
                             
                             insamp_df <- self$insample_results$insample_metrics |>
-                              dplyr::filter(Metric_shrt %in% metrics)
+                              dplyr::filter(Metric_shrt %in% metrics)|>
+                              # dplyr::mutate(Random_effect_form = dplyr::case_when(Random_effect_form %in% c("NA", "NULL") ~ paste("Random-effects:", tolower(Random_effect_form)),
+                              #                                                     T ~ paste("Random-effects:", Random_effect_form) ))
+                              dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
+                            
                             
                             # print(insamp_df)
                             # Add cv_type that isn't in base_cv_levs to cv_levs
-                            add_cv_levs <- unique(cv_df$cv_type)
-                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                            if (nrow(cv_df) > 0){
+                              add_cv_levs <- unique(cv_df$cv_type)
+                              add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                              
+                              cv_levs <- base_cv_levs[base_cv_levs %in% unique(cv_df$cv_type)]
+                              cv_levs <- c(cv_levs, add_cv_levs)
+                              
+                              # TODO: check nrow
+                              cv_df <- cv_df |>
+                                dplyr::mutate(cv_type = factor(cv_type,
+                                                               levels = cv_levs),
+                                              cv_type_num = as.numeric(cv_type)) |>
+                                droplevels()
+                              
+                              # TODO: check nrow
+                              cv_fold_df <- cv_fold_df |>
+                                dplyr::mutate(cv_type = factor(cv_type,
+                                                               levels = cv_levs),
+                                              cv_type_num = as.numeric(cv_type)) |>
+                                droplevels()
+                            }
                             
-                            cv_levs <- base_cv_levs[base_cv_levs %in% unique(cv_df$cv_type)]
-                            cv_levs <- c(cv_levs, add_cv_levs)
-                            
-                            cv_df <- cv_df |>
-                              dplyr::mutate(cv_type = factor(cv_type,
-                                                             levels = cv_levs),
-                                            cv_type_num = as.numeric(cv_type))
-                            
-                            cv_fold_df <- cv_fold_df |>
-                              dplyr::mutate(cv_type = factor(cv_type,
-                                                             levels = cv_levs),
-                                            cv_type_num = as.numeric(cv_type))
+
+                            # TODO: if nrow(cv_df) == 0 - message...
+                            if (nrow(cv_df) == 0){
+                              message(crayon::yellow(paste0("Warning: metric values from cross-valiation not avaliable.")))
+                              
+                              plt <- ggplot2::ggplot() +  
+                                ggplot2::geom_segment(ggplot2::aes(x = -0.5,
+                                                                   xend = +0.5,
+                                                                   y = Metric_val,
+                                                                   yend = Metric_val),
+                                                      data = insamp_df) +
+                                ggplot2::geom_rect(ggplot2::aes(xmin = -0.5,
+                                                                xmax = +0.5,
+                                                                ymin = Metric_lo,
+                                                                ymax = Metric_hi),
+                                                   alpha = 0.3,
+                                                   data = insamp_df) +
+                                
+                                ggplot2::labs(x = ggplot2::element_blank(),
+                                              y = "Metric value",
+                                              colour = "Cross-\nvalidation\ntype") +
+                                ggplot2::theme_bw() +
+                                basic_thm +
+                                # ggplot2::facet_wrap(~Metric_fct*Random_effect_form, scales = "free_y",
+                                #            labeller = ggplot2::label_parsed) +
+                                ggplot2::facet_grid(Metric_fct~Random_effect_form, 
+                                                    scales = "free_y",
+                                                    labeller = ggplot2::labeller(Metric_fct = ggplot2::label_parsed)
+                                                    # labeller = ggplot2::label_parsed
+                                ) +
+                                ggplot2::theme(axis.text.x = ggplot2::element_blank(),
+                                               axis.ticks.x = ggplot2::element_blank(),
+                                               aspect.ratio = 1)
+                              
+                              # %%%%
+                              # Add some baselines
+                              # %%%%
+                              # if cor/cor2/rs2, add lines at 0, bad, 1, good
+                              if (any(c("cor", "corsq", "rsq") %in% metrics)){
+                                
+                                cor_df <- data.frame(bad = 0,
+                                                     good = 1,
+                                                     Metric = c("Correlation",
+                                                                "Correlation_squared",
+                                                                "Predictive_R_squared"))
+                                
+                                cor_df <- cor_df |>
+                                  dplyr::filter(Metric %in% insamp_df$Metric) |>
+                                  dplyr::mutate(Metric_fct = factor(Metric,
+                                                                    levels = metr_levs,
+                                                                    labels = metr_labs ))
+                                
+                                plt <- plt +
+                                  ggplot2::geom_hline(ggplot2::aes(yintercept = bad), 
+                                                      lty = 2, 
+                                                      colour = "darkgrey",
+                                                      data = cor_df) +
+                                  ggplot2::geom_hline(ggplot2::aes(yintercept = good), 
+                                                      lty = 1, 
+                                                      colour = "darkgrey",
+                                                      data = cor_df) 
+                              }
+                              # for all others, add line at 0, good
+                              if (any(c("me", "mae", "rae", "mape", 
+                                        "smape", 
+                                        "mse", "rmse", "nrmse", 
+                                        "rrmse", "rmsle", "rse") %in% metrics)){
+                                err_df <- data.frame(good = 0,
+                                                     Metric = c("Mean_error", 
+                                                                "Mean_absolute_error", 
+                                                                "Relative_absolute_error", 
+                                                                "Mean_absolute_percentage_error", 
+                                                                "Symmetric_mean_absolute_percentage_error", 
+                                                                
+                                                                "Mean_squared_error", 
+                                                                "Root_mean_squared_error", 
+                                                                "Normalised_root_mean_squared_error",
+                                                                "Relative_root_mean_squared_error",
+                                                                "Root_mean_squared_log_error",
+                                                                "Relative_squared_error"))
+                                
+                                err_df <- err_df |>
+                                  dplyr::filter(Metric %in% insamp_df$Metric) |>
+                                  dplyr::mutate(Metric_fct = factor(Metric,
+                                                                    levels = metr_levs,
+                                                                    labels = metr_labs ))
+                                
+                                plt <- plt +
+                                  ggplot2::geom_hline(ggplot2::aes(yintercept = good), 
+                                                      lty = 1, 
+                                                      colour = "darkgrey",
+                                                      data = err_df) 
+                              }
+                              
+                              if ("rse" %in% metrics){
+                                rse_df <- data.frame(bad = 1,
+                                                     Metric = c("Relative_squared_error"))
+                                
+                                rse_df <- rse_df |>
+                                  dplyr::mutate(Metric_fct = factor(Metric,
+                                                                    levels = metr_levs,
+                                                                    labels = metr_labs ))
+                                
+                                plt <- plt +
+                                  ggplot2::geom_hline(ggplot2::aes(yintercept = bad), 
+                                                      lty = 2, 
+                                                      colour = "darkgrey",
+                                                      data = rse_df) 
+                              }  
+                              
+                              # stop("No metrics available.",
+                              #      call. = FALSE)
+                              return(plt)
+                            }
+
                             # print(cv_df)
                             # plot metrics by cv type, facet per metric, colour per cv type
                             plt <- ggplot2::ggplot(cv_df)
@@ -863,8 +1094,13 @@ hib_cv_res <- R6Class("hib_cv_res",
                                             colour = "Cross-\nvalidation\ntype") +
                               ggplot2::theme_bw() +
                               basic_thm +
-                              ggplot2::facet_wrap(~Metric_fct, scales = "free_y",
-                                         labeller = ggplot2::label_parsed) +
+                              # ggplot2::facet_wrap(~Metric_fct*Random_effect_form, scales = "free_y",
+                              #            labeller = ggplot2::label_parsed) +
+                              ggplot2::facet_grid(Metric_fct~Random_effect_form, 
+                                                  scales = "free_y",
+                                                  labeller = ggplot2::labeller(Metric_fct = ggplot2::label_parsed)
+                                                  # labeller = ggplot2::label_parsed
+                                                  ) +
                               ggplot2::theme(axis.text.x = ggplot2::element_blank(),
                                              axis.ticks.x = ggplot2::element_blank(),
                                              aspect.ratio = 1)
@@ -906,6 +1142,9 @@ hib_cv_res <- R6Class("hib_cv_res",
                             
                             cv_df <- purrr::map_dfr(.x = self$cv_results,
                                                      .f = function(x){
+                                                       if (is.null(x$cv_pred_df)){
+                                                         return(NULL)
+                                                       }
                                                        tmp_df <- x$cv_pred_df
                                                        
                                                        cv_type <- x$fold_type
@@ -921,14 +1160,32 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                      })
                             
                             
-                            # Add cv_type that isn't in base_cv_levs to cv_levs
-                            add_cv_levs <- unique(cv_df$cv_type)
-                            add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
-                            cv_levs <- c(base_cv_levs, add_cv_levs)
+                            if (nrow(cv_df) > 0){
+                              # Add cv_type that isn't in base_cv_levs to cv_levs
+                              add_cv_levs <- unique(cv_df$cv_type)
+                              add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
+                              cv_levs <- c(base_cv_levs, add_cv_levs)
+                              
+                              cv_df <- cv_df |>
+                                dplyr::mutate(cv_type = factor(cv_type,
+                                                               levels = cv_levs))
+                            }
                             
-                            cv_df <- cv_df |>
-                              dplyr::mutate(cv_type = factor(cv_type,
-                                                             levels = cv_levs))
+                            
+                            if (nrow(cv_df) == 0){
+                              nrow_cv_df <- 0
+                              # message(crayon::red("Error: Cross-validation predictions unavailable."))
+                              message(crayon::yellow("Warning: map of cross-valiation splits not avaliable."))
+                              # return(ggplot2::ggplot() + ggplot2::theme_void())
+                              cv_df <- self$insample_results$insample_pred_df |>
+                                dplyr::mutate(fold_id = 1,
+                                              cv_type = "In-sample",
+                                              cv_type = factor(cv_type,
+                                                               levels = base_cv_levs))
+                              # stop("Cross-validation predictions unavailable.",
+                              #      call. = FALSE)
+                              # TODO: could use insample df... - all grey...
+                            }
                             
                             if ("SSBS" %in% colnames(cv_df)){
                               cv_df <- cv_df |>
@@ -990,8 +1247,14 @@ hib_cv_res <- R6Class("hib_cv_res",
                               ggplot2::ylim(y_rng) +
                               ggplot2::facet_wrap(~cv_type, ncol = 2)
                             
+                            if (nrow_cv_df ==  0){
+                              plt <- plt +
+                                ggplot2::scale_colour_manual(values = c("1" = "#999999"))
+                            }
+                            
                           }
                             # %%%%%
+                          
                           
                           (plt)
                         }

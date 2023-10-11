@@ -23,10 +23,12 @@
 #' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
 #' to determine whether or not observation-level uncertainty is included in predictions.
 #' Setting this parameter to TRUE will produce predictions with larger uncertainty.
+#' TODO: also include re_form - as 're_formula' in brms predict/fitted - use as
+#' in lme4.
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
-#'   proj <- hib_mod_project(hib_model, preoj_data)
+#'   proj <- hib_mod_project(hib_model, proj_data)
 #' } 
 #' @export
 # TODO: replace obj with mod_obj
@@ -39,8 +41,8 @@ hib_mod_project <- function(mod_obj,
                             # n_boot = 100
                             # TODO: collate model type arguments into: - fix argument documentation
                             lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, re_form = NA),
-                            inla_specs = NULL, #list(),
-                            brms_specs = NULL, #list(incl_obs_uncert = F)
+                            inla_specs = NULL, #list(re_form = ??),
+                            brms_specs = NULL, #list(incl_obs_uncert = F, TODO, re_form = as lme4...)
                             # more scope for adjustment, and neater
                             calc_aoa = FALSE,
                             cv_obj = NULL
@@ -172,14 +174,28 @@ hib_mod_project <- function(mod_obj,
     # Dataframe 
     if (is.data.frame(data)){
       # Check all fixef vars are in colnames of data
-      assertthat::assert_that(all(fix_vars %in% colnames(data)))
+      assertthat::assert_that(all(fix_vars %in% colnames(data)),
+                              msg = "Fixed effect variables missing from input data.")
       
-      # TODO: for categorical vars, ensure levels in projection input are within 
+      # for categorical vars, ensure levels in projection input are within 
       # model fitting data
       # for each fix_vars, check if chr or fct
       # if it is, check all data[,var] are in obj$data[,var]
       check_covar_levels(mod_obj$model, data, fix_vars)
       
+      # need to check any random vars in lme4_specs$re_form
+      if (inherits(lme4_specs$re_form, "formula")){
+        # print("Checking random variables")
+        re_form_vars <- all.vars(lme4_specs$re_form)
+        assertthat::assert_that(all(re_form_vars %in% rand_vars), 
+                                msg = "Specified re_form structure contains variables not in the original model.")
+        # all.vars(lme4_specs$re_form[[2]])
+        check_covar_levels(mod_obj$model, data, re_form_vars)
+      }
+      if (is.null(lme4_specs$re_form)){
+        check_covar_levels(mod_obj$model, data, rand_vars)
+      }
+
       message(crayon::green("Projecting model...\n"))
       pred_df <- as.data.frame(predict(mod_obj$model,
                                        data,
@@ -225,7 +241,9 @@ hib_mod_project <- function(mod_obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
+      # print("running terra proj")
       data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
+                          rand_vars,
                          lme4_specs = lme4_specs)
     }
     # List of raster objects
@@ -239,6 +257,7 @@ hib_mod_project <- function(mod_obj,
                          rescale_pred = rescale_pred, 
                          base_val = base_val, 
                          fix_vars = fix_vars,
+                         rand_vars = rand_vars,
                          lme4_specs = lme4_specs)
                          # lme4_boot = lme4_boot,
                          # n_boot = n_boot)
@@ -264,6 +283,32 @@ hib_mod_project <- function(mod_obj,
     message(crayon::green("INLA model detected! Projection in progress...\n"))
     # stop("In development")
     
+    # %%%
+    # Get info re bootstrapping
+    if (!is.null(inla_specs)){
+    
+      if ("re_form" %in% names(inla_specs)){
+        assertthat::assert_that(
+          is.na(c(inla_specs$re_form)) || is.null(inla_specs$re_form) || inherits(inla_specs$re_form, "formula")
+        )
+      }
+      if (!"re_form" %in% names(inla_specs)){
+        message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+        inla_specs$re_form <- NA
+      }
+
+    }
+    if (is.null(inla_specs)){
+      message(crayon::yellow(paste0("Warning: inla_specs missing, using default values:\n",
+                                    "\tre_form = NA",
+                                    " ...\n")))
+      inla_specs <- list(re_form = NA) #
+    }
+    # print(inla_specs)
+    # %%%
+
+
+
     # Get baseline value for optional rescaling
     # get model intercept
     int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
@@ -304,19 +349,36 @@ hib_mod_project <- function(mod_obj,
     # ignore "Intercept" too
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
-    # TODO: check and test
+    # Get random vars
+    rand_vars <- all.vars(mod_obj$user_formula$random)
+    
+    # And re_form_vars
+    re_form_vars <- NA
+    if (inherits(inla_specs$re_form, "formula")){
+      # print("Checking random variables")
+      re_form_vars <- all.vars(inla_specs$re_form)
+      assertthat::assert_that(all(re_form_vars %in% rand_vars),
+                              msg = "Specified re_form structure contains variables not in the original model.")
+    }
+    if (is.null(inla_specs$re_form)){
+      re_form_vars <- rand_vars
+    }
+
     # If terra, convert rasters to dfs
     if (inherits(data, "SpatRaster")){
-      data_df <- terra_to_df_inla(data, mod_obj, fix_vars)
+      data_df <- terra_to_df_inla(data, mod_obj, fix_vars, rand_vars, re_form_vars)
     }
-    # TODO
+    # TODO: what about random effects??
+
     # If list of terra, convert each raster to df, add name of item in list, bind all
     if ((is.list(data) & !is.data.frame(data) &
          all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ) ){
       data_df <- purrr::map(data,
                             terra_to_df_inla,
                             obj = mod_obj, 
-                            fix_vars = fix_vars) |>
+                            fix_vars = fix_vars,
+                            rand_vars = rand_vars, 
+                            re_form_vars = re_form_vars) |>
         # TODO: is ".," needed?
         # TODO: better term for id
         dplyr::bind_rows(.id = "Year")
@@ -378,6 +440,7 @@ hib_mod_project <- function(mod_obj,
     # if any other cols missing, e.g. SS/SSB, add as NA
     covars_sub <- all_covars[all_covars %in% colnames(data_df)]
     
+
     # print(all_covars)
     # print(covars_sub)
     
@@ -391,7 +454,7 @@ hib_mod_project <- function(mod_obj,
     
     missing_covars <- all_covars[!all_covars %in% colnames(pred_X)]
     for (covar in missing_covars){
-      pred_X[,covar] <- NA
+      pred_X[, covar] <- NA
     }
     
     # TODO: for categorical vars, ensure levels in projection input are within 
@@ -400,6 +463,26 @@ hib_mod_project <- function(mod_obj,
     # if it is, check all data[,var] are in obj$data[,var
     check_covar_levels(mod_obj$model, pred_X, fix_vars)
     
+    # TODO: also need to check any random vars - difference between fix_vars and all_vars
+    if (inherits(inla_specs$re_form, "formula")){
+        # print("Checking random variables")
+        
+        # Need to set rand_vars that are non-re_form_vars to NA
+        non_reform_rand <- rand_vars[!rand_vars %in% re_form_vars]
+        pred_X[, non_reform_rand] <- NA
+        check_covar_levels(mod_obj$model, pred_X, re_form_vars)
+    }
+    if (is.null(inla_specs$re_form)){
+        # print("Checking random variables")
+        check_covar_levels(mod_obj$model, pred_X, re_form_vars)
+    }
+    if (is.na(re_form_vars)){
+       # Need to set rand_vars to NA
+       pred_X[, rand_vars] <- NA
+    }
+    # print(re_form_vars)
+    # print(head(pred_X))
+
     # print(missing_covars)
     # print(head(pred_X))
     # Combine data etc into stack
@@ -421,14 +504,42 @@ hib_mod_project <- function(mod_obj,
                                  pred_stk)
     message(crayon::green("Re-fitting INLA model to make projection (this may take a while)...\n"))
     # re-fit/ Project
-    m0 <- INLA::inla(formula = mod_obj$inla_fitted_formula,
-                     family = mod_obj$model$.args$family,
-                     data= INLA::inla.stack.data(comb_stk),
-                     control.fixed = list(expand.factor.strategy='inla'),
-                     # control.inla = list(strategy = "", int.strategy = ""), 
-                     control.compute = list(dic = TRUE, waic = TRUE),
-                     control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
-                     verbose = F)
+    # TODO: incl while to ensure fixef are fitted properly!
+    # %%%%%
+    if (length(fix_vars) > 0){
+      check_flag <- 0
+      while(check_flag == 0){
+        m0 <- INLA::inla(formula = mod_obj$inla_fitted_formula,
+                   family = mod_obj$model$.args$family,
+                   data = INLA::inla.stack.data(comb_stk),
+                   control.fixed = list(expand.factor.strategy='inla'),
+                   # control.inla = list(strategy = "", int.strategy = ""), 
+                   control.compute = list(dic = TRUE, waic = TRUE),
+                   control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+                   verbose = F)
+
+        check_flag <- nrow(m0$summary.fixed)
+      }
+    } else {
+      m0 <- INLA::inla(formula = mod_obj$inla_fitted_formula,
+                 family = mod_obj$model$.args$family,
+                 data = INLA::inla.stack.data(comb_stk),
+                 control.fixed = list(expand.factor.strategy='inla'),
+                 # control.inla = list(strategy = "", int.strategy = ""), 
+                 control.compute = list(dic = TRUE, waic = TRUE),
+                 control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+                 verbose = F)
+    }
+    # %%%%%
+
+    # m0 <- INLA::inla(formula = mod_obj$inla_fitted_formula,
+    #                  family = mod_obj$model$.args$family,
+    #                  data= INLA::inla.stack.data(comb_stk),
+    #                  control.fixed = list(expand.factor.strategy='inla'),
+    #                  # control.inla = list(strategy = "", int.strategy = ""), 
+    #                  control.compute = list(dic = TRUE, waic = TRUE),
+    #                  control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+    #                  verbose = F)
     
     # Get pred_stack index
     pred_idx <- INLA::inla.stack.index(comb_stk, tag = "pred")$data
@@ -550,9 +661,25 @@ hib_mod_project <- function(mod_obj,
       if (!"incl_obs_uncert" %in% names(brms_specs)){
         brms_specs$incl_obs_uncert <- FALSE
       }
+
+      if ("re_form" %in% names(brms_specs)){
+        assertthat::assert_that(
+          is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
+      }
+      # if absent, set to F
+      if (!"re_form" %in% names(brms_specs)){
+        message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+        brms_specs$re_form <- NA
+      }
+  
     }
     if (is.null(brms_specs)){
-      brms_specs <- list(incl_obs_uncert = FALSE)
+      message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
+                                  "\tincl_obs_uncert = FALSE,\n",
+                                  "\tre_form = NA",
+                                  " ...\n")))
+      brms_specs <- list(incl_obs_uncert = FALSE,
+                          re_form = NA)
     }
     # print(brms_specs)
     # %%%%
@@ -583,7 +710,8 @@ hib_mod_project <- function(mod_obj,
     # Dataframe 
     if (is.data.frame(data)){
       # Check all fixef vars are in colnames of data
-      assertthat::assert_that(all(fix_vars %in% colnames(data)))
+      assertthat::assert_that(all(fix_vars %in% colnames(data)),
+                              msg = "Fixed effect variables missing from input data.")
       
       
       # TODO: for categorical vars, ensure levels in projection input are within 
@@ -592,29 +720,48 @@ hib_mod_project <- function(mod_obj,
       # if it is, check all data[,var] are in obj$data[,var
       check_covar_levels(mod_obj$model, data, fix_vars)
       
+      # TODO: also need to check any random vars in brms_specs$re_form
+      # Check they are present, and check they have the correct levels...
+      if (inherits(brms_specs$re_form, "formula")){
+          # print("Checking random variables")
+          re_form_vars <- all.vars(brms_specs$re_form)
+          assertthat::assert_that(all(re_form_vars %in% rand_vars), 
+                                  msg = "Specified re_form structure contains variables not in the original model.")
+          # all.vars(brms_specs$re_form[[2]])
+          check_covar_levels(mod_obj$model, data, re_form_vars)
+      }
+      if (is.null(brms_specs$re_form)){
+        check_covar_levels(mod_obj$model, data, rand_vars)
+      }
+
       # %%%%%
-      if (brms_specs$incl_obs_uncert == T){
+      if (brms_specs$incl_obs_uncert == TRUE){
       # if (incl_obs_uncert == T){
         mean_df <- predict(mod_obj$model,
                            data,
-                           re_form = NA) |>
+                           # re_form = NA
+                           re_form = brms_specs$re_form) |>
           as.data.frame()
         med_df <- predict(mod_obj$model,
                           data,
-                          re_form = NA,
-                          robust = T) |>
+                          # re_form = NA,
+                          re_form = brms_specs$re_form,
+                          robust = TRUE) |>
           as.data.frame()
       }
-      if (brms_specs$incl_obs_uncert == F){
+      if (brms_specs$incl_obs_uncert == FALSE){
       # if (incl_obs_uncert == F){
         mean_df <- fitted(mod_obj$model,
                           data,
-                          re_form = NA) |>
+                          # re_form = NA
+                          re_form = brms_specs$re_form) |>
+        # re_form = brms_specs$re_form
           as.data.frame()
         med_df <- fitted(mod_obj$model,
                          data,
-                         re_form = NA,
-                         robust = T) |>
+                         # re_form = NA,
+                         re_form = brms_specs$re_form,
+                         robust = TRUE) |>
           as.data.frame()
       }
       mean_df <- mean_df |>
@@ -668,6 +815,7 @@ hib_mod_project <- function(mod_obj,
     if (inherits(data, "SpatRaster")){
       # print(brms_specs)
       data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
+                          rand_vars,
                          brms_specs = brms_specs)
                          # incl_obs_uncert)
     }
@@ -682,6 +830,7 @@ hib_mod_project <- function(mod_obj,
                          rescale_pred = rescale_pred,
                          base_val = base_val,
                          fix_vars = fix_vars,
+                         rand_vars = rand_vars,
                          brms_specs = brms_specs)
                          # incl_obs_uncert = incl_obs_uncert)
     }
@@ -718,6 +867,7 @@ hib_mod_project <- function(mod_obj,
 #' to the model intercept (assumes intercept is for baseline environment/LU)
 #' @param base_val Model intercept, for use in rescaling predictions
 #' @param fix_vars Model fixed effects
+#' @param rand_vars Model random effects
 #' @param lme4_specs A list containing details relevant to projecting an lme4-style
 #' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
 #' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
@@ -733,6 +883,7 @@ hib_mod_project <- function(mod_obj,
 #' } 
 #' @noRd
 terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars,
+                        rand_vars,
                        lme4_specs = NULL,
                        brms_specs = NULL){
                        # incl_obs_uncert = F,
@@ -747,6 +898,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     is.logical(rescale_pred),
     is.numeric(base_val),
     is.character(fix_vars),
+    is.character(rand_vars) || is.na(c(rand_vars)) || is.null(rand_vars),
     # is.logical(incl_obs_uncert),
     # is.logical(lme4_boot),
     # is.numeric(n_boot) || is.null(n_boot)
@@ -756,6 +908,31 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
   # Covar checks
   # print(fix_vars)
   # print(names(data))
+
+  # Extract important re_form_vars
+  re_form_vars <- NA
+  if (inherits(obj, "hib_lme4_model")){
+    if (inherits(lme4_specs$re_form, "formula")){
+      re_form_vars <- all.vars(lme4_specs$re_form)
+      assertthat::assert_that(all(re_form_vars %in% rand_vars), 
+                              msg = "Specified re_form structure contains variables not in the original model.")
+    }
+    if (is.null(lme4_specs$re_form)){
+      re_form_vars <- rand_vars
+    }
+  }
+  if (inherits(obj, "hib_brms_model")){
+    if (inherits(brms_specs$re_form, "formula")){
+      re_form_vars <- all.vars(brms_specs$re_form)
+      assertthat::assert_that(all(re_form_vars %in% rand_vars), 
+                              msg = "Specified re_form structure contains variables not in the original model.")
+    }
+    if (is.null(brms_specs$re_form)){
+      re_form_vars <- rand_vars
+    }
+  }
+
+
   if (all(fix_vars %in% names(data))){
     # data_pred <- terra::predict(data,
     #                             obj$model,
@@ -771,14 +948,34 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     # for each fix_vars, check if chr or fct
     # if it is, check all data[,var] are in obj$data[,var
     check_covar_levels(obj$model, data, fix_vars)
-    
-    
+
     if (inherits(obj, "hib_lme4_model")){
+      # TODO: Random covar checks
+      if (inherits(lme4_specs$re_form, "formula")){
+        # print("Checking random variables")
+        # re_form_vars <- all.vars(lme4_specs$re_form)
+        # all.vars(brms_specs$re_form[[2]])
+        check_covar_levels(obj$model, data, re_form_vars)
+      }
+      if (is.null(lme4_specs$re_form)){
+        check_covar_levels(obj$model, data, re_form_vars)
+      }
+
       # TODO: incorp uncertainty
       data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_specs)#lme4_boot, n_boot)
     }
     if (inherits(obj, "hib_brms_model")){
       # TODO: change to fitted...??
+      # TODO: Random covar checks
+      if (inherits(brms_specs$re_form, "formula")){
+        # print("Checking random variables")
+        # re_form_vars <- all.vars(brms_specs$re_form)
+        # all.vars(brms_specs$re_form[[2]])
+        check_covar_levels(obj$model, data, re_form_vars)
+      }
+      if (is.null(brms_specs$re_form)){
+        check_covar_levels(obj$model, data, re_form_vars)
+      }
       # print(brms_specs)
       data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, brms_specs)#incl_obs_uncert)
     }
@@ -786,6 +983,13 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
   } else {
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
+    # TODO: want to incl ranefs here -- either from re_form, or model
+    if (!is.na(re_form_vars)){
+      ranefs_in_rast <- names(data)[names(data) %in% re_form_vars]
+      covars_in_rast <- c(covars_in_rast, ranefs_in_rast)
+      # print(covars_in_rast)
+    }
+
     tmp_pred_rast <- NULL
     n_pred_rast_lyrs <- 0
     if (length(covars_in_rast) > 0 ){
@@ -795,6 +999,12 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     
     # any layer with a name not in fix_covars needs to be aligned to a var
     non_covars_in_rast <- names(data)[!names(data) %in% fix_vars]
+    # TODO: want to drop ranefs here -- either from re_form, or model ??
+    # Easy way to drop ranefs_in_rast 
+    non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% covars_in_rast]
+    # But, also want to drop ranefs that aren't in rast from non_covars_in_rast
+    non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% rand_vars]
+
     tmp_rast <- NULL
     if (length(non_covars_in_rast) > 0 ){
       tmp_rast <- data[[non_covars_in_rast]]
@@ -868,7 +1078,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         dplyr::group_by(covar_nm) |>
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
-      print(covars_not_in_rast)
+      # print(covars_not_in_rast)
       
       # Split binary and non binary layers
       bin_covars <- covars_not_in_rast |>
@@ -980,6 +1190,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       non_bin_sub <- non_bin_covars |>
         dplyr::filter(!is.na(covar_levs_rast))
       
+      # print(tmp_prop_rast)
       # print(non_bin_covars)
       # print(non_bin_sub)
       non_bin_r <- tmp_rast[[non_bin_sub$covar_levs_rast]]
@@ -989,8 +1200,28 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       for (i in 1:n_prop_covar_lyrs){
         # TODO: need to be careful combining these, if first item is null,
         # output becomes a list of 1...
-        tmp_pred_rast_ls[[i]] <- c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
+        
+        tmp_ <- c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])
+        # If tmp is a list, get [[1]]
+        if (is.list(tmp_)){
+          tmp_ <- tmp_[[1]]
+        }
+        # print(tmp_)
+
+        assertthat::assert_that(
+          inherits(tmp_, "SpatRaster")
+        )
+        # If is a SpatRaser, use as is.
+
+        tmp_pred_rast_ls[[i]] <- tmp_ # c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
+        
         # Check all covars in new SpatRaster
+        # print(tmp_pred_rast_ls[[i]])
+
+        # print(c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]]))
+        # print(fix_vars)
+        # print(names(tmp_pred_rast_ls[[i]]))
+
         assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast_ls[[i]])))
         
         # tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
@@ -1003,21 +1234,32 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         # if it is, check all data[,var] are in obj$data[,var
         check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], fix_vars)
         
-        # print(tmp_pred_rast_ls[[i]])
         if (inherits(obj, "hib_lme4_model")){
+          # TODO : ranef covar check
+          if (inherits(lme4_specs$re_form, "formula")){
+            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
+          }
+          if (is.null(lme4_specs$re_form)){
+            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
+          }
+          
           tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
                                                         backtransform,
                                                         lme4_specs)
-                                                        # lme4_boot,
-                                                        # n_boot)
         }
         if (inherits(obj, "hib_brms_model")){
+          # TODO : ranef covar check
+          if (inherits(brms_specs$re_form, "formula")){
+            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
+          }
+          if (is.null(brms_specs$re_form)){
+            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
+          }
           tmp_pred_rast_ls[[i]] <- terra_proj_brms_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
                                                         backtransform,
                                                         brms_specs)
-                                                        # incl_obs_uncert)
         }
         
         
@@ -1076,7 +1318,15 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     # otherwise, just combine all into one raster stack
     if (n_prop_covar_lyrs == 0){
       
-      tmp_pred_rast <- c(tmp_pred_rast, tmp_bin_rast)[[1]]
+
+      tmp_pred_rast <- c(tmp_pred_rast, tmp_bin_rast) #[[1]]
+      if (is.list(tmp_pred_rast)){
+          tmp_pred_rast <- tmp_pred_rast[[1]]
+        }
+
+        assertthat::assert_that(
+          inherits(tmp_pred_rast, "SpatRaster")
+        )
       
       # Check all covars in new SpatRaster
       assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast)))
@@ -1087,13 +1337,28 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # if it is, check all data[,var] are in obj$data[,var
       check_covar_levels(obj$model, tmp_pred_rast, fix_vars)
       
+      # TODO : ranef covar check
+
       # Predict
       if (inherits(obj, "hib_lme4_model")){
+        if (inherits(lme4_specs$re_form, "formula")){
+            check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
+        }
+        if (is.null(lme4_specs$re_form)){
+          check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
+        }
+
         data_pred <- terra_proj_lme4_pred(obj$model, tmp_pred_rast, backtransform,
                                           lme4_specs)
                                           # lme4_boot, n_boot)
       }
       if (inherits(obj, "hib_brms_model")){
+        if (inherits(brms_specs$re_form, "formula")){
+            check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
+        }
+        if (is.null(brms_specs$re_form)){
+          check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
+        }
         data_pred <- terra_proj_brms_pred(obj$model, tmp_pred_rast, backtransform,
                                           brms_specs)
                                           # incl_obs_uncert)
@@ -1131,7 +1396,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 #' @param covar_df A [`data.frame`], with info on covariate, levels, and the associated
 #' names present in the raster data
 #' @param data_rast A [`SpatRaster`] that can be used to project a model.
-#' @param mod_data A [`data.frame`], of the data used to fit the model
+#' @param mod_data A [`data.frame`], or list (inla), of the data used to fit the model
 #' @param input_type A [`character`], either "binary" or "non-binary", indicating 
 #' the type of data in the raster - i.e., is each grid cell only a single level of 
 #' a covariate, or can it contain proportions of multiple levels
@@ -1142,7 +1407,6 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 #' } 
 #' @noRd
 terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type = "binary"){
-  # TODO: maybe change to @NoRd
   # TODO: better term than binary
   
   # Assertions
@@ -1150,7 +1414,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     is.character(covar_nm) || is.factor(covar_nm), 
     is.data.frame(covar_df), 
     inherits(data_rast, "SpatRaster"), 
-    is.data.frame(mod_data),
+    is.data.frame(mod_data) || is.list(mod_data),
     is.character(input_type)
   )
   
@@ -1176,8 +1440,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   # unique(mod_data[[covar_nm]])
   # 1:dplyr::n()
   fac_lev_df <- data.frame(ID = as.numeric(mod_data[[covar_nm]]),
-                           category = mod_data[[covar_nm]]
-  ) |>
+                           category = mod_data[[covar_nm]]) |>
     unique()
   # print(fac_lev_df)
   
@@ -1241,7 +1504,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 }
 
 
-#' # A helper function to project a model using SpatRaster data
+#' A helper function to project a model using SpatRaster data
 #' 
 #' @description 
 #' This function projects/predicts the supplied model using the SpatRaster 
@@ -1282,12 +1545,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
   # Project
   # TODO: could also incl df.. - more general
   
-  data_pred <- terra::predict(data,
-                              mod,
-                              re.form = lme4_specs$re_form, 
-                              na.rm = T)
-  names(data_pred) <- "prediction_mean"
-  
+
   # %%%%%
   # Get info re bootstrapping
   # Should already be checked!!! - CHECK
@@ -1371,10 +1629,17 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                                   " ...\n")))
     lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA) #
   }
+
+  data_pred <- terra::predict(data,
+                              mod,
+                              re.form = lme4_specs$re_form, 
+                              na.rm = T)
+  names(data_pred) <- "prediction_mean"
+  
   # %%%
   # print(lme4_specs)
   # %%%%%
-  if (lme4_specs$bootstrap == T){
+  if (lme4_specs$bootstrap == TRUE){
   # if (lme4_boot == T){
     # %%%%
     message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
@@ -1429,7 +1694,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 
 
 # %%%%
-#' # A helper function to project a model using SpatRaster data
+#' A helper function to project a model using SpatRaster data
 #' 
 #' @description 
 #' This function projects/predicts the supplied model using the SpatRaster 
@@ -1481,9 +1746,25 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
     if (!"incl_obs_uncert" %in% names(brms_specs)){
       brms_specs$incl_obs_uncert <- FALSE
     }
+    
+    if ("re_form" %in% names(brms_specs)){
+      assertthat::assert_that(
+        is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
+    }
+    # if absent, set to F
+    if (!"re_form" %in% names(brms_specs)){
+      message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+      brms_specs$re_form <- NA
+    }
+
   }
   if (is.null(brms_specs)){
-    brms_specs <- list(incl_obs_uncert = FALSE)
+    message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
+                                "\tincl_obs_uncert = FALSE,\n",
+                                "\tre_form = NA",
+                                " ...\n")))
+    brms_specs <- list(incl_obs_uncert = FALSE,
+                        re_form = NA)
   }
   # %%%%
   
@@ -1500,11 +1781,13 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
   # if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
                                 mod,
-                                re_form = NA,
+                                # re_form = NA,
+                                re_form = brms_specs$re_form,
                                 na.rm = T)
     med_pred <- terra::predict(data,
                                mod,
-                               re_form = NA,
+                               # re_form = NA,
+                               re_form = brms_specs$re_form,
                                robust = T,
                                na.rm = T)
     
@@ -1530,10 +1813,12 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
   # if (incl_obs_uncert == F){
     tmp_df <- terra::as.data.frame(data, xy = T)
     mean_pred <- fitted(mod, tmp_df, 
-                        re_form = NA) |>
+                        # re_form = NA
+                        re_form = brms_specs$re_form) |>
       as.data.frame()
     median_pred <- fitted(mod, tmp_df, 
-                          re_form = NA,
+                          # re_form = NA,
+                          re_form = brms_specs$re_form,
                           robust = T) |>
       as.data.frame()
     
@@ -1594,13 +1879,15 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
 #' @param data A [`SpatRaster`] that can be used to project a model.
 #' @param obj A [`hib_model`] object -inla.
 #' @param fix_vars Model fixed effects
+#' @param rand_vars Model random effects
+#' @param re_form_vars Model random effects to condition upon when predicting
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
 #'   tmp_df <- terra_to_df_inla(obj, data, fix_vars)
 #' } 
 #' @noRd
-terra_to_df_inla <- function(data, obj, fix_vars){
+terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
   # TODO: maybe change to @NoRd
   # TODO: maybe co-opt to use fitted for brms rather then predict - for terra input
   
@@ -1608,16 +1895,46 @@ terra_to_df_inla <- function(data, obj, fix_vars){
   assertthat::assert_that(
     inherits(obj, "hib_inla_model"),
     inherits(data, "SpatRaster"), 
-    is.character(fix_vars)
+    is.character(fix_vars),
+    is.character(rand_vars) || is.na(c(rand_vars)) || is.null(rand_vars),
+    is.character(re_form_vars) || is.na(c(re_form_vars)) || is.null(re_form_vars)
   )
   # Covar checks
   
+  # TODO: What about non-fix (random) variables
+
   if (all(fix_vars %in% names(data))){
-    # convert terra to df...
-    data_df <- terra::as.data.frame(data, xy = T)
+    # TODO: also check for all ranefs... re_form_vars
+    if (all(re_form_vars %in% names(data))){
+      # convert terra to df...
+      data_df <- terra::as.data.frame(data, xy = T)
+      } else {
+        if (is.na(re_form_vars)){
+          data_df <- terra::as.data.frame(data, xy = T)
+        }
+        if (!is.na(re_form_vars)){
+          # Get missing re_form_vars
+          missing_covars <- re_form_vars[!re_form_vars %in% names(data)]
+          missing_covars_chr <- paste(missing_covars, collapse = " ; ")
+
+          message(crayon::red(paste0("Error: random effect variable specified in ",
+                                    "re_form is missing.\n")))
+          message(crayon::red(paste("Missing covariates: ",
+                                missing_covars_chr, sep = "")))
+          stop()  
+        }
+        
+      }
+    
   } else {
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
+    # TODO: also get ranefs. - assume not proportions/binary - as in model
+    if (!is.na(re_form_vars)){
+      ranefs_in_rast <- names(data)[names(data) %in% re_form_vars]
+      covars_in_rast <- c(covars_in_rast, ranefs_in_rast)
+    }
+
     tmp_pred_rast <- NULL
     n_pred_rast_lyrs <- 0
     if (length(covars_in_rast) > 0 ){
@@ -1627,6 +1944,13 @@ terra_to_df_inla <- function(data, obj, fix_vars){
     
     # any layer with a name not in fix_covars needs to be aligned to a var
     non_covars_in_rast <- names(data)[!names(data) %in% fix_vars]
+    # TODO: drop ranefs in data from non_covars_in_rast
+    # Easy way to drop ranefs_in_rast 
+    non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% covars_in_rast]
+    # But, also want to drop ranefs that aren't in rast from non_covars_in_rast
+    non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% rand_vars]
+
+
     tmp_rast <- NULL
     if (length(non_covars_in_rast) > 0 ){
       tmp_rast <- data[[non_covars_in_rast]]
@@ -1770,7 +2094,33 @@ terra_to_df_inla <- function(data, obj, fix_vars){
       for (i in 1:n_prop_covar_lyrs){
         # TODO: need to be careful combining these, if first item is null,
         # output becomes a list of 1...
-        tmp_r <- c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
+
+        # %%%
+        tmp_ <- c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])
+        # If tmp is a list, get [[1]]
+        if (is.list(tmp_)){
+          tmp_ <- tmp_[[1]]
+        }
+
+        assertthat::assert_that(
+          inherits(tmp_, "SpatRaster")
+        )
+        # If is a SpatRaser, use as is.
+
+        tmp_r <- tmp_ # c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
+        
+        # %%%%
+        # Check fix vars and re-form_vars are present
+        assertthat::assert_that(all(fix_vars %in% names(tmp_r)))
+        check_covar_levels(obj$model, tmp_r, fix_vars)
+        
+        if (!is.na(re_form_vars)){
+          check_covar_levels(obj$model, tmp_r, re_form_vars)
+        }        
+        # %%%%
+
+        # %%%
+        # tmp_r <- c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
         # Convert to df
         tmp_df <- terra::as.data.frame(tmp_r,
                                        xy = T)
@@ -1809,13 +2159,14 @@ terra_to_df_inla <- function(data, obj, fix_vars){
     }
   }
   
+  # print(head(data_df))
   return(data_df)  
   
 }
 
 
 #' An internal helper function to check that the data provided for the projection 
-#' does not contain any facto-levels that are not in the model fitting data.
+#' does not contain any factor-levels that are not in the model fitting data.
 #' 
 #' @description 
 #' This function checks whether the supplied projection data is compatible with
@@ -1827,28 +2178,28 @@ terra_to_df_inla <- function(data, obj, fix_vars){
 #' Expects a model object (lme4/brms/?inla?).
 #' @param mod A fitted model, either from lme4, inla or brms
 #' @param proj_dat The prepared data used to predict from
-#' @param fix_vars The fixed-effect covariates in the model
+#' @param covars The fixed-effect covariates in the model # TODO: could also be ranefs
 #' @keywords model projections data checks
 #' @examples 
 #' \dontrun{
 #'   check_covar_levels(model, projection_df, fixed_covars)
 #' } 
 #' @noRd
-check_covar_levels <- function(mod, proj_dat, fix_vars){
+check_covar_levels <- function(mod, proj_dat, covars){
   
   # Assertion checks
   assertthat::assert_that(
     class(mod) == "lmerMod" || class(mod) == "glmerMod" || 
       class(mod) == "brmsfit" || class(mod) == "inla",
     is.data.frame(proj_dat) || inherits(proj_dat, "SpatRaster"),
-    is.character(fix_vars)
+    is.character(covars)
   )
   
-  # First check - that all fix_vars are in proj_dat
-  if (!all(fix_vars %in% names(proj_dat))){
+  # First check - that all covars are in proj_dat
+  if (!all(covars %in% names(proj_dat))){
     
     # Get missing covars
-    missing_covars <- fix_vars[!fix_vars %in% names(proj_dat)]
+    missing_covars <- covars[!covars %in% names(proj_dat)]
     missing_covars_chr <- paste(missing_covars, collapse = " ; ")
     message(crayon::red("Error: covariates missing from projection data!\n"))
     message(crayon::red(paste("Missing covariates: ",
@@ -1856,8 +2207,7 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
     
     stop()
   }
-  
-  
+
   # store info on data type
   proj_dat_type <- NA
   if (is.data.frame(proj_dat)){
@@ -1885,9 +2235,10 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
   # print(fit_dat)
   
   is_problem_var <- FALSE
-  for (i in 1:length(fix_vars)){
+  for (i in 1:length(covars)){
     # Check if var is a factor/chr
-    var_i <- fix_vars[i]
+    var_i <- covars[i]
+    # print(var_i)
     if ( (is.factor(fit_dat[[var_i]]) | is.character(fit_dat[[var_i]])) ){
       # Get unique chr values for fit data
       var_i_fit_levs <- fit_dat[[var_i]] |> 
@@ -1917,6 +2268,10 @@ check_covar_levels <- function(mod, proj_dat, fix_vars){
         var_i_proj_levs <- terra::levels(var_i_proj)[[1]][["category"]]
       }
       
+      # print(head(var_i_proj_levs))
+      # print(head(var_i_fit_levs))
+      # print(var_i_proj_levs %in% var_i_fit_levs)
+
       # Check all var_i_proj_levs are in var_i_fit_levs
       if (!all(var_i_proj_levs %in% var_i_fit_levs)){
         # if not, add to problem_vars

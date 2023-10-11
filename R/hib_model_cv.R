@@ -1,5 +1,3 @@
-# TODO: allow for custom N random - limit to 20? - have got 2,3,5,10 - most common
-
 
 #' Cross-validate a fitted hib mixed-effects model
 #' 
@@ -20,10 +18,17 @@
 #' random cross-validation folds - only used if 'Random-X' in fold_type
 #' @param backtransform A function to convert the model prediction back to the original
 #' scale of interest
+#' @param re_form A [`list`] indicating the random effects variables to be
+#' included in the cross-validation/insample predicitons - if multiple items supplied,
+#' each option will be used in a separate cv prediction.
+#' Values can be either NA (no random effects), NULL (all random effects), or a
+#' rhs formula specifying particular random effects to include.
+#' Note: only test set data points with random-effect values present in the 
+#' training data will have predictions if re_form is not NA.
 #' @param use_original_mesh A logical value indicating whether cross-validation
 #' of spatial INLA models should use the original mesh for all cv folds. Computationally
 #' this is slightly more efficient, but may affect cv performance metrics - witheld
-#' sites will still exist in the mesh. TODO: update - lme4_specs, brms_specs, INLA_specs
+#' sites will still exist in the mesh. 
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
@@ -33,6 +38,7 @@
 hib_mod_cv <- function(mod_obj, db_obj, fold_type, 
                        custom_col = NULL,
                        random_seed = NULL,
+                       re_form = list(NA),
                        backtransform = NULL,
                        use_original_mesh = NULL){
   # TODO: option to just use original mesh for inla cv - override mesh_source
@@ -44,6 +50,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     is.character(fold_type),
     is.character(custom_col) || is.null(custom_col),
     is.numeric(random_seed) || is.null(random_seed),
+    is.list(re_form), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(use_original_mesh) || is.null(use_original_mesh)
   )
@@ -98,7 +105,6 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
                                               
                                               T ~ fold_col))
   
-  
   if ("Custom" %in% fold_type){
     cv_spec <- bind_rows(cv_spec,
                          expand.grid(fold_type = c("Custom"),
@@ -108,7 +114,10 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     )
   }
   
-
+  if (inherits(mod_obj, "hib_lme4_model")){
+    message(crayon::green(paste0("Cross-validating supplied lme4 model:\n\t", 
+                                 format(stats::formula(mod_obj$model)), "\n")))
+  }
   if (inherits(mod_obj, "hib_inla_model")){
     # Package check
     if (!requireNamespace("INLA", quietly = TRUE)) {
@@ -126,28 +135,40 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
       m_form <- paste(m_form,
                       "+ f(s, model = site.spde)")
     }
-    # message(crayon::green("Cross-validating supplied model:\n\t" ))
-    # message(crayon::green(format(formula(mod_obj$user_formula$full))))
-    message(crayon::green(paste0("Cross-validating supplied model:\n\t", 
+    message(crayon::green(paste0("Cross-validating supplied INLA model:\n\t", 
                                  m_form, "\n")))
-  } else {
-    message(crayon::green(paste0("Cross-validating supplied model:\n\t", 
-                                 format(stats::formula(mod_obj$model)), "\n")))
-  }
-  
+    message(crayon::green("Have some patience, this may take a while...\n"))
+  } 
   
   if (inherits(mod_obj, "hib_brms_model")){
+    message(crayon::green(paste0("Cross-validating supplied brms model:\n\t", 
+                                 format(mod_obj$model$formula$formula), "\n")))
+    
     message(crayon::green("Have some patience, this may take a while...\n"))
   }
+
+  mod_specs <- get_model_info(mod_obj, re_form, use_original_mesh)
+  # print(mod_specs)
+  # Update within-function vars based on mod_specs
+  rand_vars <- mod_specs$rand_vars
+  re_form_vars <- mod_specs$re_form_vars
+  re_form <- mod_specs$re_form
+
+  # Random effects to consider - re_form - message?
+  # paste(as.character(re_form), collapse = "; ")
+
   cv_out <- purrr::pmap(cv_spec,
                         function(fold_type, fold_col,  
                                  mod_ = mod_obj,
                                  db_ = db_obj,
                                  rand_seed = random_seed,
+                                 re_f = re_form,
                                  backtr = backtransform,
-                                 orig_mesh = use_original_mesh){
+                                 # orig_mesh = use_original_mesh,
+                                 mod_specs_ = mod_specs){
                           hib_cv_mod_inner(mod_, db_, fold_type, fold_col, 
-                                           rand_seed, backtr, orig_mesh)
+                                           rand_seed, re_f, backtr, #orig_mesh,
+                                           mod_specs_)
                         })
   
   # TODO: drop cv item if n_folds == 1
@@ -161,47 +182,103 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   
   message(crayon::green("Generating in-sample performance metrics for comparison.\n"))
   
+
+  # Useful helpers - inla_fit_pred?
+
+  insample_df_ls <- vector("list", length(re_form))
+
   if (inherits(mod_obj, "hib_lme4_model")){
     # In-sample preds
-    orig_form <- stats::formula(mod_obj$model)
-    insample_df <- mod_obj$data
-    insample_df$prediction <- predict(mod_obj$model,
-                                      insample_df,
-                                      re.form = NA)
+    # orig_form <- stats::formula(mod_obj$model)
+    orig_form <- mod_specs$lme4_specs$orig_form
+
+    for (i in seq_along(re_form)){
+      tmp_df <- mod_obj$data
+      tmp_df$Random_effect_form <- as.character(re_form[i])
+      insample_df_ls[[i]] <- tmp_df
+    }
+    
+    insample_df <- predict_lme4_brms_cv(mod_obj$model, insample_df_ls, re_form)
   }
   
-  # TODO:
+  
   if (inherits(mod_obj, "hib_inla_model")){
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # message(crayon::yellow("Warning: INLA insample prediction in development, current output is preliminary!"))
     
     # In-sample preds
-    insample_df <- mod_obj$data
-    
+    # insample_df <- mod_obj$data
+    insample_df_ls <- vector("list", length(re_form))
+
     # Need orig_form (user supplied$response_fixed) to edit/backtransform response 
     orig_form <- mod_obj$user_formula$response_fixed
     fixed_covars <- all.vars(orig_form[3])
+    fixed_covars <- fixed_covars[!fixed_covars == "Intercept"]
     
     fitted_form_ <- mod_obj$inla_fitted_formula
     orig_fam <- mod_obj$model$.args$family
+
+    # ??: use mod_specs$inla_specs
+    # orig_form <- mod_specs$inla_specs$orig_form
+    # fixed_covars <- all.vars(orig_form[3])
+    # fitted_form_ <- mod_specs$inla_specs$fitted_form_
+    # orig_fam <- mod_specs$inla_specs$orig_fam
     
+    stk_te_ls <- vector("list", length(re_form))
     # Make a new inla stack for test predictions
     stk_te <- mod_obj$inla_stack
-    
     # Drop y, rename index
     stk_te$data$data$y <- NA
-    names(stk_te$data$index)[names(stk_te$data$index) == "fit"] <- "te"
     
-    # Drop iid random effects
-    rand_vars <- all.vars(mod_obj$user_formula$random)
+    # loop through re_form, set col to na if not in re_form_vars, but in rand_vars
+    for (i in seq_along(re_form)){
+      rand_vars_NA <- rand_vars[!rand_vars %in% re_form_vars[[i]]]
+      tmp_stk <- stk_te
+      names(tmp_stk$data$index)[names(tmp_stk$data$index) == "fit"] <- paste0("te__",
+                                                                              paste(re_form_vars[[i]], collapse = "_"))
+      if (length(rand_vars_NA) > 0){
+        tmp_stk$effects$data <- tmp_stk$effects$data |> 
+          dplyr::mutate_at(rand_vars_NA, ~ NA)
+
+        stk_te_ls[[i]] <- tmp_stk
+      } else {
+        stk_te_ls[[i]] <- tmp_stk
+      }
+
+      # %%%%%%
+      # TODO: is mod_obj$data same as tmp_stk$effects$data?
+      # %%%%%%
+      tmp_df <- mod_obj$data
+      tmp_df$Random_effect_form <- as.character(re_form[i])
+      insample_df_ls[[i]] <- tmp_df
+    }
+
+      # X_te <- dplyr::bind_rows(pred_df_ls)
     
-    stk_te$effects$data <- stk_te$effects$data |> 
-      dplyr::mutate_at(rand_vars, ~ NA)
+    
+    # stk_te_ls
+    # # Drop iid random effects
+    # # rand_vars <- all.vars(mod_obj$user_formula$random)
+    
+    # # TODO: what about incl some based on a re_form arg??
+    # # for (i in seq_along(re_form){stk_te_i <- ...}
+
+    # stk_te$effects$data <- stk_te$effects$data |> 
+    #   dplyr::mutate_at(rand_vars, ~ NA)
 
     # print(head(stk_te$effects$data))
-    # Combine stacks
+    # Combine stacks - does this work?
     comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
-                                 stk_te)
+                                 stk_te_ls[[1]])
+    if (length(seq_along(re_form)) > 1){
+      for (i in 2:length(re_form)){
+        comb_stk <- INLA::inla.stack(comb_stk,
+                                   stk_te_ls[[i]])
+      }
+    }
+    
+    # comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
+    #                              unlist(stk_te_ls))
     
     if (length(fixed_covars) > 0){
       check_flag <- 0
@@ -229,16 +306,24 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     }
     
     
-    # Extract prediction and cis to insample_df
-    pred_idx <- INLA::inla.stack.index(comb_stk, tag = "te")$data
-    tmp_pred <- tmp_m$summary.fitted.values[pred_idx,]
-    
-    insample_df$prediction <- tmp_pred$mean
-    insample_df$prediction_q2.5 <- tmp_pred$`0.025quant`
-    insample_df$prediction_q97.5 <- tmp_pred$`0.975quant`
-    # Drop y - will be regenerated below for error estimation etc
-    insample_df <- insample_df |> 
-      dplyr::select(-y)
+    # TODO
+    for (i in seq_along(re_form)){
+      tag_ <- paste0("te__", paste(re_form_vars[[i]], collapse = "_"))
+
+
+      # Extract prediction and cis to insample_df
+      pred_idx <- INLA::inla.stack.index(comb_stk, tag = tag_)$data
+      tmp_pred <- tmp_m$summary.fitted.values[pred_idx,]
+      
+      insample_df_ls[[i]]$prediction <- tmp_pred$mean
+      insample_df_ls[[i]]$prediction_q2.5 <- tmp_pred$`0.025quant`
+      insample_df_ls[[i]]$prediction_q97.5 <- tmp_pred$`0.975quant`
+      # Drop y - will be regenerated below for error estimation etc
+      insample_df_ls[[i]] <- insample_df_ls[[i]] |> 
+        dplyr::select(-y)
+    }
+
+    insample_df <- dplyr::bind_rows(insample_df_ls)
     # %%%%%
     # # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   }
@@ -246,15 +331,14 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   if (inherits(mod_obj, "hib_brms_model")){
     # In-sample preds
     orig_form <- mod_obj$model$formula$formula
-    insample_df <- mod_obj$data
+ 
+    for (i in seq_along(re_form)){
+      tmp_df <- mod_obj$data
+      tmp_df$Random_effect_form <- as.character(re_form[i])
+      insample_df_ls[[i]] <- tmp_df
+    }
     
-    tmp_pred <- fitted(mod_obj$model,
-                       insample_df,
-                       re_form = NA) |>
-      as.data.frame()
-    insample_df$prediction <- tmp_pred$Estimate
-    insample_df$prediction_q2.5 <- tmp_pred$Q2.5
-    insample_df$prediction_q97.5 <- tmp_pred$Q97.5
+    insample_df <- predict_lme4_brms_cv(mod_obj$model, insample_df_ls, re_form)
     
   }
   
@@ -276,9 +360,20 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   insample_df <- insample_df |>
     dplyr::mutate(error = y - prediction)
   
-  insample_metrics <- calc_cv_metrics(insample_df$prediction, 
-                                      insample_df$y, 
-                                      insample_df$error)
+  insample_metrics <- purrr::map(as.character(re_form),
+            function(x, df = insample_df){
+              df_sub <- df |>
+                dplyr::filter(Random_effect_form == x)
+              tmp <- calc_cv_metrics(df_sub$prediction, 
+                                    df_sub$y, 
+                                    df_sub$error)
+              tmp$Random_effect_form <- x
+              tmp
+              }) |> 
+    dplyr::bind_rows()
+  # insample_metrics <- calc_cv_metrics(insample_df$prediction, 
+  #                                     insample_df$y, 
+  #                                     insample_df$error)
   
   insample_res = list(insample_pred_df = insample_df, 
                       insample_metrics = insample_metrics)
@@ -294,13 +389,11 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 
   # if an inla, and spatial model, check it's not null, if it is, NA, else logical T/F
   if (inherits(mod_obj, "hib_inla_model")){
-    if (mod_obj$inla_incl_spatial_term == T){
-      if (is.null(use_original_mesh)){
-        use_original_mesh <- NA  
-      }  
+    if (mod_obj$inla_incl_spatial_term == TRUE){
+      use_original_mesh <- mod_specs$inla_specs$use_original_mesh
     }
     # if an inla, but non spatial model, set to na
-    if (mod_obj$inla_incl_spatial_term == F){
+    if (mod_obj$inla_incl_spatial_term == FALSE){
       use_original_mesh <- NA
     }
   }
@@ -314,8 +407,9 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     mod_obj = mod_obj,
     cv_res = cv_out,
     insamp_res = insample_res,
+    re_form = re_form,
     use_orig_mesh = use_original_mesh)
-  # Add use_original_mesh
+  
   return(cv_obj)
 }
 
@@ -338,10 +432,17 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 #' random cross-validation folds - only used if 'Random-X' in fold_type
 #' @param backtransform A function to convert the model prediction back to the original
 #' scale of interest
+#' @param re_form A [`list`] indicating the random effects variables to be
+#' included in the cross-validation/insample predicitons - if multiple items supplied,
+#' each option will be used in a separate cv prediction.
+#' Values can be either NA (no random effects), NULL (all random effects), or a
+#' rhs formula specifying particular random effects to include.
+#' Note: only test set data points with random-effect values present in the 
+#' training data will have predictions if re_form is not NA.
 #' @param use_original_mesh A logical value indicating whether cross-validation
 #' of spatial INLA models should use the original mesh for all cv folds. Computationally
 #' this is slightly more efficient, but may affect cv performance metrics - witheld
-#' sites will still exist in the mesh.
+#' sites will still exist in the mesh. - NO LONGER USED
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
@@ -353,8 +454,10 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 hib_cv_mod_inner <- function(mod_obj, db_obj, 
                              fold_type, fold_col,
                              random_seed = NULL,
+                             re_form = list(NA),
                              backtransform = NULL,
-                             use_original_mesh = NULL){
+                             # use_original_mesh = NULL, # TODO: drop - now in mod_specs
+                             mod_specs = NULL){
   
   # Assertion checks 
   assertthat::assert_that(
@@ -363,8 +466,10 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     is.character(fold_type),
     is.character(fold_col),
     is.numeric(random_seed) || is.null(random_seed),
+    is.list(re_form),
     is.function(backtransform) || is.null(backtransform),
-    is.logical(use_original_mesh) || is.null(use_original_mesh)
+    # is.logical(use_original_mesh) || is.null(use_original_mesh),
+    is.list(mod_specs)
   )
   
   # Check fold_type matches one of the options
@@ -448,108 +553,13 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   
   
-  # NOTE: this data prep stuff should only happen once, before any cv_inner,
-  # info is relevant to all cv types!!
-  
-  # Should we also try to "keep" SS together in other blockings...
-  
-  mod <- mod_obj$model
-  orig_data <- mod_obj$data
-  
-  incl_weights <- F
-  if ("data_weight" %in% colnames(orig_data)){
-    incl_weights <- T
-  }
-  
-  if (inherits(mod_obj, "hib_lme4_model")){
-    # %%%%%%%%%%
-    # LME4-specific data prep 
-    # %%%%%%%%%%
-    orig_form <- stats::formula(mod)
-    
-    fam <- NULL
-    if (is(mod@resp, "glmResp")){
-      fam <- mod@resp$family
-    }
-    
-    if (mod@devcomp$dims[["REML"]]){
-      REML <- T
-    } else {REML <- F}
-    
-    ci_type <- mod_obj$ci_type
-    # %%%%%%%%%%
-    # LME4-specific dataprep - END
-    # %%%%%%%%%%
-  }
-  
-  if (inherits(mod_obj, "hib_inla_model")){
-    # %%%%%%%%%%
-    # INLA-specific dataprep 
-    # %%%%%%%%%%
-    
-    # Formulas 
-    
-    orig_form <- mod_obj$user_formula$full
-    fitted_form <- as.formula(mod$.args$formula)
-    fitted_form_ <- mod_obj$inla_fitted_formula
-    
-    orig_form_user_ls <- mod_obj$user_formula
-    # $full
-    # $response_fixed
-    # $random
-    
-    # family
-    orig_fam <- mod$.args$family
-    
-    # Spatial settings
-    orig_incl_spatial_term <- NA
-    mesh_source <- NA
-    orig_mesh <- NA
-    orig_mesh_settings <- NA
-    
-    orig_incl_spatial_term <- mod_obj$inla_incl_spatial_term
-    if (orig_incl_spatial_term){
-      if (is.null(use_original_mesh)){
-        use_original_mesh <- NA
-      }
-      # is mesh user provided or based on mesh_settings?
-      mesh_source <- mod_obj$inla_mesh_source
-      if (mesh_source == "user_provided"){
-        orig_mesh <-  mod_obj$inla_mesh
-      }
-      if (mesh_source == "mesh_settings"){
-        orig_mesh_settings <-  mod_obj$inla_mesh_settings
-      }
-      if (use_original_mesh == T){
-        orig_mesh <-  mod_obj$inla_mesh
-        mesh_source <- "user_provided"
-      }
-    }
-    
-    # prior_list ...
-    # fit_settings ...
-    # %%%%%%%%%%
-    # INLA-specific dataprep -  END
-    # %%%%%%%%%%
-  }
-  
-  if (inherits(mod_obj, "hib_brms_model")){
-    # %%%%%%%%%%
-    # BRMS-specific dataprep -  
-    # %%%%%%%%%%
-    orig_form <- mod$formula$formula
-    orig_fam <- mod$family
-    orig_extra_args <- mod_obj$extra_args
-    
-    m_args <- orig_extra_args
-    m_args[["formula"]] <- orig_form
-    m_args[["family"]] <- orig_fam
-    # %%%%%%%%%%
-    # BRMS-specific dataprep -  END
-    # %%%%%%%%%%
-  }
-  
-  
+  # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  # Get important vars from mod_spec...
+  orig_data <- mod_specs$orig_data
+  rand_vars <- mod_specs$rand_vars
+  re_form_vars <- mod_specs$re_form_vars
+  fix_fact_vars <- mod_specs$fix_fact_vars
+
   # %%%%%%%%%%%%%%%%%%
   # Below is specific to each cv type... - i.e. needed per cv_inner
   
@@ -560,8 +570,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   # Add important fold variable - from db_obj - based on SSBS, or, 
   # if SSBS1/SSBS2 in orig_data, use these...
   if ("SSBS" %in% colnames(orig_data)){
-    # TODO: BUG FIX NEEDED: 20231005 - if fold column is already in orig_data, 
-    # Error occurs as you then get fold_col.x and fold_col.y
     # If only col in fold_df (other than SSBS/SSBS1) is already present, 
     # drop and re add, or just don't add? - question re SSBS1... - ether seems okay
     # If already present, just don't add, assume model df has correct var...
@@ -573,9 +581,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
                                   fold_df,
                                   by = "SSBS")
     }
-    # cv_data <- dplyr::left_join(orig_data,
-    #                             fold_df,
-    #                             by = "SSBS")
   }
   if ("SSBS1" %in% colnames(orig_data)){
     if (fold_col %in% colnames(orig_data)){
@@ -599,14 +604,14 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   if (n_folds == 1){
     message(crayon::yellow(paste0("Warning: ", fold_type_msg, " has only 1 fold... Cross-validation for this specification will not be run.\n")))
     
-    return(list(cv_pred_df  = NA, 
-                cv_metrics  = NA,
-                cv_fold_metrics  = NA,
-                cv_coef_df  = NA,
+    return(list(cv_pred_df  = NULL, 
+                cv_metrics  = NULL,
+                cv_fold_metrics  = NULL,
+                cv_coef_df  = NULL,
                 fold_type   = fold_type,
                 fold_col    = fold_col,
                 n_folds     = n_folds,
-                random_seed = NA
+                random_seed = NULL
     ))
   }
   
@@ -619,7 +624,22 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     # print("WOOP - lme4/inla")
     pb <- txtProgressBar(min = 1, max = max(2, n_folds), style = 3)
   }
-  
+  # Get orig_form as a local var..
+
+  if (inherits(mod_obj, "hib_lme4_model")){
+    incl_weights <- mod_specs$lme4_specs$incl_weights
+    orig_form <- mod_specs$lme4_specs$orig_form
+  }
+  if (inherits(mod_obj, "hib_inla_model")){
+    # incl_weights <- mod_specs$lme4_specs$incl_weights
+    incl_weights <- FALSE
+    orig_form <- mod_specs$inla_specs$orig_form
+    use_original_mesh <- mod_specs$inla_specs$use_original_mesh
+  }
+  if (inherits(mod_obj, "hib_brms_model")){
+    incl_weights <- mod_specs$brms_specs$incl_weights
+    orig_form <- mod_specs$brms_specs$orig_form
+  }
   for (i in 1:n_folds){
     
     tr <- cv_data |>
@@ -634,69 +654,112 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     
     # Adjust weights in tr so sum per data type - dataset_modelling_id
     # sum to same value as in orig data...
-    if (incl_weights == T){
-      weight_df <- orig_data |>
-        dplyr::group_by(dataset_modelling_id) |>
-        dplyr::summarise(prop_weight = sum(data_weight))
-      
-      tr <- tr |>
-        dplyr::select(-data_weight)
+
+
+    if (incl_weights == TRUE){
+      if (inherits(mod_obj, "hib_lme4_model")){
+        # TODO: this weighting is approapriate for lme4, but I don't think it is
+        # correct for brms - can leave brms as is?
+        weight_df <- orig_data |>
+          dplyr::group_by(dataset_modelling_id) |>
+          dplyr::summarise(prop_weight = sum(data_weight))
+        
+        tr <- tr |>
+          dplyr::select(-data_weight)
+        
+        tr <- dplyr::left_join(tr, weight_df) |>
+          dplyr::group_by(dataset_modelling_id) |>
+          dplyr::mutate(data_weight = prop_weight/dplyr::n())
+      }
       te <- te |>
-        dplyr::select(-data_weight)
+          dplyr::select(-data_weight)
       
-      tr <- dplyr::left_join(tr, weight_df) |>
-        dplyr::group_by(dataset_modelling_id) |>
-        dplyr::mutate(data_weight = prop_weight/dplyr::n())
     }
     
+    # Given each re_form item, make an output df for each
+    pred_df_ls <- vector("list", length(re_form))
+    for (j in seq_along(re_form)){
+      # Filter 
+      if (is.na(re_form_vars[[j]])){
+        tmp <- te
+      }
+      if (is.character(re_form_vars[[j]])){
+        tmp <- te
+        for (var in re_form_vars[[j]]){
+          tmp <- tmp |> 
+            dplyr::filter(!!dplyr::sym(var) %in% tr[[var]])
+        }
+      }
+
+      # TODO: need to check that factor vars in te are present in tr...
+      for (var in fix_fact_vars){
+        # print(var)
+        tmp <- tmp |> 
+            dplyr::filter(!!dplyr::sym(var) %in% tr[[var]])
+      }
+      pred_df_ls[[j]] <- tmp |> droplevels()
+      # TODO: need to check that pred_df_ls[[j]] has nrow() > 0
+      # If not... it can't be used...
+      if (nrow(pred_df_ls[[j]]) > 0){
+        pred_df_ls[[j]]$Random_effect_form <- as.character(re_form[j])  
+      }
+      # print(nrow(pred_df_ls[[i]]))
+      # print("AD1_2004__Quaranta 1" %in% tr$SS)
+    }
+    # Note: sometimes, cv may not be feasible - e.g. SS cv, with an SS re_form - no data in te...
+
+
+
     if (inherits(mod_obj, "hib_lme4_model")){
       # %%%%%%%%%%
       # LME4-specific
       # %%%%%%%%%%
       # fit model 
       # - lmer v glmer - # - family
-      if (is.null(fam)){
-        if (incl_weights == F){
-          tmp_m <- lme4::lmer(formula = orig_form, 
+      if (is.null(mod_specs$lme4_specs$fam)){
+        if (mod_specs$lme4_specs$incl_weights == FALSE){
+          tmp_m <- lme4::lmer(formula = mod_specs$lme4_specs$orig_form, 
                               data = tr,
-                              REML = REML)
+                              REML = mod_specs$lme4_specs$REML)
         }
-        if (incl_weights == T){
-          tmp_m <- lme4::lmer(formula = orig_form, 
+        if (mod_specs$lme4_specs$incl_weights == TRUE){
+          tmp_m <- lme4::lmer(formula = mod_specs$lme4_specs$orig_form, 
                               data = tr,
-                              REML = REML,
+                              REML = mod_specs$lme4_specs$REML,
                               weights = data_weight)
         }
       }
-      if (!is.null(fam)){
-        if (incl_weights == F){
-          tmp_m <- lme4::glmer(formula = orig_form, 
+      if (!is.null(mod_specs$lme4_specs$fam)){
+        if (mod_specs$lme4_specs$incl_weights == FALSE){
+          tmp_m <- lme4::glmer(formula = mod_specs$lme4_specs$orig_form, 
                                data = tr,
-                               family = fam)
+                               family = mod_specs$lme4_specs$fam)
         }
-        if (incl_weights == T){
-          tmp_m <- lme4::glmer(formula = orig_form, 
+        if (mod_specs$lme4_specs$incl_weights == TRUE){
+          tmp_m <- lme4::glmer(formula = mod_specs$lme4_specs$orig_form, 
                                data = tr,
-                               family = fam,
+                               family = mod_specs$lme4_specs$fam,
                                weights = data_weight)
         }
       }
       
-      te$prediction <- predict(tmp_m, te, re.form = NA)
+      te <- predict_lme4_brms_cv(tmp_m, pred_df_ls, re_form)
       
       # get coefs, and cis...
       fixef_df <- as.data.frame(lme4::fixef(tmp_m))
       colnames(fixef_df) <- "Coefficient_value"
       fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
       
-      if (!is.null(ci_type)){
-        confint_df <- lme4::confint.merMod(tmp_m, parm = "beta_", method = ci_type)
-        confint_df <- as.data.frame(confint_df)
-        colnames(confint_df) <- c("loCI", "hiCI")
-        confint_df$Coefficient_name <- rownames(confint_df)
-        fixef_df <- dplyr::left_join(fixef_df,
-                                     confint_df,
-                                     by = "Coefficient_name")
+      if (!is.null(mod_specs$lme4_specs$ci_type)){
+        if (!is.na(mod_specs$lme4_specs$ci_type)){
+          confint_df <- lme4::confint.merMod(tmp_m, parm = "beta_", method = mod_specs$lme4_specs$ci_type)
+          confint_df <- as.data.frame(confint_df)
+          colnames(confint_df) <- c("loCI", "hiCI")
+          confint_df$Coefficient_name <- rownames(confint_df)
+          fixef_df <- dplyr::left_join(fixef_df,
+                                       confint_df,
+                                       by = "Coefficient_name")  
+        }
       }
       # %%%%%%%%%%
       # LME4-specific - END
@@ -709,80 +772,116 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       # %%%%%%%%%%
       
       # Make X_tr and X_te
+      # print(head(tr))
       X_tr <- tr |> 
         dplyr::select(-y)
       
-      # Drop iid random effects from te
-      rand_vars <- all.vars(orig_form_user_ls$random)
+      # Drop iid random effects from te - where appropriate
+      # rand_vars <- all.vars(orig_form_user_ls$random)
     
-      X_te <- te |> 
-        dplyr::select(-y) |>
-        dplyr::mutate_at(rand_vars, ~ NA)
+      # loop through pred_df_ls, set col to na if not in re_form_vars, but in rand_vars
+      for (j in seq_along(re_form)){
+        rand_vars_NA <- rand_vars[!rand_vars %in% re_form_vars[[j]]]
+
+        if (length(rand_vars_NA) > 0){
+          pred_df_ls[[j]] <- pred_df_ls[[j]] |> 
+            dplyr::select(-y) |>
+            dplyr::mutate_at(rand_vars_NA, ~ NA)
+        } else {
+          pred_df_ls[[j]] <- pred_df_ls[[j]] |> 
+            dplyr::select(-y)
+        }
+        
+      }
+
+      X_te <- dplyr::bind_rows(pred_df_ls)
       
+      # TODO: how to deal with no row X_te...
+
       # print(dim(X_tr))
       # print(dim(X_te))
       
       # If not a spatial model
-      if (orig_incl_spatial_term == F){
+      if (mod_specs$inla_specs$orig_incl_spatial_term == FALSE){
         # Just use model dfs
         stk_tr <- INLA::inla.stack(tag = "tr",
                                    data = list(y = tr$y),
                                    A = list(1),
                                    effects = list(X = X_tr))
         
-        stk_te <- INLA::inla.stack(tag = "te",
-                                   data = list(y = NA),
-                                   A = list(1),
-                                   effects = list(X = X_te))
+        if (nrow(X_te) == 0){
+          stk_te <- NULL  
+        } else {
+          stk_te <- INLA::inla.stack(tag = "te",
+                                     data = list(y = NA),
+                                     A = list(1),
+                                     effects = list(X = X_te))  
+        }
+        
       }
       
       # TODO:
       # If spatial, make and generate mesh...
-      if (orig_incl_spatial_term == T){
+      if (mod_specs$inla_specs$orig_incl_spatial_term == TRUE){
         
         # print(orig_mesh_settings)
-        
+        # print()
         # Get lat/long
         if (("Longitude" %in% colnames(X_tr)) &
             ("Latitude" %in% colnames(X_tr)) ){
           coords_tr <- as.matrix(X_tr[,c("Longitude", "Latitude")])
-          coords_te <- as.matrix(X_te[,c("Longitude", "Latitude")])
+          if (nrow(X_te) == 0){
+            coords_te <- NULL  
+          } else {
+            coords_te <- as.matrix(X_te[,c("Longitude", "Latitude")])
+          }
         }
         if (("Longitude_midpoint" %in% colnames(X_tr)) &
             ("Latitude_midpoint" %in% colnames(X_tr)) ){
           coords_tr <- as.matrix(X_tr[,c("Longitude_midpoint", "Latitude_midpoint")])
-          coords_te <- as.matrix(X_te[,c("Longitude_midpoint", "Latitude_midpoint")])
-        }
-      
-        
-        if (mesh_source == "mesh_settings"){
-          # Need to re-build a mesh - based only on tr points
-          # Spatial settings
-          # orig_mesh
-          # orig_mesh_settings
-          
-          if (orig_mesh_settings$mesh_dim == "3d"){
-            # print("Building 3d mesh...")
-            coords_tr <- INLA::inla.mesh.map(coords_tr, projection = "longlat")
-            cv_mesh <- INLA::inla.mesh.create(loc = coords_tr,
-                                                 globe = 8)
-          }
-          
-          if (orig_mesh_settings$mesh_dim == "2d"){
-            # print("Building 2d mesh...")
-            # TODO: Why is building the cv mesh taking soooo long...
-            cv_mesh <- INLA::inla.mesh.2d(loc = coords_tr,
-                                             max.edge = orig_mesh_settings$max.edge,
-                                             cutoff = orig_mesh_settings$cutoff,
-                                             offset = orig_mesh_settings$offset)
-            # print("Mesh built!")
+          if (nrow(X_te) == 0){
+            coords_te <- NULL  
+          } else {
+            coords_te <- as.matrix(X_te[,c("Longitude_midpoint", "Latitude_midpoint")])
           }
         }
         
-        if (mesh_source == "user_provided"){
-          cv_mesh <- orig_mesh
-          # TODO: CHECK THIS IS WORKING
+        if (use_original_mesh == TRUE){
+          cv_mesh <- mod_specs$inla_specs$orig_mesh
         }
+        
+        if (use_original_mesh == FALSE){
+          if (mod_specs$inla_specs$mesh_source == "mesh_settings"){
+            message(crayon::green("Building mesh from original settings.\n"))
+            # Need to re-build a mesh - based only on tr points
+            # Spatial settings
+            # orig_mesh
+            # orig_mesh_settings
+            if (mod_specs$inla_specs$orig_mesh_settings$mesh_dim == "3d"){
+              # print("Building 3d mesh...")
+              coords_tr <- INLA::inla.mesh.map(coords_tr, projection = "longlat")
+              cv_mesh <- INLA::inla.mesh.create(loc = coords_tr,
+                                                   globe = 8)
+            }
+            
+            if (mod_specs$inla_specs$orig_mesh_settings$mesh_dim == "2d"){
+              # print("Building 2d mesh...")
+              # TODO: Why is building the cv mesh taking soooo long...
+              cv_mesh <- INLA::inla.mesh.2d(loc = coords_tr,
+                                               max.edge = mod_specs$inla_specs$orig_mesh_settings$max.edge,
+                                               cutoff = mod_specs$inla_specs$orig_mesh_settings$cutoff,
+                                               offset = mod_specs$inla_specs$orig_mesh_settings$offset)
+              # print("Mesh built!")
+            }
+          }
+          
+          if (mod_specs$inla_specs$mesh_source == "user_provided"){
+            cv_mesh <- mod_specs$inla_specs$orig_mesh
+            # TODO: CHECK THIS IS WORKING
+            message(crayon::yellow("Warning: mesh in original model was user-provided, using this for cross-validation.\n"))
+          }
+        }
+        
         
         
         # spde
@@ -796,9 +895,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
         # -for tr
         A_tr <- INLA::inla.spde.make.A(cv_mesh, 
                                        loc = coords_tr)
-        # -for te
-        A_te <- INLA::inla.spde.make.A(cv_mesh, 
-                                       loc = coords_te)
+        
         
         # Combine into stacks - tr and te
         stk_tr <- INLA::inla.stack(tag = "tr",
@@ -807,55 +904,81 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
                                    effects = list(X = X_tr,
                                                   s = s.site))
         
-        stk_te <- INLA::inla.stack(tag = "te",
-                                   data = list(y = NA),
-                                   A = list(1, A_te),
-                                   effects = list(X = X_te,
-                                                  s = s.site)) 
+        # -for te
+        if (nrow(X_te) == 0){
+          stk_te <- NULL  
+        } else {
+          A_te <- INLA::inla.spde.make.A(cv_mesh, 
+                                         loc = coords_te)
+          stk_te <- INLA::inla.stack(tag = "te",
+                                     data = list(y = NA),
+                                     A = list(1, A_te),
+                                     effects = list(X = X_te,
+                                                    s = s.site)) 
+        }
       }
       
       # Combine stacks
-      comb_stk <- INLA::inla.stack(stk_tr, 
-                                   stk_te)
+      if (is.null(stk_te)){
+        comb_stk <- stk_tr
+      } else {
+        comb_stk <- INLA::inla.stack(stk_tr, 
+                                     stk_te)  
+      }
+      
       # Fit model
-      fixed_covars <- all.vars(orig_form_user_ls$response_fixed[[3]])
+      fixed_covars <- all.vars(mod_specs$inla_specs$orig_form_user_ls$response_fixed[[3]])
       
       if (length(fixed_covars) > 0){
         check_flag <- 0
         while(check_flag == 0){
-          tmp_m <- INLA::inla(formula = fitted_form_, # orig_form,
-                           family = orig_fam,
+          tmp_m <- INLA::inla(formula = mod_specs$inla_specs$fitted_form_, # orig_form,
+                           family = mod_specs$inla_specs$orig_fam,
                            data = INLA::inla.stack.data(comb_stk),
                            control.fixed = list(expand.factor.strategy='inla'),
                            # control.inla = list(strategy = "", int.strategy = ""), 
                            control.compute = list(dic = TRUE, waic = TRUE),
                            control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
-                           verbose = F)
+                           verbose = T)
           
           check_flag <- nrow(tmp_m$summary.fixed)
         }
       } else {
-        tmp_m <- INLA::inla(formula = fitted_form_, # orig_form,
-                         family = orig_fam,
+        tmp_m <- INLA::inla(formula = mod_specs$inla_specs$fitted_form_, # orig_form,
+                         family = mod_specs$inla_specs$orig_fam,
                          data = INLA::inla.stack.data(comb_stk),
                          control.fixed = list(expand.factor.strategy='inla'),
                          # control.inla = list(strategy = "", int.strategy = ""), 
                          control.compute = list(dic = TRUE, waic = TRUE),
                          control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
-                         verbose = F)
+                         verbose = T)
       }
       
       
       # Extract prediction and cis to te (a df of data + pred)
-      pred_idx <- INLA::inla.stack.index(comb_stk, tag = "te")$data
-      tmp_pred <- tmp_m$summary.fitted.values[pred_idx,]
+      if (nrow(X_te) == 0){
+        te <- X_te
+      } else {
+        pred_idx <- INLA::inla.stack.index(comb_stk, tag = "te")$data
+        tmp_pred <- tmp_m$summary.fitted.values[pred_idx,]
+        
+        # X_te <- dplyr::bind_cols(tmp_pred[,c("mean", "0.025quant", "0.975quant")])
+        X_te$prediction <- tmp_pred$mean
+        X_te$prediction_q2.5 <- tmp_pred$`0.025quant`
+        X_te$prediction_q97.5 <- tmp_pred$`0.975quant`
+        
+        if ("y" %in% colnames(X_te)){
+          te <- X_te |> 
+            dplyr::select(-y)
+        } else {
+          te <- X_te
+        }
+      }
       
-      te$prediction <- tmp_pred$mean
-      te$prediction_q2.5 <- tmp_pred$`0.025quant`
-      te$prediction_q97.5 <- tmp_pred$`0.975quant`
-      # Drop y from te - will be regenerated below for error estimation etc
-      te <- te |> 
-        dplyr::select(-y)
+      
+      # # Drop y from te - will be regenerated below for error estimation etc
+      # te <- te |> 
+      #   dplyr::select(-y)
       
       # Get coefficients from model
       fixef_df <- tmp_m$summary.fixed |>
@@ -877,21 +1000,16 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       
       # fit model 
       tmp_args <- NULL
-      tmp_args <- m_args
+      tmp_args <- mod_specs$brms_specs$m_args
       tmp_args[["data"]] <- tr
       
       tmp_m <- do.call(brms::brm,
                        tmp_args)
       
       # predict or fitted??
-      # tmp_pred <- predict(tmp_m, te, re_form = NA)|>
-      #   as.data.frame()
-      tmp_pred <- fitted(tmp_m, te, re_form = NA) |>
-        as.data.frame()
-      te$prediction <- tmp_pred$Estimate
-      te$prediction_q2.5 <- tmp_pred$Q2.5
-      te$prediction_q97.5 <- tmp_pred$Q97.5
-      
+
+      te <- predict_lme4_brms_cv(tmp_m, pred_df_ls, re_form)
+
       # get coefs, and cis...
       fixef_df <- as.data.frame(brms::fixef(tmp_m))
       colnames(fixef_df) <- c("Coefficient_value", "Coefficient_error", "loCI", "hiCI")
@@ -909,6 +1027,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     
     if ( (inherits(mod_obj, "hib_lme4_model")) |
          (inherits(mod_obj, "hib_inla_model")) ){
+      # print("PROGRESS UPDATE")
       setTxtProgressBar(pb, i)
     }
   }
@@ -920,6 +1039,36 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   cv_out_df <- dplyr::bind_rows(cv_out_ls)
   coef_out_df <- dplyr::bind_rows(coef_out_ls)
+  
+  # Collate cv outputs
+  
+  
+  # Only return random seed if random-
+  if (fold_type %in% c(c("Random-2", "Random-3", "Random-5", "Random-10" ))){
+    rand_num <- random_seed
+  } else {
+    rand_num <- NA
+  }
+  
+  # TODO: check nrow of cv_out_df, if 0, skip, return NULL for 
+  if (nrow(cv_out_df) == 0){
+
+    message(crayon::yellow(paste0("Warning: Due to combination of cross-validation approach ( ", 
+                                  fold_type_msg, 
+                                  " ) and re_form options specified ( ",
+                                  as.character(re_form), 
+                                  " ), no out-of-sample predictions have been made.\n")))
+    
+    return(list(cv_pred_df  = NULL, 
+                cv_metrics  = NULL,
+                cv_fold_metrics  = NULL,
+                cv_coef_df  = coef_out_df,
+                fold_type   = fold_type,
+                fold_col    = fold_col,
+                n_folds     = n_folds,
+                random_seed = rand_num
+    ))
+  }
   
   # backtransform prediction, y as resp term, 
   if (!is.null(backtransform)){
@@ -937,21 +1086,55 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     dplyr::mutate(error = y - prediction)
   
   # cv metrics
-  cv_metrics <- calc_cv_metrics(cv_out_df$prediction, 
-                                cv_out_df$y, 
-                                cv_out_df$error)
+  # TODO:
+  # per Random_effect_form/re_form
+  cv_metrics <- purrr::map(as.character(re_form),
+            function(x, df = cv_out_df, fld_typ = fold_type_msg){
+              df_sub <- df |>
+                dplyr::filter(Random_effect_form == x)
+              # print(head(df_sub))
+              if (nrow(df_sub) == 0){
+                # TODO: message
+                
+                message(crayon::yellow(paste0("Warning: No predictions made for combination of ',",
+                                              fld_typ, "' cross-validation and random-effects structure '",
+                                              x, "'.\n"
+                                              )))
+                return(NULL)
+              }
+              tmp <- calc_cv_metrics(df_sub$prediction, 
+                                    df_sub$y, 
+                                    df_sub$error)
+              tmp$Random_effect_form <- x
+              tmp
+            }) |> 
+    dplyr::bind_rows()
+  cv_fold_metrics <- purrr::map(as.character(re_form),
+            function(x, df = cv_out_df){
+              df_sub <- df |>
+                dplyr::filter(Random_effect_form == x)
+              if (nrow(df_sub) == 0){
+                return(NULL)
+              }
+              tmp <- calc_per_fold_cv_metrics(df_sub$prediction, 
+                                    df_sub$y, 
+                                    df_sub$error,
+                                    df_sub$fold_id)
+              tmp$Random_effect_form <- x
+              tmp
+            }) |> 
+    dplyr::bind_rows()
+
+  # cv_metrics <- calc_cv_metrics(cv_out_df$prediction, 
+  #                               cv_out_df$y, 
+  #                               cv_out_df$error)
   
-  cv_fold_metrics <- calc_per_fold_cv_metrics(cv_out_df$prediction, 
-                                              cv_out_df$y, 
-                                              cv_out_df$error,
-                                              cv_out_df$fold_id)
+  # cv_fold_metrics <- calc_per_fold_cv_metrics(cv_out_df$prediction, 
+  #                                             cv_out_df$y, 
+  #                                             cv_out_df$error,
+  #                                             cv_out_df$fold_id)
   
-  # Only return random seed if random-
-  if (fold_type %in% c(c("Random-2", "Random-3", "Random-5", "Random-10" ))){
-    rand_num <- random_seed
-  } else {
-    rand_num <- NA
-  }
+  
   
   return(list(cv_pred_df  = cv_out_df, 
               cv_metrics  = cv_metrics,
@@ -989,7 +1172,7 @@ calc_cv_metrics <- function(pred, obs, error){
   
   # checks - any nas...
   # align metrics with possible metrics..
-  
+
   pred_mean <- mean(pred, na.rm = T)
   obs_mean <- mean(obs, na.rm = T)
   
@@ -1052,6 +1235,11 @@ calc_cv_metrics <- function(pred, obs, error){
   rmse_lo <- sqrt(mse_lo)
   rmse_hi <- sqrt(mse_hi)
   
+  N_p <- length(pred)
+  N_o <- length(pred)
+
+  N_p_no_NA <- sum(!is.na(pred))
+
   # Make metr into a df
   metr_df <- data.frame(Metric = c("Correlation",
                                    "Correlation_squared",
@@ -1116,7 +1304,8 @@ calc_cv_metrics <- function(pred, obs, error){
                                                  "RRMSE",
                                                  "RMSLE",
                                                  "RSE", 
-                                                 "Predictive~R^2")))
+                                                 "Predictive~R^2")),
+      N = N_p_no_NA)
   
   
   return(metr_df)
@@ -1181,12 +1370,15 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      
                      rae = sum(abs(error), na.rm = T) / sum((obs - obs_mean), na.rm = T),
                      rse = sum(error^2, na.rm = T) / sum( (obs - obs_mean)^2 , na.rm = T),
-                     rsq = 1- rse 
+                     rsq = 1- rse ,
+
+                     # TODO: 
+                     N = sum(!is.na(pred))
                      ) |>
-    dplyr::select(fold_id, cor_out, cor_sq, me, mae, mape, smape, mse, rmse, nrmse,
+    dplyr::select(fold_id, N, cor_out, cor_sq, me, mae, mape, smape, mse, rmse, nrmse,
                   rrmse, rmsle,
-                  rae, rse, rsq) |>
-    tidyr::pivot_longer(!fold_id, 
+                  rae, rse, rsq) |> # N
+    tidyr::pivot_longer(!c(fold_id, N), 
                         names_to = "Metric_shrt", 
                         values_to = "Metric_val") |>
     dplyr::mutate(Metric_shrt = dplyr::case_when(Metric_shrt == "cor_out" ~ "cor",
@@ -1276,3 +1468,313 @@ get_rand_fold_id <- function(n_obs, n_folds){
   
   return(fold_id_vec)
 }
+
+
+
+
+#' Helper function to collate information about fitted model
+#' 
+#' @description 
+#' This function returns a list of model-specific information
+#' @details 
+#' Expects numeric inputs
+#' @param mod_obj A [`hib_XX_model`] object.
+#' @param re_form A [`list`] indicating the random effects variables to be
+#' included in the cross-validation/insample predicitons.
+#' @param use_original_mesh A logical value indicating whether cross-validation
+#' of spatial INLA models should use the original mesh for all cv folds.
+#' @keywords model, evaluation, processing
+#' @examples 
+#' \dontrun{
+#'   model_info <- get_model_info(mod_lme4_obj, list(NA, ~ (1|SS)))
+#' } 
+#' @noRd
+get_model_info <- function(mod_obj, re_form, use_original_mesh){
+  
+  # Assertion checks 
+  assertthat::assert_that(
+    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
+    is.list(re_form),
+    is.logical(use_original_mesh) || is.null(use_original_mesh)
+  )
+  
+  # Should we also try to "keep" SS together in other blockings...
+  if (inherits(mod_obj, "hib_lme4_model")){
+    rand_vars <- names(lme4::ranef(mod_obj$model))
+  }
+  if (inherits(mod_obj, "hib_brms_model")){
+    rand_vars <- names(brms::ranef(mod_obj$model))
+  }
+  if (inherits(mod_obj, "hib_inla_model")){
+    rand_vars <- all.vars(mod_obj$user_formula$random)
+  }
+  
+  re_form_vars <- purrr::map(re_form,
+           function(x, rand_vars_ = rand_vars){
+             if (is.null(x)){
+               out <- rand_vars_
+               return(out)
+             }
+             if (is.na(c(x))){
+               out <- NA
+             }
+             if (inherits(x, "formula")){
+               out <- all.vars(x)
+               # Check all are in rand_vars 
+               assertthat::assert_that(all(out %in% rand_vars),
+                                      msg = "Specified random-effects structure contains variables not in the original model.")
+             }
+             out
+           })
+  
+  # TODO: check for re_form_vars duplicates
+  # How do drop... - just take the first...
+  # Message user...
+  re_form_usr <- re_form
+  re_form <- re_form[!duplicated(re_form_vars)]
+  re_form_vars <- re_form_vars[!duplicated(re_form_vars)]
+  
+
+  if (length(re_form) != length(re_form_usr)){
+    message(crayon::yellow(paste0("Warning: duplication detected in specified ",
+                                  "ranfom-effects structures.\n",
+                                  "De-duplicated re_form: list(",
+                                  paste(as.character(re_form), collapse = ", "), ")")))
+  }
+
+
+  mod <- mod_obj$model
+  orig_data <- mod_obj$data
+  
+  # fixed_factor_vars
+  # need to get... from fixeff
+  
+
+  incl_weights <- FALSE
+  if ("data_weight" %in% colnames(orig_data)){
+    incl_weights <- TRUE
+  }
+  
+  lme4_specs <- NULL
+  inla_specs <- NULL
+  brms_specs <- NULL
+
+  if (inherits(mod_obj, "hib_lme4_model")){
+    # %%%%%%%%%%
+    # LME4-specific data prep 
+    # %%%%%%%%%%
+    orig_form <- stats::formula(mod)
+    
+    all_covars <- all.vars(formula(delete.response(terms(orig_form))))
+    # But what about random effects... - 
+    rand_vars <- names(lme4::ranef(mod_obj$model))
+    fix_vars <- all_covars[!all_covars %in% rand_vars]
+    
+    
+    fam <- NULL
+    if (is(mod@resp, "glmResp")){
+      fam <- mod@resp$family
+    }
+    
+    if (mod@devcomp$dims[["REML"]]){
+      REML <- T
+    } else {REML <- F}
+    
+    ci_type <- mod_obj$ci_type
+    # %%%%%%%%%%
+    # LME4-specific dataprep - END
+    # %%%%%%%%%%
+
+    lme4_specs <- list(orig_form    = orig_form,
+                       fam          = fam,
+                       REML         = REML,
+                       ci_type      = ci_type,
+                       incl_weights = incl_weights)
+  }
+  
+  if (inherits(mod_obj, "hib_inla_model")){
+    # %%%%%%%%%%
+    # INLA-specific dataprep 
+    # %%%%%%%%%%
+    
+    # Formulas 
+    
+    orig_form <- mod_obj$user_formula$full
+    fitted_form <- as.formula(mod$.args$formula)
+    fitted_form_ <- mod_obj$inla_fitted_formula
+    
+    orig_form_user_ls <- mod_obj$user_formula
+    # $full
+    # $response_fixed
+    # $random
+    
+    fix_vars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$response_fixed))))
+    # ignore "Intercept" too
+    fix_vars <- fix_vars[!fix_vars == "Intercept"]
+    
+    # family
+    orig_fam <- mod$.args$family
+    
+    # Spatial settings
+    orig_incl_spatial_term <- NA
+    mesh_source <- NA
+    orig_mesh <- NA
+    orig_mesh_settings <- NA
+    
+    # print(use_original_mesh)
+    orig_incl_spatial_term <- mod_obj$inla_incl_spatial_term
+    if (orig_incl_spatial_term){
+      if (is.null(use_original_mesh)){
+        use_original_mesh <- TRUE
+        message(crayon::yellow(paste0("Warning: use_original_mesh not specified, ",
+                                      "using default value of TRUE.\n",
+                                      "This should speed up computation, but may affect ",
+                                      "estimates of model predictive performance.\n")))
+      }
+      # is mesh user provided or based on mesh_settings?
+      mesh_source <- mod_obj$inla_mesh_source
+      if (mesh_source == "user_provided"){
+        orig_mesh <-  mod_obj$inla_mesh
+      }
+      if (mesh_source == "mesh_settings"){
+        orig_mesh_settings <-  mod_obj$inla_mesh_settings
+      }
+      if (use_original_mesh == TRUE){
+        orig_mesh <-  mod_obj$inla_mesh
+        mesh_source <- "user_provided"
+        message(crayon::green("Cross-validation will use spatial mesh from original model fit.\n"))
+      }
+      if (use_original_mesh == FALSE){
+        message(crayon::green("Cross-validation will use a new spatial mesh for each fold.\n"))
+      }
+    }
+    
+    # prior_list ...
+    # fit_settings ...
+    # %%%%%%%%%%
+    # INLA-specific dataprep -  END
+    # %%%%%%%%%%
+    inla_specs <- list(orig_form    = orig_form,
+                       fitted_form  = fitted_form,
+                       fitted_form_ = fitted_form_,
+                       orig_form_user_ls = orig_form_user_ls,
+                       orig_fam     = orig_fam,
+                       orig_incl_spatial_term = orig_incl_spatial_term,
+                       use_original_mesh = use_original_mesh,
+                       mesh_source  = mesh_source, 
+                       orig_mesh    = orig_mesh,
+                       orig_mesh_settings = orig_mesh_settings)
+  }
+  
+  if (inherits(mod_obj, "hib_brms_model")){
+    # %%%%%%%%%%
+    # BRMS-specific dataprep -  
+    # %%%%%%%%%%
+    orig_form <- mod$formula$formula
+    
+    all_covars <- all.vars(formula(delete.response(terms(orig_form))))
+    # But what about random effects... - 
+    rand_vars <- names(brms::ranef(mod_obj$model))
+    fix_vars <- all_covars[!all_covars %in% rand_vars]
+    
+    orig_fam <- mod$family
+    orig_extra_args <- mod_obj$extra_args
+    
+    m_args <- orig_extra_args
+    m_args[["formula"]] <- orig_form
+    m_args[["family"]] <- orig_fam
+    # %%%%%%%%%%
+    # BRMS-specific dataprep -  END
+    # %%%%%%%%%%
+    brms_specs = list(orig_form = orig_form,
+                      orig_fam  = orig_fam,
+                      orig_extra_args = orig_extra_args,
+                      incl_weights = incl_weights,
+                      m_args = m_args)
+  }
+  
+  fix_fact_vars_idx <- purrr::map(fix_vars,
+                              function(x, df = orig_data){
+                                (is.factor(df[[x]]) | is.character(df[[x]]))
+                              }) |>
+    unlist()
+  fix_fact_vars <- fix_vars[fix_fact_vars_idx]
+  
+  # print(fix_vars)
+  # print(fix_fact_vars)
+  
+  return(list(mod = mod,
+              orig_data = orig_data,
+              
+              fix_fact_vars = fix_fact_vars,
+  
+              rand_vars = rand_vars,
+              re_form_vars = re_form_vars,
+              re_form   = re_form,
+
+              lme4_specs = lme4_specs,
+              inla_specs = inla_specs,
+              brms_specs = brms_specs
+              ))
+}
+
+
+#' Helper function to predict fitted lme4/brms model
+#' 
+#' @description 
+#' This function returns a df of cross-validated predictions
+#' @details 
+#' Expects numeric inputs
+#' @param mod An [`g/lmerMod`] or [`brmsfit`] object.
+#' @param pred_df_ls A list of 'test' data to make predictions for - each item in
+#' list corresponds to an item in re_form.
+#' @param re_form A [`list`] indicating the random effects variables to be
+#' included in the cross-validation/insample predicitons.
+#' @keywords model, evaluation, prediction
+#' @examples 
+#' \dontrun{
+#'   preds <- predict_lme4_cv(mod_lme4_obj, pred_df_ls, list(NA, ~ (1|SS)))
+#' } 
+#' @noRd
+predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
+  # Assertions
+  assertthat::assert_that(
+    inherits(mod, "lmerMod") || inherits(mod, "glmerMod") || inherits(mod, "brmsfit"),
+    is.list(pred_df_ls),
+    is.list(re_form),
+    msg = "Input arguments are not of the correct type."
+  )
+  assertthat::assert_that(
+    length(pred_df_ls) ==length(re_form),
+    msg = "List of data for prediction has a different lenght to list of re_form options."
+  )
+
+  # predict
+  for (i in seq_along(re_form)){
+    # Check that each df has a column called "Random_effect_form"
+    if (nrow(pred_df_ls[[i]]) > 0){
+      assertthat::assert_that(
+      "Random_effect_form" %in% colnames(pred_df_ls[[i]]),
+      msg = "Random_effect_form column missing."
+      )
+
+      if (inherits(mod, "brmsfit")){
+        tmp_pred <- fitted(mod, pred_df_ls[[i]], re_form = re_form[[i]]) |>
+            as.data.frame()
+          pred_df_ls[[i]]$prediction <- tmp_pred$Estimate
+          pred_df_ls[[i]]$prediction_q2.5 <- tmp_pred$Q2.5
+          pred_df_ls[[i]]$prediction_q97.5 <- tmp_pred$Q97.5
+      } else {
+        # print(head(pred_df_ls[[i]]))
+        # print(lme4::fixef((mod)))
+        pred_df_ls[[i]]$prediction <- predict(mod, pred_df_ls[[i]], 
+                                              re.form = re_form[[i]])
+      }
+    } 
+  }
+
+  out <- pred_df_ls |> dplyr::bind_rows()
+
+  return(out)
+}
+
