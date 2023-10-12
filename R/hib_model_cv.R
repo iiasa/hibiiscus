@@ -1759,7 +1759,9 @@ predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
       )
 
       if (inherits(mod, "brmsfit")){
-        tmp_pred <- fitted(mod, pred_df_ls[[i]], re_form = re_form[[i]]) |>
+        tmp_pred <- fitted(mod, pred_df_ls[[i]], 
+                          scale = "response", # brms_specs$type, ??
+                          re_form = re_form[[i]]) |>
             as.data.frame()
           pred_df_ls[[i]]$prediction <- tmp_pred$Estimate
           pred_df_ls[[i]]$prediction_q2.5 <- tmp_pred$Q2.5
@@ -1768,6 +1770,7 @@ predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
         # print(head(pred_df_ls[[i]]))
         # print(lme4::fixef((mod)))
         pred_df_ls[[i]]$prediction <- predict(mod, pred_df_ls[[i]], 
+                                              type = "response", # lme4_specs$type, ??
                                               re.form = re_form[[i]])
       }
     } 

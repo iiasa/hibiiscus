@@ -199,6 +199,7 @@ hib_mod_project <- function(mod_obj,
       message(crayon::green("Projecting model...\n"))
       pred_df <- as.data.frame(predict(mod_obj$model,
                                        data,
+                                       type = "response", # lme4_specs$type,
                                        re.form = lme4_specs$re_form)) 
       colnames(pred_df) <- "prediction_mean" # prediction
       
@@ -209,7 +210,9 @@ hib_mod_project <- function(mod_obj,
       if (lme4_specs$bootstrap == T){
         message(crayon::green("Bootstrapping model predictions...\n"))
         boot_obj <- lme4::bootMer(mod_obj$model, 
-                                  function(mod, df = data){predict(mod, df, re.form = lme4_specs$re_form)}, 
+                                  function(mod, df = data){predict(mod, df, 
+                                    type = "response", # lme4_specs$type,
+                                    re.form = lme4_specs$re_form)}, 
                                   nsim = lme4_specs$n_boot)
         
         pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
@@ -751,15 +754,19 @@ hib_mod_project <- function(mod_obj,
       }
       if (brms_specs$incl_obs_uncert == FALSE){
       # if (incl_obs_uncert == F){
+        # brms::fitted.brmsfit
         mean_df <- fitted(mod_obj$model,
                           data,
                           # re_form = NA
+                          scale = "response", # brms_specs$scale,
                           re_form = brms_specs$re_form) |>
         # re_form = brms_specs$re_form
           as.data.frame()
+          # brms::fitted.brmsfit
         med_df <- fitted(mod_obj$model,
                          data,
                          # re_form = NA,
+                         scale = "response", # brms_specs$scale,
                          re_form = brms_specs$re_form,
                          robust = TRUE) |>
           as.data.frame()
@@ -1632,6 +1639,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 
   data_pred <- terra::predict(data,
                               mod,
+                              type = "response", # lme4_specs$type, ??
                               re.form = lme4_specs$re_form, 
                               na.rm = T)
   names(data_pred) <- "prediction_mean"
@@ -1652,6 +1660,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     boot_obj <- lme4::bootMer(mod, 
                           function(m, rast = data){
                             tmp <- terra::predict(rast, m, 
+                                                  type = "response", # lme4_specs$type, ??
                                                   re.form = lme4_specs$re_form, 
                                                   na.rm = T) |>
                               terra::as.data.frame()
@@ -1812,12 +1821,16 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
   if (brms_specs$incl_obs_uncert == F){
   # if (incl_obs_uncert == F){
     tmp_df <- terra::as.data.frame(data, xy = T)
+    # brms::fitted.brmsfit
     mean_pred <- fitted(mod, tmp_df, 
                         # re_form = NA
+                        scale = "response", # brms_specs$scale
                         re_form = brms_specs$re_form) |>
       as.data.frame()
+    # brms::fitted.brmsfit
     median_pred <- fitted(mod, tmp_df, 
                           # re_form = NA,
+                          scale = "response", # brms_specs$scale
                           re_form = brms_specs$re_form,
                           robust = T) |>
       as.data.frame()
