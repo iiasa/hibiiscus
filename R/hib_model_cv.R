@@ -1096,7 +1096,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
               if (nrow(df_sub) == 0){
                 # TODO: message
                 
-                message(crayon::yellow(paste0("Warning: No predictions made for combination of ',",
+                message(crayon::yellow(paste0("Warning: No predictions made for combination of '",
                                               fld_typ, "' cross-validation and random-effects structure '",
                                               x, "'.\n"
                                               )))
