@@ -1041,9 +1041,10 @@ hib_calc_pie <- function(obj){
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(adj_val = sum( !!dplyr::sym(measure_var) ) / ( sum( !!dplyr::sym(measure_var) ) - 1 ),
                      PIE_ = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ),
-                     PIE = adj_val * PIE_) |>
+                     PIE = adj_val * PIE_,
+                     sPIE = (1 / (1 – PIE) ) |>
     dplyr::ungroup() |>
-    dplyr::select(SSBS, SS, PIE)
+    dplyr::select(SSBS, SS, PIE, sPIE)
   # %%%%%
   
   

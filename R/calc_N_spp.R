@@ -30,7 +30,7 @@ calc_N_spp <- function(obj,
                       "Mean_abundance", "Geometric_mean_abundance",
                       "Shannon_diversity",
                       "HillShannon_diversity", "HillSimpson_diversity",
-                      "PIE", "Evenness")){
+                      "PIE", "sPIE", "Evenness")){
 
     # TODO: assertions
     # obj$species contains:
