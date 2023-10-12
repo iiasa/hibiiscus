@@ -206,6 +206,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                                          N_folds = n_fld,
                                                                          Random_effect_form = re_f))
                                                      })
+                          cv_specs$CV_type[grepl("Random", cv_specs$CV_type)] <- "Random"
 
                           cv_df <- purrr::map_dfr(self$cv_results,
                                                   function(x){
