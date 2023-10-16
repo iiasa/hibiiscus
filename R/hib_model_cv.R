@@ -289,7 +289,8 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
                             control.fixed = list(expand.factor.strategy='inla'),
                             # control.inla = list(strategy = "", int.strategy = ""), 
                             control.compute = list(dic = TRUE, waic = TRUE),
-                            control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+                            control.predictor = list(A = INLA::inla.stack.A(comb_stk),
+                                                      link = 1),
                             verbose = F)
         
         check_flag <- nrow(tmp_m$summary.fixed)
@@ -301,7 +302,8 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
                           control.fixed = list(expand.factor.strategy='inla'),
                           # control.inla = list(strategy = "", int.strategy = ""), 
                           control.compute = list(dic = TRUE, waic = TRUE),
-                          control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+                          control.predictor = list(A = INLA::inla.stack.A(comb_stk),
+                                                    link = 1),
                           verbose = F)
     }
     

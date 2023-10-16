@@ -18,13 +18,18 @@
 #' estimated, and if so, how many bootstrap samples should be used.
 #' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
 #' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
-#' @param inla_specs Currently unused, but may be useful in future dev.
+#' @param inla_specs A list containing details relevant to projecting an inla-style
+#' model.
+#' 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
+#' effects to condition on when predicting an inla model (formula, NULL, or NA).
+#' 'link_inverse' a function that is the invers of the link used to fit the model.
+#' Used to backtranform the global intercept for use in rescaling predictions.
 #' @param brms_specs A list containing details relevant to projecting a brms-style
 #' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
 #' to determine whether or not observation-level uncertainty is included in predictions.
 #' Setting this parameter to TRUE will produce predictions with larger uncertainty.
-#' TODO: also include re_form - as 're_formula' in brms predict/fitted - use as
-#' in lme4.
+#' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
+#' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -41,7 +46,7 @@ hib_mod_project <- function(mod_obj,
                             # n_boot = 100
                             # TODO: collate model type arguments into: - fix argument documentation
                             lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, re_form = NA),
-                            inla_specs = NULL, #list(re_form = ??),
+                            inla_specs = NULL, #list(re_form = x, link_inverse = function(y){exp(y)})
                             brms_specs = NULL, #list(incl_obs_uncert = F, TODO, re_form = as lme4...)
                             # more scope for adjustment, and neater
                             calc_aoa = FALSE,
@@ -152,11 +157,24 @@ hib_mod_project <- function(mod_obj,
     # %%%%
     # get model intercept
     # base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
+    
+    # TODO: if using a non-gaussian model, this casues issues!! - e.g. species_richness
+    # intercept is on log scale, but species richness is on linear...
+    # rescaling doens't work... - need to get link func from model and backtrans intercept?
+    # DO this above backtransform...
+    # hib_lme4_sr$model@resp$family$linkinv()
+    if (inherits(mod_obj$model, "glmerMod")){
+      base_val <- mod_obj$model@resp$family$linkinv(base_val)
+    }
+
     # if backtrans - backrans intercept to get baseline val
     if (!is.null(backtransform)){
       base_val <- backtransform(base_val)
     }
-    
+
+
+
+
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
     all_covars <- all.vars(formula(delete.response(terms(formula(mod_obj$model)))))
@@ -300,12 +318,24 @@ hib_mod_project <- function(mod_obj,
         inla_specs$re_form <- NA
       }
 
+      # Link_inverse
+      if ("link_inverse" %in% names(inla_specs)){
+        assertthat::assert_that(
+          is.null(inla_specs$link_inverse) || is.function(inla_specs$link_inverse)
+        )
+      }
+      if (!"link_inverse" %in% names(inla_specs)){
+        message(crayon::yellow("Warning: link_inverse missing, using default value of NULL...\n"))
+        inla_specs$link_inverse <- NULL
+      }
+
     }
     if (is.null(inla_specs)){
       message(crayon::yellow(paste0("Warning: inla_specs missing, using default values:\n",
                                     "\tre_form = NA",
+                                    "\tlink_inverse = NULL",
                                     " ...\n")))
-      inla_specs <- list(re_form = NA) #
+      inla_specs <- list(re_form = NA, link_inverse = NULL) #
     }
     # print(inla_specs)
     # %%%
@@ -325,6 +355,11 @@ hib_mod_project <- function(mod_obj,
       int_id <- 1
     }
     base_val <- mod_obj$model$summary.fixed$mean[int_id]
+
+    if (is.function(inla_specs$link_inverse)){
+      base_val <- inla_specs$link_inverse(base_val)
+    }
+
     # if backtrans - backrans intercept to get baseline val
     if (!is.null(backtransform)){
       base_val <- backtransform(base_val)
@@ -518,7 +553,8 @@ hib_mod_project <- function(mod_obj,
                    control.fixed = list(expand.factor.strategy='inla'),
                    # control.inla = list(strategy = "", int.strategy = ""), 
                    control.compute = list(dic = TRUE, waic = TRUE),
-                   control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+                   control.predictor = list(A = INLA::inla.stack.A(comb_stk),
+                                            link = 1),
                    verbose = F)
 
         check_flag <- nrow(m0$summary.fixed)
@@ -530,7 +566,8 @@ hib_mod_project <- function(mod_obj,
                  control.fixed = list(expand.factor.strategy='inla'),
                  # control.inla = list(strategy = "", int.strategy = ""), 
                  control.compute = list(dic = TRUE, waic = TRUE),
-                 control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
+                 control.predictor = list(A = INLA::inla.stack.A(comb_stk),
+                                          link = 1),
                  verbose = F)
     }
     # %%%%%
@@ -694,6 +731,9 @@ hib_mod_project <- function(mod_obj,
       base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
     }
     
+    # Convert intercept to response scale
+    base_val <- mod_obj$model$family$linkinv(base_val)
+
     # if backtrans - backrans intercept to get baseline val
     if (!is.null(backtransform)){
       base_val <- backtransform(base_val)

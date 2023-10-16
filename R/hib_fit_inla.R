@@ -415,7 +415,7 @@ hib_fit_inla <- function(obj,
     check_flag <- 0
     while(check_flag == 0){
       m0 <- INLA::inla(formula = inla_form,
-                 family = "gaussian",
+                 family = family, #"gaussian",
                  data = INLA::inla.stack.data(stk),
                  control.fixed = list(expand.factor.strategy='inla'),
                  # control.inla = list(strategy = "", int.strategy = ""), 
@@ -427,12 +427,13 @@ hib_fit_inla <- function(obj,
     }
   } else {
     m0 <- INLA::inla(formula = inla_form,
-               family = "gaussian",
+               family = family, #"gaussian",
                data = INLA::inla.stack.data(stk),
                control.fixed = list(expand.factor.strategy='inla'),
                # control.inla = list(strategy = "", int.strategy = ""), 
                control.compute = list(dic = TRUE, waic = TRUE),
                control.predictor = list(A = INLA::inla.stack.A(stk)),
+               # , link = 1??
                verbose = F)
   }
 
