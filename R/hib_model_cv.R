@@ -1175,6 +1175,14 @@ calc_cv_metrics <- function(pred, obs, error){
   # checks - any nas...
   # align metrics with possible metrics..
 
+  # NOTE: relative metrics here use mean of obs or similar as a benchmark
+  # but this is the mean over all data and all cv-folds... - may be more appropriate to calc 
+  # relative to 'in-sample' mean for data used to fit model...
+  # Alternatively, if we just think of the denominator as a scaling factor to
+  # align errors from various response scales, this is less of a concern - 
+  # interpretation is just error scaled by average obs_minus_obs_mean or similar 
+  # < 1 if better than average as a predictor, > 1 if worse.
+
   pred_mean <- mean(pred, na.rm = T)
   obs_mean <- mean(obs, na.rm = T)
   
@@ -1187,25 +1195,38 @@ calc_cv_metrics <- function(pred, obs, error){
   
   # me, mae, rae, mape, mse, rmse, nrmse, rmsle, rse, rrmse
   me <- mean(error, na.rm = T)
-  
+  # TODO:
+  mede <- median(error, na.rm = T)
+
   ae <- abs(error)
   
   mae <- mean(ae, na.rm = T)
   
+  # are <- ??
   rae <- sum(ae, na.rm = T) / sum(abs(obs_minus_obs_mean), na.rm = T)
   
   # mape - issue of zeros in obs... - v small adjustment
-  mape <- mean( (ae / obs), na.rm = T) * 100
-  
-  smape <- mean( (ae / ( (pred + obs) / 2) ), na.rm = T ) * 100
+  # issues of negative obs? - 
+  # mape <- mean( (ae / obs), na.rm = T) * 100 OLD version
+  # mape <- mean( (ae / abs(obs) ), na.rm = T) * 100 OLD version
+  mape <- mean( abs( error / obs), na.rm = T ) * 100
+
+  # smape <- mean( (ae / ( (pred + obs) / 2) ), na.rm = T ) * 100 OLD version
+  # TODO: update smape to 0-100 scale
+  smape <- mean( (ae / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100
   
   mse <- mean(error^2, na.rm = T)
   rmse <- sqrt(mse)
   
-  nrmse <- rmse / sd(pred, na.rm = T)
-  
-  rrmse <- sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) )
-  
+  # nrmse <- rmse / sd(pred, na.rm = T) OLD version
+  # Alternative
+  nrmse <- rmse / obs_mean
+
+  # rrmse <- sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) ) OLD version
+  # Check this
+  # Alternative
+  rrmse <- rmse / obs_mean * 100
+
   rmsle <- sqrt(mean( ( log(obs + 1) - log(pred + 1) )^2 , na.rm = T))
   
   rse <- sum(error^2, na.rm = T) / sum( obs_minus_obs_mean^2 , na.rm = T)
@@ -1219,6 +1240,18 @@ calc_cv_metrics <- function(pred, obs, error){
   # rsq, rse, rae - all relative to using mean as a predictor...
   # need fold_id...
   
+  # TODO:
+  # median relative absolute error
+  mrae <- median( abs( error / obs_minus_obs_mean ), na.rm = T)
+
+  # geometric mean relative absolute error
+  gmrae <- exp(mean(log( abs( error / obs_minus_obs_mean ) ), na.rm = T))
+  
+  # mean absolute scaled error: 
+  # mase = mae / mean(abs(obs_minus_obs_mean), na.rm = T)
+  mase <- mean( ae / mean(abs(obs_minus_obs_mean), na.rm = T), na.rm = T) # - equivalent
+
+
   # CIs for mse, rmse, me...- sheiner and beale 1981
   n_ <- sum(!is.na(error))
   se_me <- sqrt( (1 / (n_ * (n_ - 1) ) ) * sum( (error - me)^2, na.rm = T) )
@@ -1246,6 +1279,7 @@ calc_cv_metrics <- function(pred, obs, error){
   metr_df <- data.frame(Metric = c("Correlation",
                                    "Correlation_squared",
                                    "Mean_error", 
+                                   "Median_error", 
                                    "Mean_absolute_error", 
                                    "Relative_absolute_error", 
                                    "Mean_absolute_percentage_error", 
@@ -1256,32 +1290,44 @@ calc_cv_metrics <- function(pred, obs, error){
                                    "Relative_root_mean_squared_error",
                                    "Root_mean_squared_log_error",
                                    "Relative_squared_error", 
+                                   "Median_relative_absolute_error",
+                                   "Geometric_mean_relative_absolute_error",
+                                   "Mean_absolute_scaled_error",
                                    "Predictive_R_squared"),
                         Metric_val = c(cor_out, cor_sq,
-                                       me, mae, rae, mape, smape, 
+                                       me, mede, mae, rae, mape, smape, 
                                        mse, rmse, nrmse, 
                                        rrmse, rmsle, rse, 
+                                       mrae,
+                                       gmrae,
+                                       mase,
                                        rsq),
                         Metric_lo = c(NA, NA, 
-                                      me_lo, NA, NA, NA, NA,
+                                      me_lo, NA, NA, NA, NA, NA,
                                       mse_lo, rmse_lo, NA,
+                                      NA, NA, NA, 
                                       NA, NA, NA, 
                                       NA),
                         Metric_hi = c(NA, NA, 
-                                      me_hi, NA, NA, NA, NA,
+                                      me_hi, NA, NA, NA, NA, NA,
                                       mse_hi, rmse_hi, NA,
+                                      NA, NA, NA, 
                                       NA, NA, NA, 
                                       NA),
                         Metric_shrt = c("cor", "corsq",
-                                        "me", "mae", "rae", "mape", 
+                                        "me", "mede", "mae", "rae", "mape", 
                                         "smape", 
                                         "mse", "rmse", "nrmse", 
                                         "rrmse", "rmsle", "rse", 
+                                        "mrae",
+                                        "gmrae",
+                                        "mase",
                                         "rsq")) |>
     dplyr::mutate(Metric_fct = factor(Metric,
                                       levels = c("Correlation",
                                                  "Correlation_squared",
                                                  "Mean_error", 
+                                                 "Median_error", 
                                                  "Mean_absolute_error", 
                                                  "Relative_absolute_error", 
                                                  "Mean_absolute_percentage_error", 
@@ -1292,10 +1338,14 @@ calc_cv_metrics <- function(pred, obs, error){
                                                  "Relative_root_mean_squared_error",
                                                  "Root_mean_squared_log_error",
                                                  "Relative_squared_error", 
+                                                 "Median_relative_absolute_error",
+                                                 "Geometric_mean_relative_absolute_error",
+                                                 "Mean_absolute_scaled_error",
                                                  "Predictive_R_squared"),
                                       labels = c("Correlation",
                                                  "Correlation^2",
-                                                 "ME~(Bias)", 
+                                                 "ME~(Bias)",
+                                                 "Median error" 
                                                  "MAE", 
                                                  "RAE", 
                                                  "MAPE", 
@@ -1306,6 +1356,9 @@ calc_cv_metrics <- function(pred, obs, error){
                                                  "RRMSE",
                                                  "RMSLE",
                                                  "RSE", 
+                                                 "MRAE",
+                                                 "GMRAE",
+                                                 "MASE"
                                                  "Predictive~R^2")),
       N = N_p_no_NA)
   
@@ -1359,25 +1412,44 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      cor_sq  = cor_out^2,
                      # me, mae, rae, mape, mse, rmse, nrmse, rmsle, rse, rrmse
                      me = mean(error, na.rm = T),
+
+                     mede = median(error, na.rm = T),
+
                      mae = mean(abs(error), na.rm = T),
                      # mape - issue of zeros in obs... - v small adjustment
-                     mape = mean( (abs(error) / obs), na.rm = T) * 100,
-                     smape = mean( (abs(error) / ( (pred + obs) / 2) ), na.rm = T ) * 100,
+                     mape = mean( (abs(error) / obs), na.rm = T) * 100, 
+                     # smape = mean( (abs(error) / ( (pred + obs) / 2) ), na.rm = T ) * 100,OLD version
+                     smape = mean( (abs(error) / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100,
+                     
                      mse = mean(error^2, na.rm = T),
                      rmse = sqrt(mse),
-                     nrmse = rmse / sd(pred, na.rm = T),
-                     rrmse = sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) ),
+                     # nrmse = rmse / sd(pred, na.rm = T),OLD version
+                     nrmse = rmse / obs_mean,
+
+                     # rrmse = sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) ), OLD version
+                     
+                     rrmse = rmse / obs_mean * 100, 
                      rmsle = sqrt(mean( ( log(obs + 1) - log(pred + 1) )^2 , na.rm = T)),
                      # %%%
                      
                      rae = sum(abs(error), na.rm = T) / sum((obs - obs_mean), na.rm = T),
                      rse = sum(error^2, na.rm = T) / sum( (obs - obs_mean)^2 , na.rm = T),
+
+                     # 
+                     mrae = median( abs( error / (obs - obs_mean) ), na.rm = T),
+
+                     # geometric mean relative absolute error
+                     gmrae = exp(mean(log( abs( error / (obs - obs_mean) ) ), na.rm = T)),
+                    
+                     # mean absolute scaled error: 
+                     mase = mean( abs(error) / mean(abs((obs - obs_mean)), na.rm = T), na.rm = T), #- equivalent
+
                      rsq = 1- rse ,
 
                      # TODO: 
                      N = sum(!is.na(pred))
                      ) |>
-    dplyr::select(fold_id, N, cor_out, cor_sq, me, mae, mape, smape, mse, rmse, nrmse,
+    dplyr::select(fold_id, N, cor_out, cor_sq, me, mede, mae, mape, smape, mse, rmse, nrmse,
                   rrmse, rmsle,
                   rae, rse, rsq) |> # N
     tidyr::pivot_longer(!c(fold_id, N), 
@@ -1389,6 +1461,7 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
     dplyr::mutate(Metric = dplyr::case_when(Metric_shrt == "cor"   ~ "Correlation",
                                             Metric_shrt == "corsq" ~ "Correlation_squared",
                                             Metric_shrt == "me"    ~ "Mean_error", 
+                                            Metric_shrt == "mede"  ~ "Median_error", 
                                             Metric_shrt == "mae"   ~ "Mean_absolute_error", 
                                             Metric_shrt == "rae"   ~ "Relative_absolute_error", 
                                             Metric_shrt == "mape"  ~ "Mean_absolute_percentage_error", 
@@ -1399,12 +1472,18 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                                             Metric_shrt == "rrmse" ~ "Relative_root_mean_squared_error",
                                             Metric_shrt == "rmsle" ~ "Root_mean_squared_log_error",
                                             Metric_shrt == "rse"   ~ "Relative_squared_error", 
+
+                                            Metric_shrt == "mrae"  ~ "Median_relative_absolute_error", 
+                                            Metric_shrt == "gmrae" ~ "Geometric_mean_relative_absolute_error", 
+                                            Metric_shrt == "mase"  ~ "Mean_absolute_scaled_error", 
+                                            
                                             Metric_shrt == "rsq"   ~ "Predictive_R_squared",
                                             T ~ NA),
                   Metric_fct = factor(Metric,
                                       levels = c("Correlation",
                                                  "Correlation_squared",
                                                  "Mean_error", 
+                                                 "Median_error", 
                                                  "Mean_absolute_error", 
                                                  "Relative_absolute_error", 
                                                  "Mean_absolute_percentage_error", 
@@ -1415,10 +1494,14 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                                                  "Relative_root_mean_squared_error",
                                                  "Root_mean_squared_log_error",
                                                  "Relative_squared_error", 
+                                                 "Median_relative_absolute_error",
+                                                 "Geometric_mean_relative_absolute_error",
+                                                 "Mean_absolute_scaled_error",
                                                  "Predictive_R_squared"),
                                       labels = c("Correlation",
                                                  "Correlation^2",
                                                  "ME~(Bias)", 
+                                                 "Median error",
                                                  "MAE", 
                                                  "RAE", 
                                                  "MAPE", 
@@ -1429,6 +1512,11 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                                                  "RRMSE",
                                                  "RMSLE",
                                                  "RSE", 
+
+                                                 "MRAE",
+                                                 "GMRAE",
+                                                 "MASE",
+
                                                  "Predictive~R^2")))
   
   return(metr_df)
