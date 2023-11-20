@@ -1345,7 +1345,7 @@ calc_cv_metrics <- function(pred, obs, error){
                                       labels = c("Correlation",
                                                  "Correlation^2",
                                                  "ME~(Bias)",
-                                                 "Median error" 
+                                                 "Median error", 
                                                  "MAE", 
                                                  "RAE", 
                                                  "MAPE", 
@@ -1358,7 +1358,7 @@ calc_cv_metrics <- function(pred, obs, error){
                                                  "RSE", 
                                                  "MRAE",
                                                  "GMRAE",
-                                                 "MASE"
+                                                 "MASE",
                                                  "Predictive~R^2")),
       N = N_p_no_NA)
   
