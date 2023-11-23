@@ -14,7 +14,9 @@
 #' @param version A [`character`] denoting the version of the PREDICTS database to use. Has to be either
 #' \code{"2016"}, \code{"2022"} or \code{"custom"}. In the latter case it is important that formatting is consistent
 #' with earlier versions of the PREDICTS database (Default: \code{"2016"}).
-
+#' @param custom_version_name Optional [`character`] that will help indicate the source 
+#' of a custom database - the create_hib function will internally generate
+#' paste("Custom - ", custom_version_name). Only used if version == "custom"
 #' @param ... Other non-specified parameters.
 #' @references 
 #' * 1. Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Senior, R.A., Bennett, D.J., Booth, H., et al. (2014). The PREDICTS database: a global database of how local terrestrial biodiversity responds to human impacts. Ecol. Evol. 4, 4701–4735. 10.1002/ece3.1303.
@@ -29,7 +31,8 @@
 #' }
 #' @export
 create_hib <- function(path_species, path_sites = "", 
-                       version = "2016", custom_version_name = "", ...){
+                       version = "2016", 
+                       custom_version_name = "", ...){
   # NOTE RC - dropping output path - not really needed - use save_hib instead.
   # output = NULL,
   #  #' @param output A optional [`character`] name to store the underlying database. 

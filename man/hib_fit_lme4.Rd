@@ -13,21 +13,23 @@ hib_fit_lme4(
   optimise_ranefs = F,
   model_dredge = F,
   model_average = F,
-  dataset_weights = NULL
+  weight_specs = list(weights = NULL, weight_type = NULL),
+  scale_specs = list(covars_to_scale = NULL, scale_func = NULL),
+  relevel_specs = c(NULL)
 )
 }
 \arguments{
-\item{obj}{A [`Database`] object, or a list of databases.}
+\item{obj}{A \code{\link{Database}} object, or a list of databases.}
 
-\item{form}{A [`formula`] in the style of lme4 - including fixed and random 
+\item{form}{A \code{\link{formula}} in the style of lme4 - including fixed and random
 effects.}
 
-\item{family}{A [`family`] function, e.g. gaussian, poisson - as allowed by lme4}
+\item{family}{A \code{\link{family}} function, e.g. gaussian, poisson - as allowed by lme4}
 
-\item{REML}{A [`boolean`] - if using a gaussian family, should model be fitted 
+\item{REML}{A \code{\link{logical}} - if using a gaussian family, should model be fitted
 using REML (T) or ML (F) - as in lme4}
 
-\item{calc_CIs}{An indication of whether fixed effect confidence intervals (95%) 
+\item{calc_CIs}{An indication of whether fixed effect confidence intervals (95\%)
 should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"}
 
 \item{optimise_ranefs}{Not currently applicable - future dev}
@@ -36,18 +38,28 @@ should be calculated or not, and if so how - one of NULL, "Wald", "profile", "bo
 
 \item{model_average}{Not currently applicable - future dev}
 
-\item{dataset_weights}{A [`numeric`] vector containing the relative weights to
-assign to each dataset, should sum to 1. Note: if using this argument, the 
-supplied formula should have a response of the form [`y | weights(data_weight) ~`]
-The data_weight variable will be generated within the function call so as to 
-assign each observation per dataset an equal fraction of that dataset's weight.}
+\item{weight_specs}{A \code{\link{list}} containing "weights" and "weight_type".
+weights is a \code{\link{numeric}} vector containing the relative weights to
+assign to each dataset/site, should sum to 1.
+weight_type is a \code{\link{character}}, specifying either "dataset" or "site" - i.e. should
+the weights argument assign relative weights to whole datasets, or for sites in
+each dataset.}
+
+\item{scale_specs}{A \code{\link{list}} containing "covars_to_scale" and "scale_func".
+covars_to_scale is a \code{\link{character}} vector of numeric covariates that should be
+scaled prior to modelling.
+scale_func is a function that will be used to scale
+the specified covariates - if NULL, base::scale() will be used.}
+
+\item{relevel_specs}{A named \code{\link{vector}} where each item is:
+"<covar_to_relevel_name>" = "<base_level>".}
 }
 \description{
 This function fits an lme4 model using the supplied database, formula and other
 function arguments tuning the model fitting process
 }
 \details{
-Expects a database object...
+Expects a database object and various other arguments.
 }
 \examples{
 \dontrun{

@@ -7,12 +7,12 @@
 set_lu_legend(obj, leg)
 }
 \arguments{
-\item{obj}{A [`hib_database`].}
+\item{obj}{A \code{\link{hib_database}}.}
 
-\item{leg}{A [`hib_lu_legend`].}
+\item{leg}{A \code{\link{hib_lu_legend}}.}
 }
 \description{
-This function adds a land-use legend to a database - specifically modifying the 
+This function adds a land-use legend to a database - specifically modifying the
 sites dataframe.
 }
 \examples{

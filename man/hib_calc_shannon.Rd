@@ -7,13 +7,13 @@
 hib_calc_shannon(obj)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 }
 \description{
 This function calculates shannon for each site measuring abundance
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

@@ -14,30 +14,30 @@ hib_calc_div_between(
 )
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{metrics}{A [`character`] vector of dissimilarity metrics, any/all of ...}
+\item{metrics}{A \code{\link{character}} vector of dissimilarity metrics, any/all of ...}
 
-\item{binary}{A [`logical`] vector applicable for vegan-based metrics, see [`vegdist`], 
+\item{binary}{A \code{\link{logical}} vector applicable for vegan-based metrics, see \code{\link{vegdist}},
 for non-vegan metrics, this will be ignored}
 
-\item{rel_abund}{A [`logical`] vector determining whether relative abundance 
-should be used to calculate the dissimilarity metric, only applicable for some metrics, 
+\item{rel_abund}{A \code{\link{logical}} vector determining whether relative abundance
+should be used to calculate the dissimilarity metric, only applicable for some metrics,
 e.g., euclidean, hypervolume - Note: many metrics include rescaling to 'relative abundances'
 as part of the calculation}
 
-\item{rescale}{A [`logical`] vector determining if dissimilarity measure should 
-be rescaled relative to its maximum value - applies to metrics that are not 
+\item{rescale}{A \code{\link{logical}} vector determining if dissimilarity measure should
+be rescaled relative to its maximum value - applies to metrics that are not
 on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), chord, hellinger}
 
-\item{baseline_lui}{A [`character`] or NULL, indicating the baseline LUI against
+\item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
 which compositional dis/similarity is calculated per study}
 }
 \description{
 This function calculates compositional dissimilarity between sites within a study
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

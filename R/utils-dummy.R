@@ -1,7 +1,7 @@
 #' Internal function to create dummy data for PREDICTS style models
 #' 
 #' @description
-#' The package itself should not contain or reference any external datasets or 
+#' The package itself should not contain or reference any external datasets
 #' or their paths (which are system specific anyway).
 #' Rather a dummy dataset with the same format should be used, also allowing 
 #' us to create tests for the package that are not reliant on external data.
@@ -22,9 +22,9 @@
 #' \dontrun{
 #'   out <- create_dummy_data()
 #'   # Save in hibiscus data folder (lazy loading enabled)
-#'   save(out, "data/dummydata.rda")
+#'   save(out, "data/dummy_data.rda")
 #' }
-#' @import stringi stri_rand_strings
+#' @import stringi 
 #' @keywords internal
 #' @author Martin Jung
 #' @noRd
@@ -51,7 +51,7 @@ create_dummy_data <- function(what = "sites",
   what <- match.arg(what, c("sites", "species"), several.ok = FALSE)
   
   # print(what)
-  # Make the land-use legend an factor, with the first level being the reference
+  # Make the land-use legend a factor, with the first level being the reference
   lu_legend <- factor(lu_legend, levels = c(lu_legend[1], lu_legend[2:length(lu_legend)]))
   
   # Normalize function
@@ -78,7 +78,7 @@ create_dummy_data <- function(what = "sites",
 
     # Other study settings
     # Normalize and invert
-    out$Rescaled_sampling_effort <- 1- norm(rexp(nrow(out),rate = 2))
+    out$Rescaled_sampling_effort <- 1- norm(stats::rexp(nrow(out),rate = 2))
     # NOTE: but minimum rescaled sample effort will currently be 0... - issue for 
     # rescaling abundance metrics
     # Alternative:
@@ -96,8 +96,8 @@ create_dummy_data <- function(what = "sites",
     # Then randomly sample around that.. within some buffered distance
     
     ## Generate some random measurements ##
-    out$Species_richness <- rpois(n = nrow(out), 5) 
-    out$LogAbundance <- rnorm(n = nrow(out), 10, .5)
+    out$Species_richness <- stats::rpois(n = nrow(out), 5) 
+    out$LogAbundance <- stats::rnorm(n = nrow(out), 10, .5)
      
     # Just use abundance. - log-normal
     # out$Diversity_metric_type <- "Abundance"
@@ -240,7 +240,7 @@ create_dummy_data <- function(what = "sites",
     for (ss in unique(out$SS)){
       # For each SS, sample N spp - 
       ssbs <- unique(out$SSBS[out$SS == ss])
-      N_spp <- runif(n = 1, min = 5, max = 100) |> round()
+      N_spp <- stats::runif(n = 1, min = 5, max = 100) |> round()
       spp_id <- stringi::stri_rand_strings(n = N_spp, length = 7)
       
       # Sample mean abundance (log) - runif()

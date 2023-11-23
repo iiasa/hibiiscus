@@ -7,13 +7,13 @@
 hib_calc_sr(obj)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 }
 \description{
 This function calculates species richness for each site
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

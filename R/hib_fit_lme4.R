@@ -9,7 +9,7 @@
 #' @param form A [`formula`] in the style of lme4 - including fixed and random 
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by lme4
-#' @param REML A [`boolean`] - if using a gaussian family, should model be fitted 
+#' @param REML A [`logical`] - if using a gaussian family, should model be fitted 
 #' using REML (T) or ML (F) - as in lme4
 #' @param calc_CIs An indication of whether fixed effect confidence intervals (95%) 
 #' should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"
@@ -17,9 +17,9 @@
 #' @param model_dredge Not currently applicable - future dev
 #' @param model_average Not currently applicable - future dev
 #' @param weight_specs A [`list`] containing "weights" and "weight_type".
-#' weights is [`numeric`] vector containing the relative weights to
+#' weights is a [`numeric`] vector containing the relative weights to
 #' assign to each dataset/site, should sum to 1. 
-#' weight_type is a character, specifying either "dataset" or "site" - i.e. should
+#' weight_type is a [`character`], specifying either "dataset" or "site" - i.e. should
 #' the weights argument assign relative weights to whole datasets, or for sites in
 #' each dataset.
 #' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
@@ -220,7 +220,7 @@ hib_fit_lme4 <- function(obj,
                                  confint_df)
   }
   
-  metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], AIC(m0), BIC(m0), MuMIn::AICc(m0))
+  metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], stats::AIC(m0), stats::BIC(m0), MuMIn::AICc(m0))
   names(metr_vec) <- c("R2m", "R2c", "AIC", "BIC", "AICc")
   
   ci_type_ <- calc_CIs
@@ -358,7 +358,7 @@ get_model_data <- function(obj,
     stop()
   }
   
-  mod_df <- na.omit(mod_df)
+  mod_df <- stats::na.omit(mod_df)
   
   # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
   # Do this in prep_model_data
@@ -470,7 +470,7 @@ prep_model_data <- function(df,
     
     # drop unused factor levels
     df <- droplevels(df)
-    
+
     # relevel
     for (i in 1:length(covars_to_relevel)){
       if (is.character(df[[covars_to_relevel[i]]])){

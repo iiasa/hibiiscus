@@ -10,30 +10,40 @@ hib_fit_inla(
   random_covar,
   family = "gaussian",
   fit_settings,
-  incl_spatial_term = T,
+  incl_spatial_term = FALSE,
   input_mesh = NULL,
   mesh_settings = list(mesh_dim = "2d", max.edge = c(75, 100), cutoff = 1e-12, offset =
     NULL),
+  scale_specs = list(covars_to_scale = NULL, scale_func = NULL),
+  relevel_specs = c(NULL),
   prior_list
 )
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{response_fixed_form}{A [`formula`] with the response and fixed effects}
+\item{response_fixed_form}{A \code{\link{formula}} with the response and fixed effects}
 
-\item{random_covar}{A [`formula`] with random, non-spatial, iid effects specified}
+\item{random_covar}{A \code{\link{formula}} with random, non-spatial, iid effects specified}
 
-\item{family}{A [`character`] indicating the model family, e.g., "gaussian"}
+\item{family}{A \code{\link{character}} indicating the model family, e.g., "gaussian"}
 
 \item{fit_settings}{In development}
 
-\item{incl_spatial_term}{A [`logical`], whether or not to include a spatial 
+\item{incl_spatial_term}{A \code{\link{logical}}, whether or not to include a spatial
 random effect}
 
 \item{input_mesh}{Optionally provide an inla mesh object}
 
 \item{mesh_settings}{Optionally specify inla mash settings, e.g., max.edge}
+
+\item{scale_specs}{A \code{\link{list}} containing "covars_to_scale" and "scale_func".
+covars_to_scale is a \code{\link{character}} vector of numeric covariates that should be
+scaled prior to modelling. scale_func is a function that will be used to scale
+the specified covariates - if NULL, base::scale() will be used.}
+
+\item{relevel_specs}{A named \code{\link{vector}} where each item is:
+"<covar_to_relevel_name>" = "<base_level>".}
 
 \item{prior_list}{In development}
 }
@@ -42,7 +52,7 @@ This function fits an inla(bru) model using the supplied database, formula and o
 function arguments tuning the model fitting process
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

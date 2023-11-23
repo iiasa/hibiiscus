@@ -7,13 +7,13 @@
 hib_calc_gma(obj)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 }
 \description{
 This function calculates geometric mean abundance for each site measuring this metric
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

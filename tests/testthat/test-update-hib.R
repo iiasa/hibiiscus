@@ -2,7 +2,8 @@
 
 test_that("Check that update_hib works as desired.", {
   
-  tmp_db_1 <- load_hib("data/dummy_database.rds")
+  tmp_db_1 <- load_hib(#"data/dummy_database.rds"
+                       system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # Create a second db from random simul func - saved...
   # tmp_spp_2 <- create_dummy_data("species", 15)
@@ -31,7 +32,8 @@ test_that("Check that update_hib works as desired.", {
   
   # Does work
   tmp_db_upd <- update_hib(tmp_db_1, 
-                           path_species = "data/dummy_species_rc_2.rds",
+                           # path_species = "data/dummy_species_rc_2.rds",
+                           path_species = system.file("extdata", "dummy_species_rc_2.rds", package = "hibiiscus", mustWork = TRUE),
                            version = "custom",
                            custom_version_name = "dummy_data_2")
   expect_true(inherits(tmp_db_upd,

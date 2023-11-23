@@ -5,49 +5,65 @@
 \title{Project a hib, mixed-effects model}
 \usage{
 hib_mod_project(
-  obj,
+  mod_obj,
   data,
   backtransform = NULL,
-  rescale_pred = F,
+  rescale_pred = FALSE,
   lme4_specs = NULL,
   inla_specs = NULL,
-  brms_specs = NULL
+  brms_specs = NULL,
+  calc_aoa = FALSE,
+  cv_obj = NULL
 )
 }
 \arguments{
-\item{obj}{A [`hib_model`] object - either lme4 or inla.}
+\item{mod_obj}{A \code{\link{hib_model}} object - either lme4, inla, or brms.}
 
 \item{data}{Either a dataframe-like object or a raster stack that can be used
 to project onto}
 
-\item{backtransform}{A [`function`] that will backtransform the model response
+\item{backtransform}{A \code{\link{function}} that will backtransform the model response
 to the scale of the original variable, e.g., exp() as the inverse of log()}
 
-\item{rescale_pred}{A [`logical`] value - should the predictions be rescaled relative
+\item{rescale_pred}{A \code{\link{logical}} value - should the predictions be rescaled relative
 to the model intercept (assumes intercept is for baseline environment/LU)}
 
-\item{lme4_specs}{A list containing details relevant to projecting an lme4-style
-model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
-'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
-estimated, and if so, how many bootstrap samples should be used.}
+\item{lme4_specs}{A \code{\link{list}} containing details relevant to projecting an lme4-style
+model. Specifically, named items should consist of 'bootstrap' (\code{\link{logical}}) and
+'n_boot' (\code{\link{numeric}}), indicating whether bootstrapped prediction intervals should be
+estimated, and if so, how many bootstrap samples should be used.
+Additionally, 're_form', as 're.form' in \code{\link[=predict.merMod]{predict.merMod()}}, used to specify random
+effects to condition on when predicting an lme4 model (formula, NULL, or NA).}
 
-\item{inla_specs}{Currently unused, but may be useful in future dev.}
+\item{inla_specs}{A \code{\link{list}} containing details relevant to projecting an inla-style
+model.
+'re_form', as 're.form' in \code{\link[=lpredict.merMod]{lpredict.merMod()}}, used to specify random
+effects to condition on when predicting an inla model (formula, NULL, or NA).
+'link_inverse' a function that is the invers of the link used to fit the model.
+Used to backtranform the global intercept for use in rescaling predictions.}
 
-\item{brms_specs}{A list containing details relevant to projecting a brms-style
-model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+\item{brms_specs}{A \code{\link{list}} containing details relevant to projecting a brms-style
+model. Specifically, named item should consist of 'incl_obs_uncert' (\code{\link{logical}})
 to determine whether or not observation-level uncertainty is included in predictions.
-Setting this parameter to TRUE will produce predictions with larger uncertainty.}
+Setting this parameter to TRUE will produce predictions with larger uncertainty.
+Additionally, 're_form', as 're_formula' in \code{\link[=predict.brmsfit]{predict.brmsfit()}}, used to specify random
+effects to condition on when predicting a brms (formula, NULL, or NA).}
+
+\item{calc_aoa}{A \code{\link{logical}} to indicate whether or non the 'Area-of-applicability'
+(AOA) should be estimated - following Meyer and Pebesma (2021)}
+
+\item{cv_obj}{A \code{\link{hib_cv_res}} object, used in AOA estimation.}
 }
 \description{
 This function projects a fitted hib model using the supplied model object and
 data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{hib_model}} object.
 }
 \examples{
 \dontrun{
-  proj <- hib_mod_project(obj, data)
+  proj <- hib_mod_project(hib_model, proj_data)
 } 
 }
 \keyword{model,}

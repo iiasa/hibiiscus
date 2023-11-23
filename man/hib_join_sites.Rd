@@ -7,13 +7,15 @@
 hib_join_sites(obj, site_info)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{site_info}{A [`dataframe`] or similar of categorical or numeric information to be added to the database.}
+\item{site_info}{A \code{\link{data.frame}} or similar of categorical or numeric information
+to be added to the database.}
 }
 \description{
-This function joins external information to a [`Database`] object. Such information could be 
-for example additional site-specific data that are not already present in the database.
+This function joins external information to a \code{\link{Database}} object. Such
+information could be for example additional site-specific data that are not
+already present in the database.
 }
 \keyword{database,}
 \keyword{external}

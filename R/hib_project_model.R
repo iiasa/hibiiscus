@@ -12,24 +12,27 @@
 #' to the scale of the original variable, e.g., exp() as the inverse of log()
 #' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
 #' to the model intercept (assumes intercept is for baseline environment/LU)
-#' @param lme4_specs A list containing details relevant to projecting an lme4-style
-#' model. Specifically, named items should consist of 'bootstrap' [`logical`] and 
-#' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
+#' @param lme4_specs A [`list`] containing details relevant to projecting an lme4-style
+#' model. Specifically, named items should consist of 'bootstrap' ([`logical`]) and 
+#' 'n_boot' ([`numeric`]), indicating whether bootstrapped prediction intervals should be 
 #' estimated, and if so, how many bootstrap samples should be used.
-#' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
+#' Additionally, 're_form', as 're.form' in [`predict.merMod()`], used to specify random
 #' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
-#' @param inla_specs A list containing details relevant to projecting an inla-style
+#' @param inla_specs A [`list`] containing details relevant to projecting an inla-style
 #' model.
-#' 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
+#' 're_form', as 're.form' in [`lpredict.merMod()`], used to specify random
 #' effects to condition on when predicting an inla model (formula, NULL, or NA).
 #' 'link_inverse' a function that is the invers of the link used to fit the model.
 #' Used to backtranform the global intercept for use in rescaling predictions.
-#' @param brms_specs A list containing details relevant to projecting a brms-style
-#' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+#' @param brms_specs A [`list`] containing details relevant to projecting a brms-style
+#' model. Specifically, named item should consist of 'incl_obs_uncert' ([`logical`]) 
 #' to determine whether or not observation-level uncertainty is included in predictions.
 #' Setting this parameter to TRUE will produce predictions with larger uncertainty.
-#' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
-#' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
+#' Additionally, 're_form', as 're_formula' in [`predict.brmsfit()`], used to specify random
+#' effects to condition on when predicting a brms (formula, NULL, or NA).
+#' @param calc_aoa A [`logical`] to indicate whether or non the 'Area-of-applicability' 
+#' (AOA) should be estimated - following Meyer and Pebesma (2021)
+#' @param cv_obj A [`hib_cv_res`] object, used in AOA estimation.
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -898,7 +901,7 @@ hib_mod_project <- function(mod_obj,
 }
 
 
-#' # A helper function to wrap the preparation of SpatRaster data, and then project 
+#' A helper function to wrap the preparation of SpatRaster data, and then project 
 #' a hib, mixed-effects model - for lme4 and brms models
 #' 
 #' @description 
@@ -1069,15 +1072,18 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # brms: @frame
       
       # # lme4 fit data,
-      if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+      # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+      if ((inherits(obj$model, "lmerMod") || inherits(obj$model, "glmerMod"))){
         fit_dat <- obj$model@frame
       }
       # brms fit data
-      if (class(obj$model) == "brmsfit"){
+      # if (class(obj$model) == "brmsfit"){
+      if (inherits(obj$model, "brmsfit")){
         fit_dat <- obj$model$data
       }
       # inla fit data
-      if (class(obj$model) == "inla"){
+      # if (class(obj$model) == "inla"){
+      if (inherits(obj$model, "inla")){
         fit_dat <- obj$model$.args$data
       }
       # 
@@ -1433,7 +1439,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 }
 
 
-#' # A helper function to prepare SpatRaster data for projection
+#' A helper function to prepare SpatRaster data for projection
 #' 
 #' @description 
 #' This function prepares the supplied SpatRaster to be ready for model projection
@@ -1921,7 +1927,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
 #   
 # }   
 
-#' # A helper function to wrap the preparation of SpatRaster data and then return
+#' A helper function to wrap the preparation of SpatRaster data and then return
 #' a dataframe - for use in inla model projections
 #' 
 #' @description 
@@ -2022,15 +2028,19 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
       # brms: @frame
       
       # # lme4 fit data,
-      if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+      # TODO: convert class().. to inherits(obj, "class")
+      # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+      if ((inherits(obj$model, "lmerMod") || inherits(obj$model, "glmerMod"))){
         fit_dat <- obj$model@frame
       }
       # brms fit data
-      if (class(obj$model) == "brmsfit"){
+      # if (class(obj$model) == "brmsfit"){
+      if (inherits(obj$model, "brmsfit")){
         fit_dat <- obj$model$data
       }
       # inla fit data
-      if (class(obj$model) == "inla"){
+      # if (class(obj$model) == "inla"){
+      if (inherits(obj$model, "inla")){
         fit_dat <- obj$model$.args$data
       }
       # if (is.factor(fit_dat[[x]]))
@@ -2242,8 +2252,10 @@ check_covar_levels <- function(mod, proj_dat, covars){
   
   # Assertion checks
   assertthat::assert_that(
-    class(mod) == "lmerMod" || class(mod) == "glmerMod" || 
-      class(mod) == "brmsfit" || class(mod) == "inla",
+    # class(mod) == "lmerMod" || class(mod) == "glmerMod" || 
+    #   class(mod) == "brmsfit" || class(mod) == "inla",
+    inherits(mod, "lmerMod") || inherits(mod, "glmerMod") ||
+      inherits(mod, "brmsfit") || inherits(mod, "inla"),
     is.data.frame(proj_dat) || inherits(proj_dat, "SpatRaster"),
     is.character(covars)
   )
@@ -2271,15 +2283,18 @@ check_covar_levels <- function(mod, proj_dat, covars){
   }
   
   # lme4 fit data,
-  if ((class(mod) == "lmerMod" || class(mod) == "glmerMod")){
+  # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
+  if ((inherits(mod, "lmerMod") || inherits(mod, "glmerMod"))){
     fit_dat <- mod@frame
   }
   # brms fit data
-  if (class(mod) == "brmsfit"){
+  # if (class(obj$model) == "brmsfit"){
+  if (inherits(mod, "brmsfit")){
     fit_dat <- mod$data
   }
   # inla fit data
-  if (class(mod) == "inla"){
+  # if (class(obj$model) == "inla"){
+  if (inherits(mod, "inla")){
     fit_dat <- mod$.args$data
   }
   

@@ -10,13 +10,13 @@
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by brms
 #' @param weight_specs A [`list`] containing "weights" and "weight_type".
-#' weights is [`numeric`] vector containing the relative weights to
+#' weights is a [`numeric`] vector containing the relative weights to
 #' assign to each dataset/site, should sum to 1. 
-#' weight_type is a character, specifying either "dataset" or "site" - i.e. should
+#' weight_type is a [`character`], specifying either "dataset" or "site" - i.e. should
 #' the weights argument assign relative weights to whole datasets, or for sites in
 #' each dataset.
 #' Note: if using this argument, the supplied formula should have a response of 
-#' the form [`y | weights(data_weight) ~`].
+#' the form `y | weights(data_weight) ~`.
 #' The data_weight variable will be generated within the function call.
 #' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
 #' covars_to_scale is a [`character`] vector of numeric covariates that should be 
@@ -24,7 +24,7 @@
 #' the specified covariates - if NULL, base::scale() will be used.
 #' @param relevel_specs A named [`vector`] where each item is:
 #' "<covar_to_relevel_name>" = "<base_level>".
-#' @param ... Any other named arguments that can be passed to brms::brm(), e.g. prior, data2
+#' @param ... Any other named arguments that can be passed to brms::brm(), e.g., prior, data2
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{

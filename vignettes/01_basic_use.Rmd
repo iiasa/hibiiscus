@@ -55,7 +55,8 @@ devtools::load_all()
 #                      path_sites   = "../../PREDICTS/2016/sites.rds", 
 #                      version = "2016")
 
-hib_db <- create_hib(path_species = "../data/dummy_species_rc.rds",
+hib_db <- create_hib(#path_species = "../data/dummy_species_rc.rds",
+                     path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")
 

@@ -548,7 +548,7 @@ hib_calc_rsr <- function(obj){
     dplyr::mutate(min_abund = min(TA)) |>
     dplyr::ungroup()
   
-  pb <- txtProgressBar(min = 1, max = 100, style = 3)
+  pb <- utils::txtProgressBar(min = 1, max = 100, style = 3)
   
   rsr_df <- purrr::map_dfr(seq(1,100),
                            function(x, df = rsr_df){
@@ -559,7 +559,7 @@ hib_calc_rsr <- function(obj){
                                                 min_abund = min_abund[1],
                                                 iter = x)
                              
-                             setTxtProgressBar(pb, x)
+                             utils::setTxtProgressBar(pb, x)
                              # print(head(tmp))
                              tmp
                            }) |>

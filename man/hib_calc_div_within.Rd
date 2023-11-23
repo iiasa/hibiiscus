@@ -7,16 +7,18 @@
 hib_calc_div_within(obj, metrics)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{metrics}{A [`character`] vector, any of "Total_abundance", "Species_richness", 
-"Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness"}
+\item{metrics}{A \code{\link{character}} vector, any/all of "Total_abundance", "Species_richness",
+"Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
+"Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
+"HillShannon_diversity", "HillSimpson_diversity", "PIE"}
 }
 \description{
 This function calculates diversity per site, wrapper for the above functions
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

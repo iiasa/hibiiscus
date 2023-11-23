@@ -144,7 +144,7 @@ hib_fit_inla <- function(obj,
       dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")],
                         by = "SSBS")
     
-    mod_df <- na.omit(mod_df)
+    mod_df <- stats::na.omit(mod_df)
     
     # n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
     

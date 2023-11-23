@@ -1,7 +1,8 @@
 # Testthat checks for hib_site_contrasts.R
 
 test_that("Check that hib_site_contrasts works as expected.", {
-  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db <- load_hib(#"data/dummy_database.rds"
+                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # -Incorrect object input
   expect_error(hib_calc_site_contrasts("hello",

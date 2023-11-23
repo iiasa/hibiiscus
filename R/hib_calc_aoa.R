@@ -9,7 +9,7 @@
 #' make a projection.
 #' @param mod_obj A [`hib_X_model`] object.
 #' @param cv_obj A [`hib_cv_res`] object, based on the above mod_obj.
-#' @param proj_data A [`dataframe`], [`SpatRaster`] or list of [`SpatRaster`], 
+#' @param proj_data A [`data.frame`], [`SpatRaster`] or list of [`SpatRaster`], 
 #' containing covariates for projecting the model.
 #' @keywords model, projections, 
 #' @examples 
@@ -261,9 +261,9 @@ hib_calc_aoa <- function(mod_obj,
 #' @param train_mult A [`data.frame`] containing the model fitting data, weighted 
 #' by variable importance
 #' @param variable_weights A [`data.frame`] containing variable importance weights
-#' @param variable_scale_params A [`list`] of 
-#' @param mod_data
-#' @param fix_vars 
+#' @param variable_scale_params A [`list`] of the parameters used to scale each variable
+#' @param mod_data A [`data.frame`] of the data used to fit the original model
+#' @param fix_vars A [`character`] identifying model fixed effects
 #' @param proj_data A [`dataframe`], [`SpatRaster`] or list of [`SpatRaster`], 
 #' containing covariates for projecting the model.
 #' @keywords projections, dissimilarity
@@ -446,7 +446,7 @@ aoa_get_weights_local <- function(model, variables){
   
   #set negative weights to 0
   if(!inherits(weight, "error")){
-    weight <- weight[, na.omit(match(variables, names(weight))), drop = F]
+    weight <- weight[, stats::na.omit(match(variables, names(weight))), drop = F]
     if (any(weight<0)){
       weight[weight<0]<-0
       message("negative weights were set to 0")

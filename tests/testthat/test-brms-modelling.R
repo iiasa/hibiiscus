@@ -1,7 +1,8 @@
 # Testthat checks for hib_fit_brms.R, cv, projection
 
 test_that("Check brms modelling pipeline works as desired.", {
-  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db <- load_hib(#"data/dummy_database.rds"
+                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   tmp_db <- hib_calc_div_within(tmp_db,
                                 c("Total_abundance", "Species_richness",

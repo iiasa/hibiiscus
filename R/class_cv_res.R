@@ -1161,7 +1161,9 @@ hib_cv_res <- R6Class("hib_cv_res",
                                                      })
                             
                             
-                            if (nrow(cv_df) > 0){
+                            nrow_cv_df <- nrow(cv_df)
+                            
+                            if (nrow_cv_df > 0){
                               # Add cv_type that isn't in base_cv_levs to cv_levs
                               add_cv_levs <- unique(cv_df$cv_type)
                               add_cv_levs <- add_cv_levs[!(add_cv_levs %in% base_cv_levs)]
@@ -1173,8 +1175,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                             }
                             
                             
-                            if (nrow(cv_df) == 0){
-                              nrow_cv_df <- 0
+                            if (nrow_cv_df == 0){
+                              # nrow_cv_df <- 0
                               # message(crayon::red("Error: Cross-validation predictions unavailable."))
                               message(crayon::yellow("Warning: map of cross-valiation splits not avaliable."))
                               # return(ggplot2::ggplot() + ggplot2::theme_void())

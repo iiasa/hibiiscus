@@ -27,21 +27,14 @@ Database <- R6Class("Database",
                     initialize = function(version, paths){
                       assertthat::assert_that(is.character(version), is.list(paths))
                       
-                      # Assert path$sites/species is character ?? - already checked in create_hib
+                      # path$sites/species is character - already checked in create_hib
     
                       # ------ #
 
                       message(crayon::green(paste0("Initializing input datasets for ", version, " data ...\n")) )
                       
-                      # Now load both datasets
-                      # Note RC: But the species data has all the sites
-                      # And the 2022 data is just the full spp data
-                      
-                      # TODO: option to make a hib db from a species df... - useful for simul data
-
                       # %%%%%
                       # Load species data
-                      # ensure paths$species is RDS
                       assertthat::assert_that(
                         assertthat::has_extension(paths$species, "rds")
                         )
@@ -93,9 +86,13 @@ Database <- R6Class("Database",
                           assertthat::has_name(sites, "SSBS"),
                           assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
                           assertthat::has_name(sites, "Use_intensity")
-                        #   assertthat::has_name(sites, "Longitude"), 
-                          # assertthat::has_name(sites, "Latitude")
                         )
+                        
+                        # Ensure that Predominant_land_use is present - for LUI
+                        if (!"Predominant_land_use" %in% colnames(sites)){
+                          species <- species |>
+                            dplyr::mutate(Predominant_land_use = Predominant_habitat)
+                        }
                       }
                       
                     
@@ -169,136 +166,21 @@ Database <- R6Class("Database",
                         sites$version <- version
                       }
                       
+                      # %%%%%
+                      # Add LUI column - Only if no LUI already
+                      if (!"LUI" %in% colnames(sites)){
+                        sites <- sites |>
+                          dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                                                    sep = "_"))
+                      }
+                      if (!"LUI" %in% colnames(species)){
+                        species <- species |>
+                          dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                                                    sep = "_"))
+                      }
                       
-                      # Add LUI column - 
-                      # TODO: Only if no LUI already??
-
-                      sites <- sites |>
-                        dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
-                                           sep = "_"))
-                      species <- species |>
-                        dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
-                                           sep = "_"))
+                      # %%%%%
                       
-                      # Alternative initialisation approach - version specific
-                      # # Use some standard site columns - subset to those in species df
-                      # 
-                      # # Check for data structure... - if core columns missing break
-                      # # - e.g. Source_ID, SS, SSBS, Measure, Predominant_land_use, 
-                      # #         Diversity_metric, Diversity_metric_type, Best_guess_binomial
-                      # 
-                      # 
-                      # # Add version value to dfs
-                      # 
-                      # # %%%%%
-                      # 
-                      # 
-                      # if(version == "2016"){
-                      #   sites <- readr::read_rds(paths$sites)
-                      #   species <- readr::read_rds(paths$species)
-                      #   # Add version info to sites/species
-                      # }
-                      # if(version == "2022"){
-                      #   
-                      #   species <- readr::read_rds(paths$species)
-                      #   
-                      #   message(crayon::green("Generating sites dataframe..."))
-                      #   
-                      #   # unique values of important columns...
-                      #   # also need to generate N_samples, Sample_midpoint, Higher_taxa
-                      #   # and maybe Rescaled_sampling_effort
-                      #   
-                      #   # TODO: neater way to do this?? - all cols except 
-                      #   # -Higher_taxon
-                      #   # -...
-                      #   site_specific_cols <- c("Source_ID", "Reference",                          
-                      #                           "Study_number", "Study_name",                             
-                      #                           "SS", "Diversity_metric",                       
-                      #                           "Diversity_metric_unit", 
-                      #                           "Diversity_metric_type",                  
-                      #                           "Diversity_metric_is_effort_sensitive",    
-                      #                           "Diversity_metric_is_suitable_for_Chao",
-                      #                           "Sampling_method","Sampling_effort_unit",                   
-                      #                           "Study_common_taxon", 
-                      #                           "Rank_of_study_common_taxon",
-                      #                           "Site_number", "Site_name",                              
-                      #                           "Block", "SSS",                                    
-                      #                           "SSB", "SSBS",                                   
-                      #                           "Sample_start_earliest", "Sample_end_latest",
-                      #                           "Sample_date_resolution",                 
-                      #                           "Max_linear_extent", "Habitat_patch_area_square_metres",
-                      #                           "Sampling_effort", 
-                      #                           # "Rescaled_sampling_effort",       
-                      #                           "Habitat_as_described", 
-                      #                           "Predominant_habitat",                   
-                      #                           "Source_for_predominant_habitat",
-                      #                           "Use_intensity",                          
-                      #                           "Km_to_nearest_edge_of_habitat",
-                      #                           "Years_since_fragmentation_or_conversion",
-                      #                           "Transect_details", "Coordinates_method",                     
-                      #                           "Longitude", "Latitude",                               
-                      #                           "Country_distance_metres", "Country",                                
-                      #                           "UN_subregion", "UN_region",                              
-                      #                           "Eco_region_distance_metres", "Ecoregion",                              
-                      #                           "Biome", "Realm",                                  
-                      #                           "Hotspot", "Wilderness_area")
-                      #   
-                      #   # subset site_specific cols to those in species??
-                      #   
-                      #   # if sample_midpoint not present and sample_strt/end are...
-                      #   sites <- species |>
-                      #     dplyr::mutate(Sample_midpoint = Sample_start_earliest + floor((Sample_end_latest - Sample_start_earliest)/2)) |>
-                      #     dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) |>
-                      #     dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
-                      #                      Sample_midpoint = Sample_midpoint[1], 
-                      #                      N_samples = n()) |>
-                      #     dplyr::ungroup()
-                      #   
-                      #   # Name changes to match PREDICTS 2016
-                      #   # Convert Predominant_habitat to Predominant_land_use
-                      #   # Convert Eco_region_distance_metres to Ecoregion_distance_metres
-                      #   # Convert Max_linear_extent to Max_linear_extent_metres
-                      #   species <- species |>
-                      #     dplyr::rename(Predominant_land_use = Predominant_habitat,
-                      #                   Ecoregion_distance_metres = Eco_region_distance_metres,
-                      #                   Max_linear_extent_metres = Max_linear_extent)
-                      #   sites <- sites |>
-                      #     dplyr::rename(Predominant_land_use = Predominant_habitat,
-                      #                   Ecoregion_distance_metres = Eco_region_distance_metres,
-                      #                   Max_linear_extent_metres = Max_linear_extent)
-                      #   
-                      #   # Differences in column names
-                      #   # 2022 version v 2016 version
-                      #   # Predominant_habitat (2022) is equiv to Predominant_land_use 
-                      #   # - but Predominant_habitat splits primary forest and primary non-forest
-                      #   # 2022 has 11 levels, 2016 has 10
-                      #   # Can split primary into forest/non-forest based on biome ??
-                      #   
-                      #   # Source_for_predominant_habitat =? Source_for_predominant_land_use
-                      #   
-                      #   # Max_linear_extent is in 2022, Max_linear_extent_metres is in 2016...
-                      #   
-                      #   # Eco_region_distance_metres =? Ecoregion_distance_metres
-                      #   
-                      #   # Higher_taxa -- "," separated character of higher taxa present in site
-                      #   
-                      #   # Sample_midpoint missing from 2022 - sample_end + sample_strt / 2 ??
-                      #   
-                      #   # Rescaled_sampling_effort and N_sampled missing 
-                      #   # Rescaled_sampling_effort can be easily calculated - needed?
-                      #   
-                      #   
-                      #   # Add version info to sites/species
-                      # }
-                      # 
-                      # # TODO:
-                      # # Add custom data source version - but retain need for sites and species?
-                      # # Definitely need species.., sites is optional...
-                      # if(version == "custom"){
-                      #   sites <- readr::read_rds(paths$sites)
-                      #   species <- readr::read_rds(paths$species)
-                      #   # Add version info to sites/species
-                      # }
                       
                       # And check 
                       # Outsourced security checks

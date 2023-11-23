@@ -1,7 +1,8 @@
 # Testthat checks for hib_filter.R
 
 test_that("Check hib_filter correctly filters database",{
-  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
+                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   # -Select a random country, and exclude it
   tmp_db <- hib_filter_sites(tmp_db,
                              Country != tmp_db$sites$Country[1])
@@ -19,7 +20,6 @@ test_that("Check hib_filter correctly filters database",{
                        "Database")
   )
   expect_length(tmp_db$processing_flags$filtering_steps, 2)
-  
   
 })
 

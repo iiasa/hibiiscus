@@ -7,13 +7,14 @@
 hib_join_species(obj, spp_info)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{spp_info}{A [`dataframe`] or similar of categorical or numeric information to be added to the database.}
+\item{spp_info}{A \code{\link{data.frame}} or similar of categorical or numeric information
+to be added to the database.}
 }
 \description{
-This function joins external information to a [`Database`] object. Such information could be 
-for example prepared data on species traits.
+This function joins external information to a \code{\link{Database}} object. Such
+information could be for example prepared data on species traits.
 }
 \keyword{database,}
 \keyword{external}

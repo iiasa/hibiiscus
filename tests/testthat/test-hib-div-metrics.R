@@ -5,7 +5,8 @@
 # %%%%%%%%%%
 
 test_that("Check that within-sample diversity metrics work.", {
-  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db <- load_hib(#"data/dummy_database.rds"
+                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # -Won't work if metric is not supported
   expect_error(hib_calc_div_within(tmp_db,
@@ -39,10 +40,11 @@ test_that("Check that within-sample diversity metrics work.", {
 # %%%%%%%%%%
 # Between-sample
 # %%%%%%%%%%
-devtools::load_all()
+# devtools::load_all()
 
 test_that("Check that between-sample diversity metrics work.", {
-  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db <- load_hib(#"data/dummy_database.rds"
+                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # -Won't work if metric is not supported
   expect_error(hib_calc_div_between(tmp_db,
@@ -61,7 +63,7 @@ test_that("Check that between-sample diversity metrics work.", {
                        "Database"))
   
   expect_true(is.data.frame(tmp_db$diversity_between))
-  expect_true(nrow(tmp_db$diversity_between) == length(within_site_metrics))
+  expect_true(nrow(tmp_db$diversity_between) == length(between_site_metrics))
   
   # tmp_db <- hib_calc_div_between(tmp_db,
   #                                c("euclidean", "theta",

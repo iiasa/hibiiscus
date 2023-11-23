@@ -7,12 +7,12 @@
 save_legend(leg, output_path)
 }
 \arguments{
-\item{leg}{A land-use [`legend`].}
+\item{leg}{A land-use \code{\link{legend}}.}
 
-\item{output_path}{A [`character`] pointing to a filename.}
+\item{output_path}{A \code{\link{character}} pointing to a filename.}
 }
 \description{
-The function [`save_legend`] saves the output of the formatted [`legend`] object in a specific
+The function \code{\link{save_legend}} saves the output of the formatted \code{\link{legend}} object in a specific
 place.
 }
 \details{

@@ -4,7 +4,7 @@
 #' This function joins external information to a [`Database`] object. Such 
 #' information could be for example prepared data on species traits.
 #' @param obj A [`Database`] object.
-#' @param spp_info A [`dataframe`] or similar of categorical or numeric information 
+#' @param spp_info A [`data.frame`] or similar of categorical or numeric information 
 #' to be added to the database.
 #' @keywords database, external
 #' @export
@@ -67,7 +67,7 @@ hib_join_species <- function(obj, spp_info){
 #' information could be for example additional site-specific data that are not 
 #' already present in the database.
 #' @param obj A [`Database`] object.
-#' @param site_info A [`dataframe`] or similar of categorical or numeric information 
+#' @param site_info A [`data.frame`] or similar of categorical or numeric information 
 #' to be added to the database.
 #' @keywords database, external
 #' @export

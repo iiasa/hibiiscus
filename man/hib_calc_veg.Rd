@@ -9,22 +9,24 @@ hib_calc_veg(spp_site_data, metric, binary, rel_abund, rescale)
 \arguments{
 \item{spp_site_data}{A dataframe/tibble object.}
 
-\item{metric}{A [`character`] - see vegdist}
+\item{metric}{A \code{\link{character}} - see vegdist}
 
-\item{binary}{A [`logical`] value - should distance be based on presence/absence}
+\item{binary}{A \code{\link{logical}} value - should distance be based on presence/absence}
 
-\item{rel_abund}{A [`logical`] value - whether relative abundance values should 
+\item{rel_abund}{A \code{\link{logical}} value - whether relative abundance values should
 be used; applicable for euclidean ...}
 
-\item{rescale}{A [`logical`] value - should distance be rescaled relative to
+\item{rescale}{A \code{\link{logical}} value - should distance be rescaled relative to
 theoretical max (if applicable and not 1)}
 }
 \description{
 This function calculates vegan-based dissimilarity metrics between sites
 }
 \details{
-Expects a dataframe/tibble with species abundance records at two sites 
-- sites as rows, species as columns
+Expects a dataframe/tibble with species abundance records at two sites
+\itemize{
+\item sites as rows, species as columns
+}
 }
 \examples{
 \dontrun{

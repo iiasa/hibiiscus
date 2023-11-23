@@ -4,7 +4,7 @@
 #' This function returns a database object containing only sites whose characteristics 
 #' are retained
 #' @param obj A [`hib_database`] object.
-#' @param condition A [`conditional`] statement identifying how to filter the sites dataframe
+#' @param condition An expression identifying how to filter the sites dataframe. 
 #' @keywords database filtering
 #' @examples
 #' \dontrun{
@@ -90,7 +90,7 @@ hib_filter_sites <- function(obj, condition){
 #' This function returns a database object containing only species (and associated sites) whose characteristics 
 #' are retained
 #' @param obj A [`hib_database`] object.
-#' @param condition A [`conditional`] statement identifying how to filter the species dataframe
+#' @param condition An expression identifying how to filter the species dataframe
 #' @keywords database, filtering
 #' @examples
 #' \dontrun{

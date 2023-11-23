@@ -73,7 +73,8 @@ test_that("Check load_lu_legend works as intended.", {
   expect_error(load_lu_legend("data/not_an_lu_legend.rds"),
                regexp = "Path 'data/not_an_lu_legend.rds' does not exist")
   # - check it fails if file is not an lu legend ...
-  expect_error(load_lu_legend("data/dummy_species_rc.rds"),
+  expect_error(load_lu_legend(#"data/dummy_species_rc.rds"
+                              system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE)),
                regexp = "leg does not inherit from class lu_legend")
   # TODO: check that this also works...
   # load from "inst/extdata/example_lu_legend.rds"
@@ -84,7 +85,8 @@ test_that("Check load_lu_legend works as intended.", {
 # set_lu_legend
 # %%%%%%%%%%
 test_that("Check set_lu_legend works correctly.", {
-  tmp_db <- load_hib("data/dummy_database.rds")
+  tmp_db <- load_hib(#"data/dummy_database.rds"
+                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   alt_lu_df <- tmp_db$sites[,c("SSBS", "Predominant_land_use", "Use_intensity")] |>
     dplyr::mutate(Predominant_land_use = dplyr::case_when(Predominant_land_use == "Primary" ~ "Natural/Semi-natural",

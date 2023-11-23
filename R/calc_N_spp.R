@@ -2,7 +2,7 @@
 #' 
 #' @description 
 #' This function calculates the number of species contributing to a model fit based
-#' on the metric (model response) of interest
+#' on the metric (model response) of interest. Intended for internal use.
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
@@ -24,6 +24,8 @@ calc_N_spp <- function(obj,
   # actually count?? 
   # dplyr::filter(Measurement > 0) |>
   
+  # TODO: isn't it more efficient to just filter obj$species to SSBS/SSBS1/SSBS2 in mod_df?
+  
   # First, for within site metrics
   if (mod_resp %in% c("Total_abundance", "Rescaled_total_abundance", 
                       "Simpson_diversity", 
@@ -31,7 +33,7 @@ calc_N_spp <- function(obj,
                       "Shannon_diversity",
                       "HillShannon_diversity", "HillSimpson_diversity",
                       "PIE", "sPIE", "Evenness")){
-
+    
     # TODO: assertions
     # obj$species contains:
     #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement

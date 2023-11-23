@@ -7,10 +7,10 @@
 load_hib(path_input)
 }
 \arguments{
-\item{path_input}{A [`character`] pointing to a filename.}
+\item{path_input}{A \code{\link{character}} pointing to a filename.}
 }
 \description{
-The function [`load_hib`] loads a previously created [`hib_database`].
+The function \code{\link{load_hib}} loads a previously created \code{\link{hib_database}}.
 }
 \details{
 Expecting a file with \code{rds} ending.

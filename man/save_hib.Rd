@@ -7,12 +7,12 @@
 save_hib(obj, output_path)
 }
 \arguments{
-\item{obj}{A [`hib_database`].}
+\item{obj}{A \code{\link{hib_database}}.}
 
-\item{output_path}{A [`character`] pointing to a filename.}
+\item{output_path}{A \code{\link{character}} pointing to a filename.}
 }
 \description{
-The function [`save_hib`] saves the output of the formatted [`hib_database`] object in a specific
+The function \code{\link{save_hib}} saves the output of the formatted \code{\link{hib_database}} object in a specific
 place.
 }
 \details{

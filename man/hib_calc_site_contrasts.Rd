@@ -11,12 +11,12 @@ hib_calc_site_contrasts(
 )
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{metrics}{A [`character`] vector of dissimilarity metrics...}
+\item{metrics}{A \code{\link{character}} vector of dissimilarity metrics...}
 
-\item{baseline_lui}{A [`character`] or NULL, indicating the baseline LUI against
-which compositional dis/similarity is calculated per study - should match the 
+\item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
+which compositional dis/similarity is calculated per study - should match the
 value used when calculating compositional dis/similarity (hib_calc_div_between)}
 }
 \description{
@@ -24,7 +24,7 @@ This function calculates dissimilarity measures between sites within a study,
 for use as covariates in models of comopositional dis/similarity
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

@@ -4,24 +4,43 @@
 \alias{hib_fit_brms}
 \title{Fit a brms style mixed-effects model}
 \usage{
-hib_fit_brms(obj, form, family = gaussian, dataset_weights = NULL, ...)
+hib_fit_brms(
+  obj,
+  form,
+  family = gaussian,
+  weight_specs = list(weights = NULL, weight_type = NULL),
+  scale_specs = list(covars_to_scale = NULL, scale_func = NULL),
+  relevel_specs = c(NULL),
+  ...
+)
 }
 \arguments{
-\item{obj}{A [`Database`] object or a list of them.}
+\item{obj}{A \code{\link{Database}} object or a list of them.}
 
-\item{form}{A [`formula`] in the style of brms (as in lme4) - including fixed and random 
+\item{form}{A \code{\link{formula}} in the style of brms (as in lme4) - including fixed and random
 effects.}
 
-\item{family}{A [`family`] function, e.g. gaussian, poisson - as allowed by brms}
+\item{family}{A \code{\link{family}} function, e.g. gaussian, poisson - as allowed by brms}
 
-\item{dataset_weights}{A [`numeric`] vector containing the relative weights to
-assign to each dataset, should sum to 1. Note: if using this argument, the 
-supplied formula should have a response of the form [`y | weights(data_weight) ~`]
-The data_weight variable will be generated within the function call so as to 
-assign each observation per dataset an equal fraction of that dataset's weight -
-total weight sums to the total number of observations across all datasets.}
+\item{weight_specs}{A \code{\link{list}} containing "weights" and "weight_type".
+weights is a \code{\link{numeric}} vector containing the relative weights to
+assign to each dataset/site, should sum to 1.
+weight_type is a \code{\link{character}}, specifying either "dataset" or "site" - i.e. should
+the weights argument assign relative weights to whole datasets, or for sites in
+each dataset.
+Note: if using this argument, the supplied formula should have a response of
+the form \verb{y | weights(data_weight) ~}.
+The data_weight variable will be generated within the function call.}
 
-\item{...}{Any other named arguments that can be passed to brms::brm(), e.g. prior, data2}
+\item{scale_specs}{A \code{\link{list}} containing "covars_to_scale" and "scale_func".
+covars_to_scale is a \code{\link{character}} vector of numeric covariates that should be
+scaled prior to modelling. scale_func is a function that will be used to scale
+the specified covariates - if NULL, base::scale() will be used.}
+
+\item{relevel_specs}{A named \code{\link{vector}} where each item is:
+"<covar_to_relevel_name>" = "<base_level>".}
+
+\item{...}{Any other named arguments that can be passed to brms::brm(), e.g., prior, data2}
 }
 \description{
 This function fits a brms model using the supplied database, formula and other

@@ -4,27 +4,38 @@
 \alias{update_hib}
 \title{This function updates an existing Database object with further data}
 \usage{
-update_hib(obj, path_species, path_sites = "", version = "2022", ...)
+update_hib(
+  obj,
+  path_species,
+  path_sites = "",
+  version = "2022",
+  custom_version_name = "",
+  ...
+)
 }
 \arguments{
-\item{obj}{A [`Database`] object.}
+\item{obj}{A \code{\link{Database}} object.}
 
-\item{path_species}{A [`character`] pointing to a `PREDICTS` formatted occurrence database.}
+\item{path_species}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted occurrence database.}
 
-\item{path_sites}{A [`character`] pointing to a `PREDICTS` formatted site database, or "" otherwise.}
+\item{path_sites}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted site database, or "" otherwise.}
 
-\item{version}{A [`character`] denoting the version of the PREDICTS database to use. Has to be either
+\item{version}{A \code{\link{character}} denoting the version of the PREDICTS database to use. Has to be either
 \code{"2016"}, \code{"2022"} or \code{"custom"}. In the latter case it is important that formatting is consistent
 with earlier versions of the PREDICTS database (Default: \code{"2016"}).}
+
+\item{custom_version_name}{Optional \code{\link{character}} that will help indicate the source
+of a custom database - the create_hib function will internally generate
+paste("Custom - ", custom_version_name). Only used if version == "custom"}
 
 \item{...}{Other non-specified parameters.}
 }
 \description{
-This function can update an existing database, for example by adding the 2022 or a custom PREDICTS version 
-to it.
+This function can update an existing database, for example by adding the 2022
+or a custom PREDICTS version to it.
 }
 \details{
-Expects a [`Database`] object.
+Expects a \code{\link{Database}} object.
 }
 \examples{
 \dontrun{

@@ -7,10 +7,10 @@
 load_lu_legend(path_input)
 }
 \arguments{
-\item{path_input}{A [`character`] pointing to a saved RDS file.}
+\item{path_input}{A \code{\link{character}} pointing to a saved RDS file.}
 }
 \description{
-This function loads a previously created [`R6`] object containing a land-use legend class.
+This function loads a previously created \code{\link{R6}} object containing a land-use legend class.
 }
 \examples{
 \dontrun{

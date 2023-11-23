@@ -10,25 +10,34 @@ hib_mod_cv(
   fold_type,
   custom_col = NULL,
   random_seed = NULL,
+  re_form = list(NA),
   backtransform = NULL,
   use_original_mesh = NULL
 )
 }
 \arguments{
-\item{mod_obj}{A [`hib_XX_model`] object.}
+\item{mod_obj}{A \code{\link{hib_XX_model}} object.}
 
-\item{db_obj}{A [`hib_database`] object, or, if modelling used multiple data-
+\item{db_obj}{A \code{\link{hib_database}} object, or, if modelling used multiple data-
 sources, a list of database objects}
 
-\item{fold_type}{A [`character`] indicating the type of cross-validation; one
-of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", 
-    "Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom"}
+\item{fold_type}{A \code{\link{character}} indicating the type of cross-validation; one
+of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS",
+"Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom"}
 
-\item{custom_col}{A [`character`] indicating the column in the model data to 
+\item{custom_col}{A \code{\link{character}} indicating the column in the model data to
 use to define cross-validation folds, when fold_type == "Custom"}
 
-\item{random_seed}{A [`numeric`] indicating the random seed used to define
+\item{random_seed}{A \code{\link{numeric}} indicating the random seed used to define
 random cross-validation folds - only used if 'Random-X' in fold_type}
+
+\item{re_form}{A \code{\link{list}} indicating the random effects variables to be
+included in the cross-validation/insample predicitons - if multiple items supplied,
+each option will be used in a separate cv prediction.
+Values can be either NA (no random effects), NULL (all random effects), or a
+rhs formula specifying particular random effects to include.
+Note: only test set data points with random-effect values present in the
+training data will have predictions if re_form is not NA.}
 
 \item{backtransform}{A function to convert the model prediction back to the original
 scale of interest}
@@ -39,7 +48,7 @@ this is slightly more efficient, but may affect cv performance metrics - witheld
 sites will still exist in the mesh.}
 }
 \description{
-This function re-fits models on different subsets of the data, so that subsequent 
+This function re-fits models on different subsets of the data, so that subsequent
 evaluation of model performance can take place.
 }
 \details{

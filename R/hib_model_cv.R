@@ -106,7 +106,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
                                               T ~ fold_col))
   
   if ("Custom" %in% fold_type){
-    cv_spec <- bind_rows(cv_spec,
+    cv_spec <- dplyr::bind_rows(cv_spec,
                          expand.grid(fold_type = c("Custom"),
                                      fold_col = custom_col,
                                      stringsAsFactors = F) |>
@@ -624,7 +624,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   if ( (inherits(mod_obj, "hib_lme4_model")) | 
         (inherits(mod_obj, "hib_inla_model")) ){
     # print("WOOP - lme4/inla")
-    pb <- txtProgressBar(min = 1, max = max(2, n_folds), style = 3)
+    pb <- utils::txtProgressBar(min = 1, max = max(2, n_folds), style = 3)
   }
   # Get orig_form as a local var..
 
@@ -1030,7 +1030,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     if ( (inherits(mod_obj, "hib_lme4_model")) |
          (inherits(mod_obj, "hib_inla_model")) ){
       # print("PROGRESS UPDATE")
-      setTxtProgressBar(pb, i)
+      utils::setTxtProgressBar(pb, i)
     }
   }
   
@@ -1662,7 +1662,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
     
     
     fam <- NULL
-    if (is(mod@resp, "glmResp")){
+    if (inherits(mod@resp, "glmResp")){
       fam <- mod@resp$family
     }
     

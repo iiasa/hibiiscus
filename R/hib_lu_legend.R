@@ -5,7 +5,7 @@
 #' 
 #' This object is then used in other functions of this package to prepare or filter
 #' associated databases and enable ecological impact analyses. 
-#' @param input Either a [`character`] pointing to a saved RDS file, or a [`dataframe`]-like
+#' @param input Either a [`character`] pointing to a saved RDS file, or a [`data.frame`]-like
 #' object within the environment.
 #' @keywords database, land-use, legend
 #' @examples
