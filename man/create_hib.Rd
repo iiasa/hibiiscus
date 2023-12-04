@@ -40,8 +40,8 @@ Other or later \code{PREDICTS} formatted object need to be supplied via ...
 }
 \examples{
 \dontrun{
-  path_species <- "../../100_rawdata/PREDICTS/2016/database.rds"
-  path_sites <- "../../100_rawdata/PREDICTS/2016/sites.rds"
+  path_species <- "rawdata/PREDICTS/2016/database.rds"
+  path_sites <- "rawdata/PREDICTS/2016/sites.rds"
   obj <- create_hib(path_species, path_sites)
   obj
 }

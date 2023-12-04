@@ -2,42 +2,119 @@
 #' 
 #' @description 
 #' This is the template object for an inla model class.
-#' It contains all the functions inherent to the model class. Any functions in 
-#' the package that operate on or interact with the model(summarising, plottting) 
-#' need to be coded in here or provided separately.
+#' It contains all the functions inherent to the model class. 
+#' Any functions in the package that operate on or interact with the model
+#' (summarising, plotting) need to be coded in here or provided separately.
 #' @keywords internal
 #' @import R6
 #' @noRd
 hib_inla_model <- R6Class("hib_inla_model",
+                          # HibModelINLA
                           # Public data objects and functions
                           public = list(
+                            #' @field version (`character`)\cr
+                            #' Identifies the version of data used.
                             version = NULL,
+                            
+                            #' @field last_update (`character`)\cr
+                            #' Identifies the most recent update to the object (YYYY-MM-DD).
                             last_update = NULL,
-                            # paths = NULL, # ??
-                            data = NULL, # - restrict data to that used in model fitting... + version?
+                            
+                            #' @field data (`data.frame`)\cr
+                            #' The data used in model fitting.
+                            data = NULL,
+                            
+                            #' @field model (`inla`)\cr
+                            #' The inla model object.
                             model = NULL,
-                            # fixedef_coefficients = NULL,
-                            # metrics = NULL,
+                            
+                            #' @field processing_flags (`list()`)\cr
+                            #' Identifies the processing steps used for the Database 
+                            #' object that was used for model fitting.
                             processing_flags = NULL,
-                            # TODO: what else to include
+                            
+                            #' @field fixedef_coefficients (`data.frame`)\cr
+                            #' The fixed effects coefficients.
+                            fixedef_coefficients = NULL,
+                            
+                            #' @field user_formula (`formula` or `list`)\cr
+                            #' The model formula supplied by the user (includes
+                            #' the fixed effects and non-spatial random effects).
+                            user_formula = NULL,
+                            
+                            #' @field inla_fitted_formula (`formula`)\cr
+                            #' The fitted model formula (includes all effects).
+                            inla_fitted_formula = NULL,
+                            
+                            #' @field inla_incl_spatial_term (`logical`)\cr
+                            #' TRUE or FALSE, does the model include a spatial term.
+                            inla_incl_spatial_term = NULL,
+                            
+                            #' @field inla_stack (`inla.data.stack`)\cr
+                            #' The data.stack used in model fitting, an INLA object.
+                            inla_stack = NULL,
+                            
+                            #' @field inla_mesh (`inla.mesh` or `NULL`)\cr
+                            #' If used, the mesh used in model fitting.
+                            inla_mesh = NULL,
+                            
+                            #' @field inla_mesh_settings (`list`)\cr
+                            #' A list of specifications for generating the mesh,
+                            #' if used in modelling. 
+                            inla_mesh_settings = NULL,
+                            
+                            #' @field inla_mesh_source (`character` or `NULL`)\cr
+                            #' A description of the mesh source - if not null, 
+                            #' can be either "user_provided" or "mesh_settings".
+                            inla_mesh_source = NULL,
+                            
+                            #' @field site_locations (`data.frame`)\cr
+                            #' Contains columns for "SSBS", "Longitude" ,"Latitude".
+                            site_locations = NULL,
+                            
+                            # TODO
+                            # what else to include
                             # 
                             # inla output is fairly basic, but extensive...
-                            # need to have main effects
                             # important to store random effects params/hypers
-                            fixedef_coefficients = NULL,
-                            user_formula = NULL,
-                            inla_fitted_formula = NULL,
-                            inla_incl_spatial_term = NULL,
-                            inla_stack = NULL,
-                            inla_mesh = NULL,
-                            inla_mesh_settings = NULL,
-                            inla_mesh_source = NULL,
-                            site_locations = NULL,
-                            # Executed when created
-                            # TODO
                             # need to store A matrix
                             # store priors etc
-                            initialize = function(db_obj, # ??
+                            
+                            
+                            
+                            
+                            # Executed when created
+                            #' @description
+                            #' Creates a new instance of this [R6][R6::R6Class] class.
+                            #' Note, this object is constructed via the [hib_fit_inla]
+                            #' function found within this package.
+                            #' @param db_obj (`Database`, or `list`)\cr
+                            #'   The Database object/s used to fit the model.
+                            #' @param mod_df (`data.frame`)\cr
+                            #'   The data.frame of the data used in model fitting.
+                            #' @param inla_obj (`inla`)\cr
+                            #'   The inla model object.
+                            #' @param fixef_df (`data.frame`)\cr
+                            #'   The fixed effects from the fitted model.
+                            #' @param metr_ls (`list`)\cr
+                            #'   The list of model performance metrics.
+                            #' @param user_formula (`formula` or `list`)\cr
+                            #'   The model formula supplied by the user.
+                            #' @param inla_fitted_formula (`formula`)\cr
+                            #'   The fitted model formula.
+                            #' @param inla_incl_spatial_term (`logical`)\cr
+                            #'   TRUE or FALSE, does the model include a spatial term.
+                            #' @param inla_stack (`inla.data.stack`)\cr
+                            #'   The data.stack used in model fitting, an INLA object.
+                            #' @param inla_mesh (`inla.mesh` or `NULL`)\cr
+                            #'   If used, the mesh used in model fitting.
+                            #' @param inla_mesh_settings (`list`)\cr
+                            #'   A list of specifications for generating the mesh. 
+                            #' @field inla_mesh_source (`character` or `NULL`)\cr
+                            #'   A description of the mesh source.
+                            #' @param n_spp (`integer`)\cr
+                            #'   Number of species contributing to the fitted model.
+                            initialize = function(db_obj, 
                                                   mod_df,
                                                   inla_obj,
                                                   # metr_vec,
@@ -145,7 +222,11 @@ hib_inla_model <- R6Class("hib_inla_model",
                             },
                             # Functions
                             
-                            # Base printout function
+                            #' @description
+                            #' Base printout function presents core information about the 
+                            #' object.
+                            #'
+                            #' @return (`NULL`).
                             print = function(){
                               stats <- list(number_sites = self$processing_flags$N_sites,
                                             number_species = self$processing_flags$N_spp ) 
@@ -196,7 +277,13 @@ hib_inla_model <- R6Class("hib_inla_model",
                                              "\tDIC \t ", m_summ$dic$dic, "\n",
                                              "\twAIC \t ", m_summ$waic$waic, "\n"))
                             },
-                            # Save object
+                            
+                            #' @description
+                            #' Function to save the object to the specified file-path 
+                            #' ('output_path', must be '.rds').
+                            #'
+                            #' @param output_path (`character()`)
+                            #' @return (`NULL`).
                             save_hib = function(output_path = NULL){
                               assertthat::assert_that(
                                 is.null(output_path) || is.character(output_path)
@@ -226,7 +313,13 @@ hib_inla_model <- R6Class("hib_inla_model",
                                                       msg = "Writing a copy of the model failed...")
                               invisible()
                             },
-                            # TODO: plot function ...
+                            
+                            #' @description
+                            #' Function to generate figures summarising the model.
+                            #' 
+                            #' @param type (`character()`) Options are: "fixed-effects",
+                            #' "random-effects", "spatial-random-field", "map-sites".
+                            #' @return (`ggplot`).
                             plot = function(type = "fixed-effects"){
                               assertthat::assert_that(is.character(type))
                               # stop("Function in progress...")

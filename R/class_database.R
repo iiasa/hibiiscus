@@ -1,5 +1,5 @@
 #' Template objects for databases 
-#' 
+#' @title Database Object
 #' @description 
 #' This is the template object for a database containing PREDICTS or PREDICTS-like data.
 #' It contains all the functions inherent to the database. Any functions in the package that is 
@@ -9,29 +9,69 @@
 #' @import R6
 #' @noRd
 Database <- R6Class("Database",
+                  # HibDatabase
                   # Public data objects and functions
                   public = list(
+                    #' @field version (`character()`)\cr
+                    #' Identifies the version of data used.
                     version = NULL,
+                    
+                    #' @field last_update (`character()`)\cr
+                    #' Identifies the most recent update to the Database (YYYY-MM-DD).
                     last_update = NULL,
+                    
+                    #' @field paths (`list()`)\cr
+                    #' Identifies the files used to create the Database object.
                     paths = NULL,
+                    
+                    #' @field sites (`data.frame`)\cr
+                    #' Stores information on the sites within the Database.
                     sites = NULL,
+                    
+                    #' @field species (`data.frame`)\cr
+                    #' Stores information on the species within the Database.
                     species = NULL,
-                    # diversity = NULL,
+                    
+                    #' @field diversity_within (`tibble`)\cr
+                    #' Stores information on biodiversity metrics calculated for
+                    #' each site (i.e. alpha diversity).
                     diversity_within = NULL,
+                    
+                    #' @field diversity_between (`tibble`)\cr
+                    #' Stores information on biodiversity metrics calculated 
+                    #' between sites, within studies (i.e. beta diversity).
                     diversity_between = NULL,
                     
+                    #' @field site_contrasts (`data.frame`)\cr
+                    #' Stores information on 'distances' between sites, within 
+                    #' studies (e.g., geographic distance).
                     site_contrasts = NULL,
                     
+                    #' @field processing_flags (`list()`)\cr
+                    #' Stores information on processing that has occurred (e.g.,
+                    #' filtering data, adding data).
                     processing_flags = NULL,
+
+
                     # Executed when created
+                    #' @description
+                    #' Creates a new instance of this [R6][R6::R6Class] class.
+                    #' Note, this object is constructed via the [create_hib] and 
+                    #' [update_hib] functions found within this package.
+                    #' @param version (`character()`)\cr
+                    #'   Text indicating the version of the database being created.
+                    #' @param paths (`list()`)\cr
+                    #'   List of paths to the 'species' and 'site' data to be loaded.
                     initialize = function(version, paths){
-                      assertthat::assert_that(is.character(version), is.list(paths))
+                      assertthat::assert_that(
+                        is.character(version), 
+                        is.list(paths))
                       
                       # path$sites/species is character - already checked in create_hib
-    
                       # ------ #
 
-                      message(crayon::green(paste0("Initializing input datasets for ", version, " data ...\n")) )
+                      message(crayon::green(paste0("Initializing input datasets for ", 
+                                                   version, " data ...\n")) )
                       
                       # %%%%%
                       # Load species data
@@ -188,7 +228,7 @@ Database <- R6Class("Database",
                       
                       # Save inputs in list
                       self$version <- version
-                      self$last_update <- lubridate::today()
+                      self$last_update <- lubridate::today() # lubridate::now()
                       self$paths <- paths
                       self$sites <- sites
                       self$species <- species
@@ -201,7 +241,14 @@ Database <- R6Class("Database",
                                                     lu_legend_source = "Original LU/I legend."
                                                     )
                     },
-                    # Self check function that everything is in order
+                    
+                    #' @description
+                    #' Self check function to ensure that the site and species
+                    #' data.frames contain the correct columns and align in content.
+                    #'
+                    #' @param sites (`data.frame`).
+                    #' @param species (`data.frame`).
+                    #' @return (`NULL`).
                     checkself = function(sites = self$sites, species = self$species){
                       # ------ #
                       # Security checks
@@ -217,7 +264,6 @@ Database <- R6Class("Database",
                         assertthat::has_name(sites, "LUI"), 
                         assertthat::has_name(sites, "Longitude"), 
                         assertthat::has_name(sites, "Latitude"),
-
 
                         # And the species data
                         assertthat::has_name(species, "Source_ID"),
@@ -251,7 +297,12 @@ Database <- R6Class("Database",
                       )
                       invisible()
                     },
-                    # Base printout function
+                    
+                    #' @description
+                    #' Base printout function presents core information about the 
+                    #' Database object.
+                    #'
+                    #' @return (`NULL`).
                     print = function() {
                       # Compute some stats
                       
@@ -354,7 +405,13 @@ Database <- R6Class("Database",
                         )
                       
                     },
-                    # Save object
+                    
+                    #' @description
+                    #' Function to save the Database object to the specified 
+                    #' file-path ('output_path', must be '.rds').
+                    #'
+                    #' @param output_path (`character()`)
+                    #' @return (`NULL`).
                     save_hib = function(output_path = NULL){
                       assertthat::assert_that(
                         is.character(output_path)
@@ -389,7 +446,14 @@ Database <- R6Class("Database",
                                               msg = "Writing a copy of the database failed...")
                       invisible()
                     },
-                    # Correct measurement for sampling effort
+                    
+                    #' @description
+                    #' Function to apply effort correction to the species data. 
+                    #' Uses a simple, linear scaling, such that sampling effort
+                    #' of a site is scaled relative to the maximum value per study,
+                    #' and multiplied by the original measure of diversity.
+                    #'
+                    #' @return (`Database`).
                     hib_effort_correction = function(){
                       # Assume data is in self$species?
                       # Check that relevant columns are present
@@ -417,6 +481,13 @@ Database <- R6Class("Database",
                       invisible(self)
                     } ,
                     
+                    #' @description
+                    #' Function to generate figures summarising the data present
+                    #' in the Database.
+                    #' 
+                    #' @param type (`character()`) Options are: "map-sites", 
+                    #' "map-studies", "biome-N", "ecoregion-N", "realm-N", "class-N".
+                    #' @return (`ggplot`).
                     plot = function(type = "map-sites"){
                       # Figure options
                       # - site map (map-sites)

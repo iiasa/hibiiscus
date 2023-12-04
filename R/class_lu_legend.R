@@ -16,7 +16,7 @@
 
 
 #' Template object for land-use legend 
-#' 
+#' @title LU Legend object
 #' @description 
 #' This is the template object for a land-use legend that can be linked to a database
 #' object - contains info on unique land-use and management/intensity types
@@ -24,19 +24,46 @@
 #' @import R6
 #' @noRd
 lu_legend <- R6Class("lu_legend",
+                    # LULegend ??
+                     
                     # Public data objects and functions
                     public = list(
-                      # version = NULL,
+                      #' @field last_update (`character()`)\cr
+                      #' Identifies the most recent update to the legend object (YYYY-MM-DD)
                       last_update = NULL,
                       
+                      #' @field input_data (`character()`)\cr
+                      #' Identifies the source of the input data, either "file (\[...\])",
+                      #' or "dataframe \[...\]".
                       input_data = NULL,
+                      
+                      #' @field lu_df (`data.frame`)\cr
+                      #' Contains the LU legend dataframe, i.e, A data.frame 
+                      #' containing columns for "SSBS", "Predominant_land_use", 
+                      #' "Use_intensity" and "LUI".
                       lu_df = NULL,
+                      
+                      #' @field land_use (`character()`)\cr
+                      #' The unique values of lu_df$Predominant_land_use.
                       land_use = NULL,
+                      
+                      #' @field management (`character()`)\cr
+                      #' The unique values of lu_df$Use_intensity
                       management = NULL,
+                      
+                      #' @field land_use_management (`character()`)\cr
+                      #' The unique values of lu_df$LUI
                       land_use_management = NULL,
-                      # processing_flags = NULL,
                       
                       # Executed when created
+                      #' @description
+                      #' Creates a new instance of this [R6][R6::R6Class] class.
+                      #' Note, this object is constructed via the [create_lu_legend]
+                      #' function found within this package.
+                      #' @param input (`character()` or `data.frame`)\cr
+                      #'   The source data used to generate the LU legend
+                      #' @param input_chr (`character()`)\cr
+                      #'   Text indicating the source of the data.
                       initialize = function(input, input_chr){
                         # Check that input is either a character filepath
                         # Or dataframe/tibble
@@ -137,7 +164,13 @@ lu_legend <- R6Class("lu_legend",
                         self$checkself()
                         
                       },
-                      # Self check function that everything is in order
+                      
+                      #' @description
+                      #' Self check function to ensure that the legend data.frame
+                      #' contains the correct columns.
+                      #'
+                      #' @param df (`data.frame`).
+                      #' @return (`NULL`).
                       checkself = function(df = self$lu_df){
                         # ------ #
                         # Security checks - recheck
@@ -163,7 +196,12 @@ lu_legend <- R6Class("lu_legend",
                         )
                         invisible()
                       },
-                      # Base printout function
+                      
+                      #' @description
+                      #' Base printout function presents core information about the 
+                      #' object.
+                      #'
+                      #' @return (`NULL`).
                       print = function() {
                         # Compute some stats
                         stats <- list(number_sites = length( unique(self$lu_df$SSBS) ),
@@ -185,7 +223,13 @@ lu_legend <- R6Class("lu_legend",
                         )
                         
                       },
-                      # Save object
+                      
+                      #' @description
+                      #' Function to save the object to the specified  file-path 
+                      #' ('output_path', must be '.rds').
+                      #'
+                      #' @param output_path (`character()`)
+                      #' @return (`NULL`).
                       save_legend = function(output_path = NULL){
                         assertthat::assert_that(
                           is.character(output_path)
@@ -216,8 +260,13 @@ lu_legend <- R6Class("lu_legend",
                         invisible()
                       },
                       
-                      # TODO:
-                      # summary plots - distr of luis... - either lu, i, or lui
+                      #' @description
+                      #' Function to generate figures summarising the data present
+                      #' in the LU legend
+                      #' 
+                      #' @param x_var (`character()`) Options are: "land-use", 
+                      #' "use-intensity", "land-use:use-intensity".
+                      #' @return (`ggplot`).
                       plot = function(x_var = "land-use"){
                         
                         x_var <- match.arg(x_var,

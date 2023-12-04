@@ -1,25 +1,54 @@
 #' Template objects for brms model 
 #' 
+#' @title BRMS model object
 #' @description 
 #' This is the template object for a brms model class.
-#' It contains all the functions inherent to the model class. Any functions in 
-#' the package that operate on or interact with the model(summarising, plottting) 
-#' need to be coded in here or provided separately.
+#' It contains all the functions inherent to the model class. 
+#' Any functions in the package that operate on or interact with the model
+#' (summarising, plotting) need to be coded in here or provided separately.
 #' @keywords internal
 #' @import R6
 #' @noRd
 hib_brms_model <- R6Class("hib_brms_model",
+                          # HibModelBRMS HibBRMSModel
                           # Public data objects and functions
                           public = list(
+                            #' @field version (`character`)\cr
+                            #' Identifies the version of data used.
                             version = NULL,
+                            
+                            #' @field last_update (`character`)\cr
+                            #' Identifies the most recent update to the object (YYYY-MM-DD).
                             last_update = NULL,
-                            # paths = NULL, # ??
-                            data = NULL, # - restrict data to that used in model fitting... + version?
+                            
+                            #' @field data (`data.frame`)\cr
+                            #' The data used in model fitting.
+                            data = NULL, 
+                            
+                            #' @field model (`brmsfit`)\cr
+                            #' The brms model object.
                             model = NULL,
+                            
+                            #' @field extra_args (`list()`)\cr
+                            #' Identifies addition arguments supplied during model 
+                            #' fitting (found in '...' when calling `hib_fit_brms`).
                             extra_args = NULL,
+                            
+                            #' @field fixedef_coefficients (`data.frame`)\cr
+                            #' The fixed effects coefficients.
                             fixedef_coefficients = NULL,
+                            
+                            #' @field metrics (`list`)\cr
+                            #' List containing model performance metrics.
                             metrics = NULL,
+                            
+                            #' @field processing_flags (`list()`)\cr
+                            #' Identifies the processing steps used for the Database 
+                            #' object that was used for model fitting.
                             processing_flags = NULL,
+                            
+                            #' @field site_locations (`data.frame`)\cr
+                            #' Contains columns for "SSBS", "Longitude" ,"Latitude"
                             site_locations = NULL,
                             # TODO: what else to include
                             # 
@@ -28,6 +57,24 @@ hib_brms_model <- R6Class("hib_brms_model",
                             # need model ranks, if dredged..
                             
                             # Executed when created
+                            #' @description
+                            #' Creates a new instance of this [R6][R6::R6Class] class.
+                            #' Note, this object is constructed via the [hib_fit_brms]
+                            #' function found within this package.
+                            #' @param db_obj (`Database`, or `list`)\cr
+                            #'   The Database object/s used to fit the model.
+                            #' @param mod_df (`data.frame`)\cr
+                            #'   The data.frame of the data used in model fitting.
+                            #' @param brms_obj (`brmsfit`)\cr
+                            #'   The brms model object.
+                            #' @param fixef_df (`data.frame`)\cr
+                            #'   The fixed effects from the fitted model.
+                            #' @param metr_ls (`list`)\cr
+                            #'   The list of model performance metrics.
+                            #' @param n_spp (`integer`)\cr
+                            #'   Number of species contributing to the fitted model.
+                            #' @param extra_args (`list`)\cr
+                            #'   Additional arguments specified during model fitting.
                             initialize = function(db_obj, # ??
                                                   mod_df,
                                                   brms_obj,
@@ -118,7 +165,11 @@ hib_brms_model <- R6Class("hib_brms_model",
                             },
                             # Functions
                             
-                            # Base printout function
+                            #' @description
+                            #' Base printout function presents core information about the 
+                            #' object.
+                            #'
+                            #' @return (`NULL`).
                             print = function(){
                               # Padding numbers function, from:
                               # https://github.com/jthomasmock/gtExtras/blob/HEAD/R/pad_fn.R
@@ -185,7 +236,13 @@ hib_brms_model <- R6Class("hib_brms_model",
                                              "\tWAIC   \t ", metr["waic"], "\n"))
                               
                             },
-                            # Save object
+                            
+                            #' @description
+                            #' Function to save the object to the specified file-path 
+                            #' ('output_path', must be '.rds').
+                            #'
+                            #' @param output_path (`character()`)
+                            #' @return (`NULL`).
                             save_hib = function(output_path = NULL){
                               assertthat::assert_that(
                                 is.null(output_path) || is.character(output_path)
@@ -216,6 +273,12 @@ hib_brms_model <- R6Class("hib_brms_model",
                               invisible()
                             },
                             
+                            #' @description
+                            #' Function to generate figures summarising the model.
+                            #' 
+                            #' @param type (`character()`) Options are: "fixed-effects",
+                            #' "random-effects", "map-sites".
+                            #' @return (`ggplot`).
                             plot = function(type = "fixed-effects"){
                               # sjPlot::plot_model(self$model, 
                               #                    show.intercept = T)
@@ -426,9 +489,13 @@ hib_brms_model <- R6Class("hib_brms_model",
                               
                               (plt)
                             },
+                            
+                            #' @description
+                            #' Function to assess the model.
+                            #' 
+                            #' @return (`NULL`).
                             check_model = function(){
                               m <- self$model
-                              # print(m)
                               performance::check_model(m)
                             }
                           ),

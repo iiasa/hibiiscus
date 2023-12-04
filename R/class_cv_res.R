@@ -9,28 +9,65 @@
 #' @import R6
 #' @noRd
 hib_cv_res <- R6Class("hib_cv_res",
+                      # HibCV
                       # Public data objects and functions
                       public = list(
                         # version = NULL,
+                        #' @field last_update (`character`)\cr
+                        #' Identifies the most recent update to the object (YYYY-MM-DD).
                         last_update = NULL,
+                        
+                        #' @field model_type (`character`)\cr
+                        #' Identifies the type of model; one of "hib_lme4_model", 
+                        #' "hib_inla_model", "hib_brms_model".
                         model_type = NULL,
+                        
+                        #' @field model_type (`list`)\cr
+                        #' Contains a list of core model information
                         original_model_obj = NULL, # All model info, except data, and functions
+                        
+                        #' @field cv_results (`list`)\cr
+                        #' Contains the list of results from cross-validation
                         cv_results = NULL,
+                        
+                        #' @field insample_results (`list`)\cr
+                        #' Contains the list of results from in-sample validation
                         insample_results = NULL,
+                        
+                        #' @field re_form (`list`)\cr
+                        #' A list of the re_form model structures used in evaluation.
                         re_form = NULL,
+                        
+                        #' @field use_original_mesh (`logical` or `NULL`)\cr
+                        #' Indicates use of original mesh for spatial INLA models.
                         use_original_mesh = NULL,
                         
                         # Executed when created
+                        #' @description
+                        #' Creates a new instance of this [R6][R6::R6Class] class.
+                        #' Note, this object is constructed via the [hib_mod_cv]
+                        #' function found within this package.
+                        #' @param mod_obj (`hib_X_model`)\cr
+                        #'   The model object used in cross-validation.
+                        #' @param cv_res (`list`)\cr
+                        #'   The results of cross-validation.
+                        #' @param insamp_res (`list`)\cr
+                        #'   The results of ins-sample validation.
+                        #' @param re_form (`list`)\cr
+                        #'   The list of random effects structures used in model evaluation.
+                        #' @param use_orig_mesh (`logical` or `NULL`)\cr
+                        #'   Indicates use of original mesh for spatial INLA models
                         initialize = function(mod_obj,
                                               cv_res,
                                               insamp_res,
                                               re_form,
-                                              use_orig_mesh
-                        ){
+                                              use_orig_mesh){
                           # - some assertion checks
                           assertthat::assert_that(
                             # Check model
-                            inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
+                            inherits(mod_obj, "hib_lme4_model") || 
+                              inherits(mod_obj, "hib_inla_model") || 
+                              inherits(mod_obj, "hib_brms_model"),
                             # Check cv outputs
                             is.list(cv_res),
                             is.list(insamp_res),
@@ -114,7 +151,11 @@ hib_cv_res <- R6Class("hib_cv_res",
                         },
                         # Functions
                         
-                        # Base printout function
+                        #' @description
+                        #' Base printout function presents core information about the 
+                        #' object.
+                        #'
+                        #' @return (`NULL`).
                         print = function(){
                           # Padding numbers function, from:
                           # https://github.com/jthomasmock/gtExtras/blob/HEAD/R/pad_fn.R
@@ -323,7 +364,13 @@ hib_cv_res <- R6Class("hib_cv_res",
                           #                "\tBIC               \t ", metr["BIC"], "\n"))
                           
                         },
-                        # Save object
+                        
+                        #' @description
+                        #' Function to save the object to the specified file-path 
+                        #' ('output_path', must be '.rds').
+                        #'
+                        #' @param output_path (`character()`)
+                        #' @return (`NULL`).
                         save_hib = function(output_path = NULL){
                           assertthat::assert_that(
                             is.null(output_path) || is.character(output_path)
@@ -354,7 +401,17 @@ hib_cv_res <- R6Class("hib_cv_res",
                           invisible()
                         },
                         
-                        # plot function - 
+                        #' @description
+                        #' Function to generate figures summarising the cross-
+                        #' validation results.
+                        #' 
+                        #' @param type (`character()`) Options are: "coefficients",
+                        #' "coefficients-summary", "obs-v-pred", "obs-v-error", 
+                        #' "pred-v-error", "metrics", "map-sites".
+                        #' @param metrics (`character`) Options are the lower-case
+                        #' abbreviations of calculated error metrics. - Only needed 
+                        #' if type == "metrics".
+                        #' @return (`ggplot`).
                         plot = function(type = "metrics",
                                         metrics = c("rmse", "rsq")){
                           
@@ -1162,7 +1219,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                             
                             
                             nrow_cv_df <- nrow(cv_df)
-                            
+
                             if (nrow_cv_df > 0){
                               # Add cv_type that isn't in base_cv_levs to cv_levs
                               add_cv_levs <- unique(cv_df$cv_type)

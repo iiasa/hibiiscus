@@ -1,26 +1,56 @@
 #' Template objects for lme4 model 
 #' 
+#' @title LME4 model object
 #' @description 
 #' This is the template object for an lme4 model class.
-#' It contains all the functions inherent to the model class. Any functions in 
-#' the package that operate on or interact with the model(summarising, plottting) 
-#' need to be coded in here or provided separately.
+#' It contains all the functions inherent to the model class. 
+#' Any functions in the package that operate on or interact with the model
+#' (summarising, plotting) need to be coded in here or provided separately.
 #' @keywords internal
 #' @import R6
 #' @noRd
 hib_lme4_model <- R6Class("hib_lme4_model",
+                    # HibModelLME4    HibLME4Model
+                    
                     # Public data objects and functions
                     public = list(
+                      #' @field version (`character`)\cr
+                      #' Identifies the version of data used.
                       version = NULL,
+                      
+                      #' @field last_update (`character`)\cr
+                      #' Identifies the most recent update to the object (YYYY-MM-DD).
                       last_update = NULL,
-                      # paths = NULL, # ??
-                      data = NULL, # - restrict data to that used in model fitting... + version?
+                      
+                      #' @field data (`data.frame`)\cr
+                      #' The data used in model fitting.
+                      data = NULL, 
+                      
+                      #' @field model (`merMod`)\cr
+                      #' The lme4 model object.
                       model = NULL,
+                      
+                      #' @field fixedef_coefficients (`data.frame`)\cr
+                      #' The fixed effects coefficients.
                       fixedef_coefficients = NULL,
+                      
+                      #' @field ci_type (`character`, or `NA`)\cr
+                      #' Identifies the types of confidence intervals calculated.
                       ci_type = NULL,
+                      
+                      #' @field metrics (`numeric`)\cr
+                      #' Named vector containing model performance metrics.
                       metrics = NULL,
+                      
+                      #' @field processing_flags (`list()`)\cr
+                      #' Identifies the processing steps used for the Database 
+                      #' object that was used for model fitting.
                       processing_flags = NULL,
+                      
+                      #' @field site_locations (`data.frame`)\cr
+                      #' Contains columns for "SSBS", "Longitude" ,"Latitude".
                       site_locations = NULL,
+                      
                       # TODO: what else to include
                       # 
                       # lme4 output is pretty comprehensive, this is just a wrapper...
@@ -28,6 +58,24 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       # need model ranks, if dredged..
                       
                       # Executed when created
+                      #' @description
+                      #' Creates a new instance of this [R6][R6::R6Class] class.
+                      #' Note, this object is constructed via the [hib_fit_lme4]
+                      #' function found within this package.
+                      #' @param db_obj (`Database`, or `list`)\cr
+                      #'   The Database object/s used to fit the model.
+                      #' @param mod_df (`data.frame`)\cr
+                      #'   The data.frame of the data used in model fitting.
+                      #' @param lme4_obj (`merMod`)\cr
+                      #'   The lme4 model object.
+                      #' @param fixef_df (`data.frame`)\cr
+                      #'   The fixed effects from the fitted model.
+                      #' @param ci_type (`character`, or `NA`)\cr
+                      #'   The type of confidence intervals calculated.
+                      #' @param metr_vec (`numeric`)\cr
+                      #'   The named vector of model performance metrics.
+                      #' @param n_spp (`integer`)\cr
+                      #'   Number of species contributing to the fitted model.
                       initialize = function(db_obj, # ??
                                             mod_df,
                                             lme4_obj,
@@ -115,7 +163,11 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                       },
                       # Functions
                       
-                      # Base printout function
+                      #' @description
+                      #' Base printout function presents core information about the 
+                      #' object.
+                      #'
+                      #' @return (`NULL`).
                       print = function(){
                         # Padding numbers function, from:
                         # https://github.com/jthomasmock/gtExtras/blob/HEAD/R/pad_fn.R
@@ -183,7 +235,13 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                        "\tBIC               \t ", metr["BIC"], "\n"))
                         
                       },
-                      # Save object
+                      
+                      #' @description
+                      #' Function to save the object to the specified file-path 
+                      #' ('output_path', must be '.rds').
+                      #'
+                      #' @param output_path (`character()`)
+                      #' @return (`NULL`).
                       save_hib = function(output_path = NULL){
                         assertthat::assert_that(
                           is.null(output_path) || is.character(output_path)
@@ -213,7 +271,13 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                                                 msg = "Writing a copy of the model failed...")
                         invisible()
                       },
-                      # TODO: plot function - just use sjplot?
+                      
+                      #' @description
+                      #' Function to generate figures summarising the model.
+                      #' 
+                      #' @param type (`character()`) Options are: "fixed-effects",
+                      #' "random-effects", "map-sites".
+                      #' @return (`ggplot`).
                       plot = function(type = "fixed-effects"){
                         # sjPlot::plot_model(self$model, 
                         #                    show.intercept = T)
@@ -406,9 +470,13 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                         
                         (plt)
                       },
+
+                      #' @description
+                      #' Function to assess the model.
+                      #' 
+                      #' @return (`NULL`).
                       check_model = function(){
                         m <- self$model
-                        # print(m)
                         performance::check_model(m)
                       }
                     ),

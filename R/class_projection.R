@@ -12,6 +12,7 @@
 #' @import R6
 #' @noRd
 hib_mod_projection <- R6Class("hib_mod_projection",
+                              # HibProj
                               # Public data objects and functions
                               public = list(
                                 # version = NULL,
@@ -25,6 +26,25 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                 aoa = NULL,
                                 # processing_flags = NULL,
                                 
+                                #' @description
+                                #' Creates a new instance of this [R6][R6::R6Class] class.
+                                #' Note, this object is constructed via the [hib_mod_project]
+                                #' function found within this package.
+                                #' @param obj (`hib_X_model`)\cr
+                                #'   The model object used in cross-validation.
+                                #' @param proj (`data.frame`, `SpatRaster`, or `list`)\cr
+                                #'   The results of model projection.
+                                #' @param rescale_pred (`logical`)\cr
+                                #'   Describes whether projected values are rescaled
+                                #'   relative to the baseline land-use class.
+                                #' @param lme4_specs (`list`)\cr
+                                #'   List of specifications used for lme4 models.
+                                #' @param inla_specs (`list`)\cr
+                                #'   List of specifications used for inla models.
+                                #' @param brms_specs (`list`)\cr
+                                #'   List of specifications used for brms models.
+                                #' @param aoa_res (`list`, or `NULL`)\cr
+                                #'   List of Area-of-Applicability results.
                                 # Executed when created
                                 initialize = function(obj,
                                                       proj,
@@ -98,7 +118,12 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   # )
                                   # invisible()
                                 },
-                                # Base printout function
+                                
+                                #' @description
+                                #' Base printout function presents core information about the 
+                                #' object.
+                                #'
+                                #' @return (`NULL`).
                                 print = function() {
                                   # stop("Print functionality in progress...")
                                   # Compute some stats/get some info
@@ -229,6 +254,13 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                 },
                                 # Save object
+                                
+                                #' @description
+                                #' Function to save the object to the specified file-path 
+                                #' ('output_path', must be '.rds').
+                                #'
+                                #' @param output_path (`character()`)
+                                #' @return (`NULL`).
                                 # TODO - have a generic save_hib function for all hib datatypes
                                 # Everything is just an RDS anyway
                                 save_projection = function(output_path = NULL){
@@ -263,6 +295,18 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   invisible()
                                 },
                                 
+                                #' @description
+                                #' Function to generate figures summarising the
+                                #' projection results.
+                                #' 
+                                #' @param type (`character()`) Options are: 
+                                #' "response-map", "uncertainty-map", "bivariate-map",
+                                #' "response-distr", "uncertainty-distr", "bivariate-distr".
+                                #' @param response_var (`character`, or `NULL`) 
+                                #' @param uncertainty_var (`character`, or `NULL`) 
+                                #' @param aoa_mask (`logical`) 
+                                #' @param aoa_var (`character`, or `NULL`) 
+                                #' @return (`ggplot`).
                                 plot = function(type = "response-map",
                                                 response_var = NULL,
                                                 uncertainty_var = NULL,
@@ -286,9 +330,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   
                                   
                                   # TODO: incorporate aoa info
-                                  # Mask "-map" plots
                                   # Colour "-distr" plots - or rm from plot??
-                                  # Which aoa - i.e. which cv type...
                                   
                                   
                                   basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
