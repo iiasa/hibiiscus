@@ -34,7 +34,6 @@
 hib_fit_brms <- function(obj, 
                          form,
                          family = gaussian,
-                         # dataset_weights = NULL,
                          weight_specs = list(weights = NULL,
                                              weight_type = NULL), # list(weights = c(a, b), weight_type = "dataset") # or "site"
                          scale_specs = list(covars_to_scale = NULL,

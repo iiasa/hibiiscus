@@ -32,11 +32,11 @@ hib_calc_aoa <- function(mod_obj,
   # Get covars and response names
   # lme4:
   if (inherits(mod_obj, "hib_lme4_model")){
-    all_covars <- all.vars(formula(delete.response(terms(formula(mod_obj$model)))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(stats::formula(mod_obj$model)))))
     rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     
-    resp_form <- formula(mod_obj$model)[[2]]
+    resp_form <- stats::formula(mod_obj$model)[[2]]
   }
   
   # inla:
@@ -50,8 +50,8 @@ hib_calc_aoa <- function(mod_obj,
     }
     # OR
     # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
-    all_covars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$full))))
-    fix_vars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$response_fixed))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$full))))
+    fix_vars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$response_fixed))))
     # ignore "Intercept" too
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
@@ -63,7 +63,7 @@ hib_calc_aoa <- function(mod_obj,
   
   # brms:
   if (inherits(mod_obj, "hib_brms_model")){
-    all_covars <- all.vars(formula(delete.response(terms(mod_obj$model$formula$formula))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$model$formula$formula))))
     rand_vars <- names(brms::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     # Intercept??
@@ -169,7 +169,7 @@ hib_calc_aoa <- function(mod_obj,
       # get min/mean of rows
       tmp_dist <- tmp_sub |> 
         dplyr::select(-c(SSBS, fold_id)) |>
-        dist() |>
+        stats::dist() |>
         as.matrix()
       
       diag(tmp_dist) <- NA
@@ -186,7 +186,7 @@ hib_calc_aoa <- function(mod_obj,
       dplyr::mutate(DI = row_min / mean(row_mean, na.rm = T))
     
     # 7. threshold DI for each cv-type
-    DI_thr <- quantile(tmp_di_df$DI, 0.75, na.rm = T) + (1.5 * stats::IQR(tmp_di_df$DI, na.rm=T))
+    DI_thr <- stats::quantile(tmp_di_df$DI, 0.75, na.rm = T) + (1.5 * stats::IQR(tmp_di_df$DI, na.rm=T))
     
     # add info to list (cv_type, DI_thr, DI_mean_row_mean, DI_df, )
     DI_ls[[i]] <- list(fold_type = tmp_fold_type,
@@ -326,7 +326,7 @@ calc_test_DI <- function(train_DI,
       # print(unique(data_df[, cat_var]))
       
       # then create dummy variables for the remaining levels in train:
-      data_dummy <- predict(caret::dummyVars(paste0("~", cat_var), data = mod_data, 
+      data_dummy <- stats::predict(caret::dummyVars(paste0("~", cat_var), data = mod_data, 
                                              sep = ""), data_df)
       data_dummy[is.na(data_df[, cat_var]),] <- 0
       
@@ -428,14 +428,14 @@ aoa_get_weights_local <- function(model, variables){
     inherits(model, "train"),
     is.character(variables)
   )
-  weight <- tryCatch(if(model$modelType=="Classification"){
-    as.data.frame(t(apply(caret::varImp(model,scale=F)$importance,1,mean)))
-  }else{
-    as.data.frame(t(caret::varImp(model,scale=F)$importance[,"Overall"]))
-  }, error=function(e) e)
-  if(!inherits(weight, "error") & length(variables)>1){
-    names(weight)<- rownames(caret::varImp(model,scale=F)$importance)
-  }else{
+  weight <- tryCatch(if (model$modelType == "Classification"){
+    as.data.frame(t(apply(caret::varImp(model,scale=F)$importance, 1, mean)))
+  } else {
+    as.data.frame(t(caret::varImp(model, scale=FALSE)$importance[, "Overall"]))
+  }, error = function(e) e)
+  if (!inherits(weight, "error") & length(variables) > 1){
+    names(weight) <- rownames(caret::varImp(model,scale = FALSE)$importance)
+  } else {
     # set all weights to 1
     weight <- as.data.frame(t(rep(1, length(variables))))
     names(weight) = variables
@@ -445,10 +445,10 @@ aoa_get_weights_local <- function(model, variables){
   }
   
   #set negative weights to 0
-  if(!inherits(weight, "error")){
-    weight <- weight[, stats::na.omit(match(variables, names(weight))), drop = F]
-    if (any(weight<0)){
-      weight[weight<0]<-0
+  if (!inherits(weight, "error")){
+    weight <- weight[, stats::na.omit(match(variables, names(weight))), drop = FALSE]
+    if (any(weight < 0)){
+      weight[weight < 0] <- 0
       message("negative weights were set to 0")
     }
   }
@@ -474,36 +474,36 @@ aoa_categorial_train_local <- function(train, variables, weight){
     is.list(weight)
   )
   # get all categorial variables
-  catvars <- tryCatch(names(train)[which(sapply(train[,variables, drop = F], class)%in%c("factor","character"))],
-                      error=function(e) e)
+  catvars <- tryCatch(names(train)[which(sapply(train[,variables, drop = FALSE], class) %in% c("factor", "character"))],
+                      error = function(e) e)
   
-  if (!inherits(catvars,"error")&length(catvars)>0){
-    message("warning: predictors contain categorical variables. The integration is currently still under development. Please check results carefully!")
+  if (!inherits(catvars, "error") & length(catvars) > 0){
+    message("CAST warning: predictors contain categorical variables. The integration is currently still under development. Please check results carefully!")
     
     for (catvar in catvars){
       # print(catvar)
       # mask all unknown levels in newdata as NA (even technically no predictions can be made)
-      train[,catvar]<-droplevels(train[,catvar])
+      train[,catvar] <- droplevels(train[,catvar])
       
       # print(head(train[,catvar]))
 
       # then create dummy variables for the remaining levels in train:
-      dvi_train <- predict(caret::dummyVars(paste0("~",catvar), data = train,
+      dvi_train <- stats::predict(caret::dummyVars(paste0("~",catvar), data = train,
                                             sep = ""),
                            train)
       train <- data.frame(train,dvi_train)
       # print(head(dvi_train))
       if(!inherits(weight, "error")){
-        addweights <- data.frame(t(rep(weight[,which(names(weight)==catvar)],
+        addweights <- data.frame(t(rep(weight[, which(names(weight) == catvar)],
                                        ncol(dvi_train))))
-        names(addweights)<- colnames(dvi_train)
-        weight <- data.frame(weight,addweights)
+        names(addweights) <- colnames(dvi_train)
+        weight <- data.frame(weight, addweights)
       }
     }
     if(!inherits(weight, "error")){
-      weight <- weight[,-which(names(weight)%in%catvars)]
+      weight <- weight[, -which(names(weight) %in% catvars)]
     }
-    train <- train[,-which(names(train)%in%catvars)]
+    train <- train[, -which(names(train) %in% catvars)]
   }
   return(list(train = train, weight = weight, catvars = catvars))
 }

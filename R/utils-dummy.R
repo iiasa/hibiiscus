@@ -16,7 +16,9 @@
 #' species database.
 #' @param n_studies [`numeric`] on the number of studies to be created.
 #' @param n_sites [`numeric`] Number of sites per study to be created.
-#' @param lulegend [`character`] of the land use legend to be generated for the 
+#' @param lu_legend [`character`] of the land use legend to be generated for the 
+#' dummy data.
+#' @param ui_legend [`character`] of the use-intensity legend to be generated for the 
 #' dummy data.
 #' @examples
 #' \dontrun{
@@ -162,7 +164,7 @@ create_dummy_data <- function(what = "sites",
                     )
     
     # Other study settings
-    out$Sampling_effort <- rexp(nrow(out),rate = 2)
+    out$Sampling_effort <- stats::rexp(nrow(out),rate = 2)
     # Randomly sample some studies (SS) and keep effort constant (1)
     const_effort_SS <- sample(unique(out$SS), round(length(unique(out$SS))/3*2))
     out$Sampling_effort[out$SS %in% const_effort_SS] <- 1
@@ -244,8 +246,8 @@ create_dummy_data <- function(what = "sites",
       spp_id <- stringi::stri_rand_strings(n = N_spp, length = 7)
       
       # Sample mean abundance (log) - runif()
-      mean_n <- runif(n = 1, min = 5, max = 100) |> round()
-      abund_vec <- rexp(N_spp * n_sites, rate = 1/mean_n) |> round()
+      mean_n <- stats::runif(n = 1, min = 5, max = 100) |> round()
+      abund_vec <- stats::rexp(N_spp * n_sites, rate = 1/mean_n) |> round()
       
       tmp_spp <-  tidyr::crossing(SSBS = ssbs, 
                                   Best_guess_binomial = spp_id) |>

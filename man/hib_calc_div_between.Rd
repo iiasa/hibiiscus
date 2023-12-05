@@ -7,9 +7,9 @@
 hib_calc_div_between(
   obj,
   metrics,
-  binary = F,
-  rel_abund = T,
-  rescale = T,
+  binary = FALSE,
+  rel_abund = TRUE,
+  rescale = TRUE,
   baseline_lui = "Primary vegetation_Minimal use"
 )
 }

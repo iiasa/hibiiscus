@@ -5,7 +5,7 @@
 #' information could be for example prepared data on species traits.
 #' @param obj A [`Database`] object.
 #' @param spp_info A [`data.frame`] or similar of categorical or numeric information 
-#' to be added to the database.
+#' to be added to the database. Must share atleast one column with obj$species.
 #' @keywords database, external
 #' @export
 hib_join_species <- function(obj, spp_info){
@@ -33,7 +33,7 @@ hib_join_species <- function(obj, spp_info){
   message(crayon::green("Joining species-related data into hib database...\n"))
   
   obj$species <- dplyr::left_join(obj$species,
-                           spp_info)  
+                                  spp_info)  
   
   obj$last_update <- lubridate::today()
   
@@ -68,7 +68,7 @@ hib_join_species <- function(obj, spp_info){
 #' already present in the database.
 #' @param obj A [`Database`] object.
 #' @param site_info A [`data.frame`] or similar of categorical or numeric information 
-#' to be added to the database.
+#' to be added to the database. Must share atleast one column with obj$sites.
 #' @keywords database, external
 #' @export
 hib_join_sites <- function(obj, site_info){

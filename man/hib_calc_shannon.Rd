@@ -10,7 +10,7 @@ hib_calc_shannon(obj)
 \item{obj}{A \code{\link{Database}} object.}
 }
 \description{
-This function calculates shannon for each site measuring abundance
+This function calculates shannon diversity for each site measuring abundance
 }
 \details{
 Expects a \code{\link{Database}} object.

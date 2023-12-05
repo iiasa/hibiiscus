@@ -38,12 +38,11 @@
 hib_fit_lme4 <- function(obj, 
                          form,
                          family = gaussian,
-                         REML = T,
+                         REML = TRUE,
                          calc_CIs = NULL, #,
-                         optimise_ranefs = F,
-                         model_dredge = F,
-                         model_average = F,
-                         # dataset_weights = NULL,
+                         optimise_ranefs = FALSE,
+                         model_dredge = FALSE,
+                         model_average = FALSE,
                          weight_specs = list(weights = NULL,
                                              weight_type = NULL), # list(weights = c(a, b), weight_type = "dataset") # or "site"
                          scale_specs = list(covars_to_scale = NULL,
@@ -395,7 +394,8 @@ get_model_data <- function(obj,
 #' @param scale_func A [`function`] to scale specified continuous variables.
 #' @param covars_to_relevel A [`character`] vector containing categorical variables
 #' to relevel.
-#' @param base_levels A [`character`] vector containing baseline levels
+#' @param base_levels A [`character`] vector containing baseline levels - in same
+#' order as the variables in covars_to_relevel.
 #' @keywords data processing
 #' @examples 
 #' \dontrun{
@@ -476,7 +476,7 @@ prep_model_data <- function(df,
       if (is.character(df[[covars_to_relevel[i]]])){
         df[[covars_to_relevel[i]]] <- factor(df[[covars_to_relevel[i]]])
       }
-      df[[covars_to_relevel[i]]] <- relevel(df[[covars_to_relevel[i]]],
+      df[[covars_to_relevel[i]]] <- stats::relevel(df[[covars_to_relevel[i]]],
                                              base_levels[i])
     }
   }
@@ -501,6 +501,8 @@ prep_model_data <- function(df,
 #' @details 
 #' Expects a list of dataframes
 #' @param df_ls A list of [`dataframes`], each associated with a biodiversity dataset.
+#' @param model_spec A [`character`] indicating if the model type is 'lme4', or 'brms'.
+#' TODO: need to add and check INLA options
 #' @param weights A [`numeric`] vector indicating the 'weights' the user wants to 
 #' link to each dataset.
 #' @param weight_type A [`character`] specifying the form of weighting. Either 
@@ -534,7 +536,8 @@ weight_model_data <- function(df_ls,
     )
   }
   
-  
+  # TODO: assert that model_spec is within the potential model options
+  # "lme4", "brms", ?"inla"?
   # TODO: check weight_type - NULL, dataset, site
   if (is.null(weight_type)){
     message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))

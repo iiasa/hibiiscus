@@ -10,7 +10,7 @@ hib_join_species(obj, spp_info)
 \item{obj}{A \code{\link{Database}} object.}
 
 \item{spp_info}{A \code{\link{data.frame}} or similar of categorical or numeric information
-to be added to the database.}
+to be added to the database. Must share atleast one column with obj$species.}
 }
 \description{
 This function joins external information to a \code{\link{Database}} object. Such

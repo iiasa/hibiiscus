@@ -112,7 +112,7 @@ save_hib <- function(obj, output_path) obj$save_hib(output_path)
 #' Load a previously created database object
 #' 
 #' @description 
-#' The function [`load_hib`] loads a previously created [`hib_database`]. 
+#' The function [`load_hib`] loads a previously created [`Database`]. 
 #' @details 
 #' Expecting a file with \code{rds} ending.
 #' @param path_input A [`character`] pointing to a filename.
@@ -135,6 +135,7 @@ load_hib <- function(path_input){
   
   #Make some sensitivity checks that the object is correct
   # TODO: check its a Database
+  # TODO: what about other hib datatypes... - models, cv, proj ??
   assertthat::assert_that(
     inherits(obj, "Database")
     )

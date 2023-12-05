@@ -2,8 +2,8 @@
 #' 
 #' @description 
 #' This function returns a database object containing only sites whose characteristics 
-#' are retained
-#' @param obj A [`hib_database`] object.
+#' are retained.
+#' @param obj A [`Database`] object.
 #' @param condition An expression identifying how to filter the sites dataframe. 
 #' @keywords database filtering
 #' @examples
@@ -87,9 +87,9 @@ hib_filter_sites <- function(obj, condition){
 #' Filter the database object by species or groups of species
 #' 
 #' @description 
-#' This function returns a database object containing only species (and associated sites) whose characteristics 
-#' are retained
-#' @param obj A [`hib_database`] object.
+#' This function returns a database object containing only species (and associated
+#' sites) whose characteristics are retained.
+#' @param obj A [`Database`] object.
 #' @param condition An expression identifying how to filter the species dataframe
 #' @keywords database, filtering
 #' @examples

@@ -1196,7 +1196,7 @@ calc_cv_metrics <- function(pred, obs, error){
   # me, mae, rae, mape, mse, rmse, nrmse, rmsle, rse, rrmse
   me <- mean(error, na.rm = T)
   # TODO:
-  mede <- median(error, na.rm = T)
+  mede <- stats::median(error, na.rm = T)
 
   ae <- abs(error)
   
@@ -1242,7 +1242,7 @@ calc_cv_metrics <- function(pred, obs, error){
   
   # TODO:
   # median relative absolute error
-  mrae <- median( abs( error / obs_minus_obs_mean ), na.rm = T)
+  mrae <- stats::median( abs( error / obs_minus_obs_mean ), na.rm = T)
 
   # geometric mean relative absolute error
   gmrae <- exp(mean(log( abs( error / obs_minus_obs_mean ) ), na.rm = T))
@@ -1413,7 +1413,7 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      # me, mae, rae, mape, mse, rmse, nrmse, rmsle, rse, rrmse
                      me = mean(error, na.rm = T),
 
-                     mede = median(error, na.rm = T),
+                     mede = stats::median(error, na.rm = T),
 
                      mae = mean(abs(error), na.rm = T),
                      # mape - issue of zeros in obs... - v small adjustment
@@ -1436,7 +1436,7 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      rse = sum(error^2, na.rm = T) / sum( (obs - obs_mean)^2 , na.rm = T),
 
                      # 
-                     mrae = median( abs( error / (obs - obs_mean) ), na.rm = T),
+                     mrae = stats::median( abs( error / (obs - obs_mean) ), na.rm = T),
 
                      # geometric mean relative absolute error
                      gmrae = exp(mean(log( abs( error / (obs - obs_mean) ) ), na.rm = T)),
@@ -1655,7 +1655,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
     # %%%%%%%%%%
     orig_form <- stats::formula(mod)
     
-    all_covars <- all.vars(formula(delete.response(terms(orig_form))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(orig_form))))
     # But what about random effects... - 
     rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
@@ -1690,7 +1690,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
     # Formulas 
     
     orig_form <- mod_obj$user_formula$full
-    fitted_form <- as.formula(mod$.args$formula)
+    fitted_form <- stats::as.formula(mod$.args$formula)
     fitted_form_ <- mod_obj$inla_fitted_formula
     
     orig_form_user_ls <- mod_obj$user_formula
@@ -1698,7 +1698,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
     # $response_fixed
     # $random
     
-    fix_vars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$response_fixed))))
+    fix_vars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$response_fixed))))
     # ignore "Intercept" too
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
@@ -1762,7 +1762,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
     # %%%%%%%%%%
     orig_form <- mod$formula$formula
     
-    all_covars <- all.vars(formula(delete.response(terms(orig_form))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(orig_form))))
     # But what about random effects... - 
     rand_vars <- names(brms::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
@@ -1849,7 +1849,7 @@ predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
       )
 
       if (inherits(mod, "brmsfit")){
-        tmp_pred <- fitted(mod, pred_df_ls[[i]], 
+        tmp_pred <- stats::fitted(mod, pred_df_ls[[i]], 
                           scale = "response", # brms_specs$type, ??
                           re_form = re_form[[i]]) |>
             as.data.frame()
@@ -1859,7 +1859,7 @@ predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
       } else {
         # print(head(pred_df_ls[[i]]))
         # print(lme4::fixef((mod)))
-        pred_df_ls[[i]]$prediction <- predict(mod, pred_df_ls[[i]], 
+        pred_df_ls[[i]]$prediction <- stats::predict(mod, pred_df_ls[[i]], 
                                               type = "response", # lme4_specs$type, ??
                                               re.form = re_form[[i]])
       }

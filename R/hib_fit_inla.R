@@ -194,7 +194,7 @@ hib_fit_inla <- function(obj,
       dplyr::left_join(obj$diversity_between$Data[[div_data_idx]][,c(mod_resp, "SSBS1", "SSBS2")],
                       by = c("SSBS1", "SSBS2"))
     
-    mod_df <- na.omit(mod_df)
+    mod_df <- stats::na.omit(mod_df)
     
     # print(head(mod_df))
     
@@ -388,7 +388,7 @@ hib_fit_inla <- function(obj,
   # build formula 
   resp_chr <- "y ~ "
   
-  fixed_covar_form <- formula(delete.response(terms(response_fixed_form)))
+  fixed_covar_form <- stats::formula(stats::delete.response(stats::terms(response_fixed_form)))
   fixed_chr <- as.character(fixed_covar_form)[2]
   
   inla_form <- paste0(resp_chr, fixed_chr)
@@ -404,7 +404,7 @@ hib_fit_inla <- function(obj,
     inla_form <- paste(inla_form, spat_chr, sep = " + ")
   }
   
-  inla_form <- formula(inla_form)
+  inla_form <- stats::formula(inla_form)
 
   message(crayon::green("Fitting model (this may take a while)...\n"))
 
@@ -461,7 +461,7 @@ hib_fit_inla <- function(obj,
   #                           spat_chr)
   #   user_form_full_s <- formula(user_form_full_s)
   # }
-  user_form_full <- formula(user_form_full)
+  user_form_full <- stats::formula(user_form_full)
   
   
   # instantiate an inla_mod class

@@ -684,16 +684,12 @@ hib_calc_rsr <- function(obj){
 }
 
 
-# TODO:
-# geometric mean abundance
-# mean abundance
-# shannon diversity
 
 # %%%%%
 #' Calculate arithmetic mean abundance
 #' 
 #' @description 
-#' This function calculates arithmetic mean abundance for each site measuring this metric
+#' This function calculates arithmetic mean abundance for each site measuring abundance.
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
@@ -785,7 +781,7 @@ hib_calc_ma <- function(obj){
 #' Calculate geometric mean abundance
 #' 
 #' @description 
-#' This function calculates geometric mean abundance for each site measuring this metric
+#' This function calculates geometric mean abundance for each site measuring abundance.
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
@@ -887,7 +883,7 @@ hib_calc_gma <- function(obj){
 #' Calculate shannon diversity
 #' 
 #' @description 
-#' This function calculates shannon for each site measuring abundance
+#' This function calculates shannon diversity for each site measuring abundance
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
@@ -1007,7 +1003,7 @@ hib_calc_shannon <- function(obj){
 #' Calculate PIE (Hulbert's (1971) Probability of Interspecific Encounter)
 #' 
 #' @description 
-#' This function calculates PIE per site
+#' This function calculates PIE per site.
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
@@ -1648,10 +1644,9 @@ hib_calc_nonveg <- function(spp_site_data,
 #' @export
 hib_calc_div_between <- function(obj, 
                                  metrics,
-                                 binary = F,
-                                 rel_abund = T,
-                                 rescale = T,
-                                 # primin_baseline = T
+                                 binary = FALSE,
+                                 rel_abund = TRUE,
+                                 rescale = TRUE,
                                  baseline_lui = "Primary vegetation_Minimal use"
                                  ){
 

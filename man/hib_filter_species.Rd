@@ -7,13 +7,13 @@
 hib_filter_species(obj, condition)
 }
 \arguments{
-\item{obj}{A \code{\link{hib_database}} object.}
+\item{obj}{A \code{\link{Database}} object.}
 
 \item{condition}{An expression identifying how to filter the species dataframe}
 }
 \description{
-This function returns a database object containing only species (and associated sites) whose characteristics
-are retained
+This function returns a database object containing only species (and associated
+sites) whose characteristics are retained.
 }
 \examples{
 \dontrun{

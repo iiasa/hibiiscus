@@ -6,7 +6,7 @@
 #' @details 
 #' Expects a [`Database`] object.
 #' @param obj A [`Database`] object.
-#' @param metrics A [`character`] vector of dissimilarity metrics...
+#' @param metrics A [`character`] vector of 'distance' metrics
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
 #' which compositional dis/similarity is calculated per study - should match the 
 #' value used when calculating compositional dis/similarity (hib_calc_div_between)
@@ -20,7 +20,6 @@
 #' @export
 hib_calc_site_contrasts <- function(obj,
                                     metrics,
-                                    # primin_baseline = T
                                     baseline_lui = "Primary vegetation_Minimal use"){
   
   # TODO:

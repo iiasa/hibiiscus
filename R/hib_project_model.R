@@ -180,7 +180,7 @@ hib_mod_project <- function(mod_obj,
 
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
-    all_covars <- all.vars(formula(delete.response(terms(formula(mod_obj$model)))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(stats::formula(mod_obj$model)))))
     # But what about random effects... - 
     rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
@@ -218,7 +218,7 @@ hib_mod_project <- function(mod_obj,
       }
 
       message(crayon::green("Projecting model...\n"))
-      pred_df <- as.data.frame(predict(mod_obj$model,
+      pred_df <- as.data.frame(stats::predict(mod_obj$model,
                                        data,
                                        type = "response", # lme4_specs$type,
                                        re.form = lme4_specs$re_form)) 
@@ -231,15 +231,16 @@ hib_mod_project <- function(mod_obj,
       if (lme4_specs$bootstrap == T){
         message(crayon::green("Bootstrapping model predictions...\n"))
         boot_obj <- lme4::bootMer(mod_obj$model, 
-                                  function(mod, df = data){predict(mod, df, 
+                                  function(mod, df = data){
+                                    stats::predict(mod, df, 
                                     type = "response", # lme4_specs$type,
                                     re.form = lme4_specs$re_form)}, 
                                   nsim = lme4_specs$n_boot)
         
-        pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
-        pred_df$prediction_sd <- apply(boot_obj$t, 2, sd)
-        pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
-        pred_df$prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.975, na.rm = TRUE)))
+        pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
+        pred_df$prediction_sd <- apply(boot_obj$t, 2, stats::sd)
+        pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
+        pred_df$prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.975, na.rm = TRUE)))
         # std.err <- apply(boot_test$t, 2, sd)
         # CI.lower1 <- pred - std.err*1.96
         # CI.upper1 <- pred + std.err*1.96
@@ -371,7 +372,7 @@ hib_mod_project <- function(mod_obj,
     
     # Get some basic info on model covars
     # all_covars <- all.vars(formula(delete.response(terms(obj$inla_fitted_formula))))
-    all_covars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$full))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$full))))
     # can ignore iid ranefs...
     # but covars are all needed... - can set to NA if missing though
     
@@ -386,7 +387,7 @@ hib_mod_project <- function(mod_obj,
     
     #   get from terr_proj_prep...
     # need to know fix_vars for terra_proj style approach...
-    fix_vars <- all.vars(formula(delete.response(terms(mod_obj$user_formula$response_fixed))))
+    fix_vars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$response_fixed))))
     # ignore "Intercept" too
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
@@ -744,7 +745,7 @@ hib_mod_project <- function(mod_obj,
     
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
-    all_covars <- all.vars(formula(delete.response(terms(mod_obj$model$formula$formula))))
+    all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$model$formula$formula))))
     # all_covars <- all.vars(formula(obj$model)[[3]])
     # print(all_covars)
     # But what about random effects... - 
@@ -783,12 +784,12 @@ hib_mod_project <- function(mod_obj,
       # %%%%%
       if (brms_specs$incl_obs_uncert == TRUE){
       # if (incl_obs_uncert == T){
-        mean_df <- predict(mod_obj$model,
+        mean_df <- stats::predict(mod_obj$model,
                            data,
                            # re_form = NA
                            re_form = brms_specs$re_form) |>
           as.data.frame()
-        med_df <- predict(mod_obj$model,
+        med_df <- stats::predict(mod_obj$model,
                           data,
                           # re_form = NA,
                           re_form = brms_specs$re_form,
@@ -798,7 +799,7 @@ hib_mod_project <- function(mod_obj,
       if (brms_specs$incl_obs_uncert == FALSE){
       # if (incl_obs_uncert == F){
         # brms::fitted.brmsfit
-        mean_df <- fitted(mod_obj$model,
+        mean_df <- stats::fitted(mod_obj$model,
                           data,
                           # re_form = NA
                           scale = "response", # brms_specs$scale,
@@ -806,7 +807,7 @@ hib_mod_project <- function(mod_obj,
         # re_form = brms_specs$re_form
           as.data.frame()
           # brms::fitted.brmsfit
-        med_df <- fitted(mod_obj$model,
+        med_df <- stats::fitted(mod_obj$model,
                          data,
                          # re_form = NA,
                          scale = "response", # brms_specs$scale,
@@ -1715,10 +1716,10 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                           nsim = lme4_specs$n_boot,
                           .progress = "txt")
     
-    prediction_sd <- apply(boot_obj$t, 2, sd)
-    prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.5, na.rm = TRUE)))
-    prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs = 0.025, na.rm = TRUE)))
-    prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(quantile(x, probs= 0.975, na.rm = TRUE)))
+    prediction_sd <- apply(boot_obj$t, 2, stats::sd)
+    prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
+    prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
+    prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs= 0.975, na.rm = TRUE)))
     # TODO:
     # Above apply approach is v slow for large data sets...
     # 
@@ -1868,13 +1869,13 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
   # if (incl_obs_uncert == F){
     tmp_df <- terra::as.data.frame(data, xy = T)
     # brms::fitted.brmsfit
-    mean_pred <- fitted(mod, tmp_df, 
+    mean_pred <- stats::fitted(mod, tmp_df, 
                         # re_form = NA
                         scale = "response", # brms_specs$scale
                         re_form = brms_specs$re_form) |>
       as.data.frame()
     # brms::fitted.brmsfit
-    median_pred <- fitted(mod, tmp_df, 
+    median_pred <- stats::fitted(mod, tmp_df, 
                           # re_form = NA,
                           scale = "response", # brms_specs$scale
                           re_form = brms_specs$re_form,

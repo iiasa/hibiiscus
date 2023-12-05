@@ -10,7 +10,7 @@ hib_calc_gma(obj)
 \item{obj}{A \code{\link{Database}} object.}
 }
 \description{
-This function calculates geometric mean abundance for each site measuring this metric
+This function calculates geometric mean abundance for each site measuring abundance.
 }
 \details{
 Expects a \code{\link{Database}} object.

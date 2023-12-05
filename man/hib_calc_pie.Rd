@@ -10,7 +10,7 @@ hib_calc_pie(obj)
 \item{obj}{A \code{\link{Database}} object.}
 }
 \description{
-This function calculates PIE per site
+This function calculates PIE per site.
 }
 \details{
 Expects a \code{\link{Database}} object.
