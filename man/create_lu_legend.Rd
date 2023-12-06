@@ -11,7 +11,7 @@ create_lu_legend(input)
 object within the environment.}
 }
 \description{
-This function creates a \code{\link{R6}} object containing the loaded land-use legend.
+This function creates a \code{\link{R6}} HibLULegend object containing the loaded land-use legend.
 
 This object is then used in other functions of this package to prepare or filter
 associated databases and enable ecological impact analyses.

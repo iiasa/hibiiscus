@@ -7,7 +7,7 @@
 save_legend(leg, output_path)
 }
 \arguments{
-\item{leg}{A land-use \code{\link{legend}}.}
+\item{leg}{A \code{\link{HibLULegend}}.}
 
 \item{output_path}{A \code{\link{character}} pointing to a filename.}
 }

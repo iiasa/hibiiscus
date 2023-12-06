@@ -8,8 +8,8 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-hib_inla_model <- R6Class("hib_inla_model",
-                          # "HibModelINLA"
+HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
+                          
                           # Public data objects and functions
                           public = list(
                             #' @field version (`character`)\cr
@@ -254,7 +254,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                               
                               
                               message(
-                                paste0("Hibiiscus fitted INLA model\n\n",
+                                paste0("Hibiiscus fitted model (INLA)\n\n",
                                        "(Last updated: ", crayon::green( self$last_update ), ")",
                                        "\n",
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",

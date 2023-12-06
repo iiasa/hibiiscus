@@ -190,7 +190,7 @@ hib_fit_brms <- function(obj,
                   "waic" = waic_metr)
 
   # instantiate a brms_mod class
-  mod_obj <- hib_brms_model$new(
+  mod_obj <- HibModelBRMS$new(
     db_obj = obj, 
     mod_df = mod_df,
     brms_obj = m0,

@@ -32,7 +32,7 @@ test_that("Check lme4 modelling pipeline works as desired.", {
                                          ))
   
   expect_true(inherits(mod_w,
-                       "hib_lme4_model"))
+                       "HibModelLME4"))
   
   # between-site model
   suppressWarnings(mod_b <- hib_fit_lme4(tmp_db,
@@ -40,7 +40,7 @@ test_that("Check lme4 modelling pipeline works as desired.", {
                                          calc_CIs = "Wald",
                                          relevel_specs = c("LUI_contrast" = "Primary_Minimal_use_vs_Primary_Minimal_use")))
   expect_true(inherits(mod_b,
-                       "hib_lme4_model"))
+                       "HibModelLME4"))
   
   # mod_w$plot()
   # mod_b$plot()
@@ -51,13 +51,13 @@ test_that("Check lme4 modelling pipeline works as desired.", {
                                       c("Random-2", "Random-5"),
                                       backtransform = function(x){exp(x) - 1}))
   expect_true(inherits(cv_w,
-                       "hib_cv_res"))
+                       "HibCV"))
   
   suppressWarnings(cv_b <- hib_mod_cv(mod_b,
                                       tmp_db,
                                       c("Random-2")))
   expect_true(inherits(cv_b,
-                       "hib_cv_res"))
+                       "HibCV"))
   
   # cv_w$plot()
   # cv_b$plot()
@@ -95,14 +95,14 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   
   # project for df
   expect_true(inherits(proj_w_aoa,
-                       "hib_mod_projection"))  
+                       "HibProj"))  
   # Check for aoa_res as a list in proj_w_aoa
   expect_true(is.list(proj_w_aoa$aoa))
 
   proj_b <- hib_mod_project(mod_b,
                             proj_df_b)
   expect_true(inherits(proj_b,
-                       "hib_mod_projection")) 
+                       "HibProj")) 
   
   # proj_w$plot()
   # proj_b$plot()
@@ -132,7 +132,7 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   )
     
   expect_true(inherits(proj_w_aoa_,
-                       "hib_mod_projection"))  
+                       "HibProj"))  
   # Check for aoa_res as a list in proj_w_aoa_
   expect_true(is.list(proj_w_aoa_$aoa))
   
@@ -161,7 +161,7 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   proj_b_ <- hib_mod_project(mod_b,
                              proj_rast_b)
   expect_true(inherits(proj_b_,
-                       "hib_mod_projection"))  
+                       "HibProj"))  
   
   # proj_w_$plot()
   # proj_b_$plot()

@@ -228,7 +228,7 @@ hib_fit_lme4 <- function(obj,
   }
 
   # instantiate an lme4_mod class
-  mod_obj <- hib_lme4_model$new(
+  mod_obj <- HibModelLME4$new(
     db_obj = obj, 
     mod_df = mod_df,
     lme4_obj = m0,

@@ -6,7 +6,7 @@
 #' evaluation of model performance can take place.
 #' @details 
 #' Expects a hib model object...
-#' @param mod_obj A [`hib_XX_model`] object.
+#' @param mod_obj A [`HibModelXXXX`] object.
 #' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
@@ -45,7 +45,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   
   # Assertion checks
   assertthat::assert_that(
-    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),     
+    inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"),     
     inherits(db_obj, "HibDatabase") || ( is.list(db_obj) & all(unlist(lapply(db_obj, function(x){inherits(x, "HibDatabase")}))) ),    
     is.character(fold_type),
     is.character(custom_col) || is.null(custom_col),
@@ -114,11 +114,11 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     )
   }
   
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     message(crayon::green(paste0("Cross-validating supplied lme4 model:\n\t", 
                                  format(stats::formula(mod_obj$model)), "\n")))
   }
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     # Package check
     if (!requireNamespace("INLA", quietly = TRUE)) {
       stop(
@@ -140,7 +140,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     message(crayon::green("Have some patience, this may take a while...\n"))
   } 
   
-  if (inherits(mod_obj, "hib_brms_model")){
+  if (inherits(mod_obj, "HibModelBRMS")){
     message(crayon::green(paste0("Cross-validating supplied brms model:\n\t", 
                                  format(mod_obj$model$formula$formula), "\n")))
     
@@ -187,7 +187,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 
   insample_df_ls <- vector("list", length(re_form))
 
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     # In-sample preds
     # orig_form <- stats::formula(mod_obj$model)
     orig_form <- mod_specs$lme4_specs$orig_form
@@ -202,7 +202,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   }
   
   
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     # message(crayon::yellow("Warning: INLA insample prediction in development, current output is preliminary!"))
     
@@ -330,7 +330,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
     # # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   }
   
-  if (inherits(mod_obj, "hib_brms_model")){
+  if (inherits(mod_obj, "HibModelBRMS")){
     # In-sample preds
     orig_form <- mod_obj$model$formula$formula
  
@@ -385,12 +385,12 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   # %%%
   # Sort out use_original_mesh
   # if not an inla model, set to NA
-  if (!inherits(mod_obj, "hib_inla_model")){
+  if (!inherits(mod_obj, "HibModelINLA")){
     use_original_mesh <- NA
   }
 
   # if an inla, and spatial model, check it's not null, if it is, NA, else logical T/F
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     if (mod_obj$inla_incl_spatial_term == TRUE){
       use_original_mesh <- mod_specs$inla_specs$use_original_mesh
     }
@@ -405,7 +405,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   # initialise cv_output...
   message(crayon::green("\nCollating cross-validation output ..."))
   
-  cv_obj <- hib_cv_res$new(
+  cv_obj <- HibCV$new(
     mod_obj = mod_obj,
     cv_res = cv_out,
     insamp_res = insample_res,
@@ -422,8 +422,8 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 #' This function re-fits the model on different subsets of the data, so that subsequent 
 #' evaluation of model performance can take place.
 #' @details 
-#' Expects a hib_XX_model object...
-#' @param mod_obj A [`hib_XX_model`] object.
+#' Expects a HibModelXXXX object.
+#' @param mod_obj A [`HibModelXXXX`] object.
 #' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
@@ -463,7 +463,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   # Assertion checks 
   assertthat::assert_that(
-    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
+    inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"),
     inherits(db_obj, "HibDatabase") || ( is.list(db_obj) & all(unlist(lapply(db_obj, function(x){inherits(x, "HibDatabase")}))) ),
     is.character(fold_type),
     is.character(fold_col),
@@ -621,24 +621,24 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   # TODO: this is only really good for LME4 models, unless we make brms/inla
   # silent
-  if ( (inherits(mod_obj, "hib_lme4_model")) | 
-        (inherits(mod_obj, "hib_inla_model")) ){
+  if ( (inherits(mod_obj, "HibModelLME4")) | 
+        (inherits(mod_obj, "HibModelINLA")) ){
     # print("WOOP - lme4/inla")
     pb <- utils::txtProgressBar(min = 1, max = max(2, n_folds), style = 3)
   }
   # Get orig_form as a local var..
 
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     incl_weights <- mod_specs$lme4_specs$incl_weights
     orig_form <- mod_specs$lme4_specs$orig_form
   }
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     # incl_weights <- mod_specs$lme4_specs$incl_weights
     incl_weights <- FALSE
     orig_form <- mod_specs$inla_specs$orig_form
     use_original_mesh <- mod_specs$inla_specs$use_original_mesh
   }
-  if (inherits(mod_obj, "hib_brms_model")){
+  if (inherits(mod_obj, "HibModelBRMS")){
     incl_weights <- mod_specs$brms_specs$incl_weights
     orig_form <- mod_specs$brms_specs$orig_form
   }
@@ -659,7 +659,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
 
 
     if (incl_weights == TRUE){
-      if (inherits(mod_obj, "hib_lme4_model")){
+      if (inherits(mod_obj, "HibModelLME4")){
         # TODO: this weighting is approapriate for lme4, but I don't think it is
         # correct for brms - can leave brms as is?
         weight_df <- orig_data |>
@@ -712,7 +712,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
 
 
 
-    if (inherits(mod_obj, "hib_lme4_model")){
+    if (inherits(mod_obj, "HibModelLME4")){
       # %%%%%%%%%%
       # LME4-specific
       # %%%%%%%%%%
@@ -768,7 +768,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       # %%%%%%%%%%
     }
     
-    if (inherits(mod_obj, "hib_inla_model")){
+    if (inherits(mod_obj, "HibModelINLA")){
       # %%%%%%%%%%
       # INLA-specific
       # %%%%%%%%%%
@@ -995,7 +995,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       # %%%%%%%%%%
     }
     
-    if (inherits(mod_obj, "hib_brms_model")){
+    if (inherits(mod_obj, "HibModelBRMS")){
       # %%%%%%%%%%
       # BRMS-specific
       # %%%%%%%%%%
@@ -1027,15 +1027,15 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     fixef_df$fold_id <- fold_ids[i]
     coef_out_ls[[i]] <- fixef_df
     
-    if ( (inherits(mod_obj, "hib_lme4_model")) |
-         (inherits(mod_obj, "hib_inla_model")) ){
+    if ( (inherits(mod_obj, "HibModelLME4")) |
+         (inherits(mod_obj, "HibModelINLA")) ){
       # print("PROGRESS UPDATE")
       utils::setTxtProgressBar(pb, i)
     }
   }
   
-  if ( (inherits(mod_obj, "hib_lme4_model")) |
-        (inherits(mod_obj, "hib_inla_model")) ){
+  if ( (inherits(mod_obj, "HibModelLME4")) |
+        (inherits(mod_obj, "HibModelINLA")) ){
     close(pb)
   }
   
@@ -1568,7 +1568,7 @@ get_rand_fold_id <- function(n_obs, n_folds){
 #' This function returns a list of model-specific information
 #' @details 
 #' Expects numeric inputs
-#' @param mod_obj A [`hib_XX_model`] object.
+#' @param mod_obj A [`HibModelXXXX`] object.
 #' @param re_form A [`list`] indicating the random effects variables to be
 #' included in the cross-validation/insample predicitons.
 #' @param use_original_mesh A logical value indicating whether cross-validation
@@ -1583,19 +1583,19 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
   
   # Assertion checks 
   assertthat::assert_that(
-    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
+    inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"),
     is.list(re_form),
     is.logical(use_original_mesh) || is.null(use_original_mesh)
   )
   
   # Should we also try to "keep" SS together in other blockings...
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     rand_vars <- names(lme4::ranef(mod_obj$model))
   }
-  if (inherits(mod_obj, "hib_brms_model")){
+  if (inherits(mod_obj, "HibModelBRMS")){
     rand_vars <- names(brms::ranef(mod_obj$model))
   }
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     rand_vars <- all.vars(mod_obj$user_formula$random)
   }
   
@@ -1649,7 +1649,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
   inla_specs <- NULL
   brms_specs <- NULL
 
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     # %%%%%%%%%%
     # LME4-specific data prep 
     # %%%%%%%%%%
@@ -1682,7 +1682,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
                        incl_weights = incl_weights)
   }
   
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     # %%%%%%%%%%
     # INLA-specific dataprep 
     # %%%%%%%%%%
@@ -1756,7 +1756,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
                        orig_mesh_settings = orig_mesh_settings)
   }
   
-  if (inherits(mod_obj, "hib_brms_model")){
+  if (inherits(mod_obj, "HibModelBRMS")){
     # %%%%%%%%%%
     # BRMS-specific dataprep -  
     # %%%%%%%%%%

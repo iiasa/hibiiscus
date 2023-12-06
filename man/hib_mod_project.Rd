@@ -17,7 +17,7 @@ hib_mod_project(
 )
 }
 \arguments{
-\item{mod_obj}{A \code{\link{hib_model}} object - either lme4, inla, or brms.}
+\item{mod_obj}{A \code{\link{HibModelXXXX}} object - either lme4, inla, or brms.}
 
 \item{data}{Either a dataframe-like object or a raster stack that can be used
 to project onto}
@@ -52,14 +52,14 @@ effects to condition on when predicting a brms (formula, NULL, or NA).}
 \item{calc_aoa}{A \code{\link{logical}} to indicate whether or non the 'Area-of-applicability'
 (AOA) should be estimated - following Meyer and Pebesma (2021)}
 
-\item{cv_obj}{A \code{\link{hib_cv_res}} object, used in AOA estimation.}
+\item{cv_obj}{A \code{\link{HibCV}} object, used in AOA estimation.}
 }
 \description{
 This function projects a fitted hib model using the supplied model object and
 data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 }
 \details{
-Expects a \code{\link{hib_model}} object.
+Expects a \code{\link{HibModelXXXX}} object.
 }
 \examples{
 \dontrun{

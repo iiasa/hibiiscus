@@ -11,8 +11,8 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-hib_mod_projection <- R6Class("hib_mod_projection",
-                              # "HibProj"
+HibProj <- R6Class("HibProj",
+                              # hib_mod_projection "HibProj"
                               # Public data objects and functions
                               public = list(
                                 # version = NULL,
@@ -21,8 +21,8 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                 last_update = NULL,
                                 
                                 #' @field model_type (`character`)\cr
-                                #' Identifies the type of model; one of "hib_lme4_model", 
-                                #' "hib_inla_model", "hib_brms_model".
+                                #' Identifies the type of model; one of "HibModelLME4", 
+                                #' "HibModelINLA", "HibModelBRMS".
                                 model = NULL, # should this be a whole model class??
                                 
                                 #' @param projection (`data.frame`, `SpatRaster`, or `list`)\cr
@@ -43,7 +43,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                 #' Creates a new instance of this [R6][R6::R6Class] class.
                                 #' Note, this object is constructed via the [hib_mod_project]
                                 #' function found within this package.
-                                #' @param obj (`hib_X_model`)\cr
+                                #' @param obj (`HibModelXXXX`)\cr
                                 #'   The model object used in cross-validation.
                                 #' @param proj (`data.frame`, `SpatRaster`, or `list`)\cr
                                 #'   The results of model projection.
@@ -70,7 +70,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   # Check that input is either a character filepath
                                   # Or dataframe/tibble
                                   assertthat::assert_that(
-                                    inherits(obj, "hib_lme4_model") || inherits(obj, "hib_inla_model") || inherits(obj, "hib_brms_model"), # obj is a hib model
+                                    inherits(obj, "HibModelLME4") || inherits(obj, "HibModelINLA") || inherits(obj, "HibModelBRMS"), # obj is a hib model
                                     is.data.frame(proj) || inherits(proj, "SpatRaster") || (is.list(proj) & !is.data.frame(proj)), # or a list of SpatRasters
                                     is.function(backtransform) || is.null(backtransform),
                                     is.logical(rescale_pred),
@@ -91,10 +91,10 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   proj_specs <- list("Backransformation_function" = backtransform,
                                                      "Rescaled_prediction" = rescale_pred)
                                   
-                                  if (inherits(obj, "hib_lme4_model")){
+                                  if (inherits(obj, "HibModelLME4")){
                                     self$projection_specs <- c(proj_specs, lme4_specs)
                                   }
-                                  if (inherits(obj, "hib_inla_model")){
+                                  if (inherits(obj, "HibModelINLA")){
                                     # Package check
                                     if (!requireNamespace("INLA", quietly = TRUE)) {
                                       stop(
@@ -107,7 +107,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
     
                                     self$projection_specs <- c(proj_specs, inla_specs)
                                   }
-                                  if (inherits(obj, "hib_brms_model")){
+                                  if (inherits(obj, "HibModelBRMS")){
                                     self$projection_specs <- c(proj_specs, brms_specs)
                                   }
                                   
@@ -144,7 +144,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   mod_type <- ""
                                   pred_vars <- ""
                                   n_pred_vars <- NA
-                                  if (inherits(self$model, "hib_lme4_model")){
+                                  if (inherits(self$model, "HibModelLME4")){
                                     mod_type <- "lme4"
                                     
                                     all_covars <- all.vars(formula(delete.response(terms(formula(self$model$model)))))
@@ -152,7 +152,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     fix_vars <- all_covars[!all_covars %in% rand_vars]
                                   }
                                   
-                                  if (inherits(self$model, "hib_inla_model")){
+                                  if (inherits(self$model, "HibModelINLA")){
                                     mod_type <- "INLA"
                                     
                                     fix_vars <- all.vars(formula(delete.response(terms(self$model$user_formula$response_fixed))))
@@ -164,7 +164,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                     }
                                   }
                                   
-                                  if (inherits(self$model, "hib_brms_model")){
+                                  if (inherits(self$model, "HibModelBRMS")){
                                     mod_type <- "brms"
                                     # print(self$model$formula)
                                     all_covars <- all.vars(formula(delete.response(terms(formula(self$model$model$formula)))))
@@ -249,7 +249,7 @@ hib_mod_projection <- R6Class("hib_mod_projection",
                                   # prnt_info <- list(mod_type = mod_type,
                                   #                    )
                                   message(
-                                    paste0("Hibiiscus projection \n",
+                                    paste0("Hibiiscus projection\n",
                                            "(Last updated: ", crayon::green( self$last_update ), ")\n",
                                            "\n",
                                            "Model type:        ", mod_type, "\n",

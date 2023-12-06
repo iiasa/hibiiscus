@@ -8,7 +8,7 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-hib_cv_res <- R6Class("hib_cv_res",
+HibCV <- R6Class("HibCV",
                       # "HibCV"
                       # Public data objects and functions
                       public = list(
@@ -18,8 +18,8 @@ hib_cv_res <- R6Class("hib_cv_res",
                         last_update = NULL,
                         
                         #' @field model_type (`character`)\cr
-                        #' Identifies the type of model; one of "hib_lme4_model", 
-                        #' "hib_inla_model", "hib_brms_model".
+                        #' Identifies the type of model; one of "HibModelLME4", 
+                        #' "HibModelINLA", "HibModelBRMS".
                         model_type = NULL,
                         
                         #' @field model_type (`list`)\cr
@@ -47,7 +47,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                         #' Creates a new instance of this [R6][R6::R6Class] class.
                         #' Note, this object is constructed via the [hib_mod_cv]
                         #' function found within this package.
-                        #' @param mod_obj (`hib_X_model`)\cr
+                        #' @param mod_obj (`HibModelXXXX`)\cr
                         #'   The model object used in cross-validation.
                         #' @param cv_res (`list`)\cr
                         #'   The results of cross-validation.
@@ -65,9 +65,9 @@ hib_cv_res <- R6Class("hib_cv_res",
                           # - some assertion checks
                           assertthat::assert_that(
                             # Check model
-                            inherits(mod_obj, "hib_lme4_model") || 
-                              inherits(mod_obj, "hib_inla_model") || 
-                              inherits(mod_obj, "hib_brms_model"),
+                            inherits(mod_obj, "HibModelLME4") || 
+                              inherits(mod_obj, "HibModelINLA") || 
+                              inherits(mod_obj, "HibModelBRMS"),
                             # Check cv outputs
                             is.list(cv_res),
                             is.list(insamp_res),
@@ -88,27 +88,27 @@ hib_cv_res <- R6Class("hib_cv_res",
                                           "site_locations")
                           # 
                           
-                          if (inherits(mod_obj, "hib_lme4_model")){ 
+                          if (inherits(mod_obj, "HibModelLME4")){ 
                             core_items <- c(core_items, c("metrics", 
                                                           "ci_type"
                                                           # "fixedef_coefficients"
                                                           ))
-                            self$model_type <- "hib_lme4_model"
+                            self$model_type <- "HibModelLME4"
                           }
-                          if (inherits(mod_obj, "hib_inla_model")){ 
+                          if (inherits(mod_obj, "HibModelINLA")){ 
                             core_items <- c(core_items, c("user_formula",
                                                           "inla_fitted_formula", 
                                                           "inla_incl_spatial_term",
                                                           # "inla_mesh",
                                                           "inla_mesh_settings",
                                                           "inla_mesh_source"))
-                            self$model_type <- "hib_inla_model"
+                            self$model_type <- "HibModelINLA"
                           }
-                          if (inherits(mod_obj, "hib_brms_model")){ 
+                          if (inherits(mod_obj, "HibModelBRMS")){ 
                             core_items <- c(core_items, c("metrics", 
                                                           # "fixedef_coefficients",
                                                           "extra_args"))
-                            self$model_type <- "hib_brms_model"
+                            self$model_type <- "HibModelBRMS"
                           }
                           
                           
@@ -189,10 +189,10 @@ hib_cv_res <- R6Class("hib_cv_res",
                           
                           
                           # Model form
-                          if (self$model_type == "hib_lme4_model"){
+                          if (self$model_type == "HibModelLME4"){
                             m_form <- format(stats::formula(self$original_model_obj$model))
                           }
-                          if (self$model_type == "hib_inla_model"){
+                          if (self$model_type == "HibModelINLA"){
                             # m_form <- format(self$original_model_obj$user_formula$full)
                             # m_form <- format(self$original_model_obj$model$.args$formula)
                             m_form <- as.character(self$original_model_obj$user_formula$full)
@@ -204,7 +204,7 @@ hib_cv_res <- R6Class("hib_cv_res",
                             }
                           }
                           
-                          if (self$model_type == "hib_brms_model"){
+                          if (self$model_type == "HibModelBRMS"){
                             m_form <- format(self$original_model_obj$model$formula$formula)
                           }
                           

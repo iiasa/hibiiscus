@@ -16,7 +16,7 @@ hib_mod_cv(
 )
 }
 \arguments{
-\item{mod_obj}{A \code{\link{hib_XX_model}} object.}
+\item{mod_obj}{A \code{\link{HibModelXXXX}} object.}
 
 \item{db_obj}{A \code{\link{HibDatabase}} object, or, if modelling used multiple data-
 sources, a list of database objects}

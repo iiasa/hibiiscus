@@ -30,7 +30,7 @@ test_that("Check that create_lu_legend works as intended.", {
   
   tmp_leg <- create_lu_legend(alt_lu_df)
   expect_true(inherits(tmp_leg, 
-                       "lu_legend")
+                       "HibLULegend")
   )
   
 })
@@ -75,7 +75,7 @@ test_that("Check load_lu_legend works as intended.", {
   # - check it fails if file is not an lu legend ...
   expect_error(load_lu_legend(#"data/dummy_species_rc.rds"
                               system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE)),
-               regexp = "leg does not inherit from class lu_legend")
+               regexp = "leg does not inherit from class HibLULegend")
   # TODO: check that this also works...
   # load from "inst/extdata/example_lu_legend.rds"
 })
@@ -115,7 +115,7 @@ test_that("Check set_lu_legend works correctly.", {
                regexp = "obj does not inherit from class HibDatabase")
   expect_error(set_lu_legend(tmp_db,
                              c(1,0,1,0)),
-               regexp = "leg does not inherit from class lu_legend")
+               regexp = "leg does not inherit from class HibLULegend")
   
   
   

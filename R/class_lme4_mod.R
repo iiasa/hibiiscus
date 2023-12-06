@@ -9,7 +9,7 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-hib_lme4_model <- R6Class("hib_lme4_model",
+HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                     # "HibModelLME4"    HibLME4Model
                     
                     # Public data objects and functions
@@ -103,7 +103,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
                           )
                         
                         # ------ #
-                        message(crayon::green("Initialising fitted hib model object ...") )
+                        message(crayon::green("Initialising fitted HibModelLME4 object ...") )
                         
                         # %%%%%%%%%%%%%%%
                         
@@ -205,7 +205,7 @@ hib_lme4_model <- R6Class("hib_lme4_model",
     
                         
                         message(
-                          paste0("Hibiiscus fitted lme4 model\n",
+                          paste0("Hibiiscus fitted model (lme4)\n",
                                  "(Last updated: ", crayon::green( self$last_update ), ")",
                                  "\n",
                                  "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",

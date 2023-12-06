@@ -23,8 +23,8 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-lu_legend <- R6Class("lu_legend",
-                    # "HibLULegend"
+HibLULegend <- R6Class("HibLULegend",
+                    # "lu_legend"
                      
                     # Public data objects and functions
                     public = list(

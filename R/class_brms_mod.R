@@ -9,8 +9,8 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-hib_brms_model <- R6Class("hib_brms_model",
-                          # "HibModelBRMS" HibBRMSModel
+HibModelBRMS <- R6Class("HibModelBRMS",
+                          # hib_brms_model "HibModelBRMS" HibBRMSModel
                           # Public data objects and functions
                           public = list(
                             #' @field version (`character`)\cr
@@ -51,10 +51,6 @@ hib_brms_model <- R6Class("hib_brms_model",
                             #' Contains columns for "SSBS", "Longitude" ,"Latitude"
                             site_locations = NULL,
                             # TODO: what else to include
-                            # 
-                            # lme4 output is pretty comprehensive, this is just a wrapper...
-                            # need optimal ranef struct, if found
-                            # need model ranks, if dredged..
                             
                             # Executed when created
                             #' @description
@@ -206,7 +202,7 @@ hib_brms_model <- R6Class("hib_brms_model",
                               # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
                               
                               message(
-                                paste0("Hibiiscus fitted brms model\n",
+                                paste0("Hibiiscus fitted model (brms)\n",
                                        "(Last updated: ", crayon::green( self$last_update ), ")",
                                        "\n",
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",

@@ -30,7 +30,7 @@ test_that("Check inla modelling pipeline works as desired.", {
                                          # relevel_specs = c("LUI" = "Primary_Minimal_use")
                                          ))
   expect_true(inherits(mod_w,
-                       "hib_inla_model"))
+                       "HibModelINLA"))
   
   # between-site model - fails...-inla error
   # suppressWarnings(mod_b <- hib_fit_inla(tmp_db,
@@ -48,7 +48,7 @@ test_that("Check inla modelling pipeline works as desired.", {
                                       c("Random-2"),
                                       backtransform = function(x){exp(x) - 1}))
   expect_true(inherits(cv_w,
-                       "hib_cv_res"))
+                       "HibCV"))
   
   # suppressWarnings(cv_b <- hib_mod_cv(mod_b,
   #                                     tmp_db,
@@ -84,7 +84,7 @@ test_that("Check inla modelling pipeline works as desired.", {
                             calc_aoa = T,
                             cv_obj = cv_w)
   expect_true(inherits(proj_w,
-                       "hib_mod_projection"))  
+                       "HibProj"))  
   # Check for aoa_res as a list in proj_w_aoa
   expect_true(is.list(proj_w$aoa))
   
@@ -121,7 +121,7 @@ test_that("Check inla modelling pipeline works as desired.", {
                              calc_aoa = T,
                              cv_obj = cv_w)
   expect_true(inherits(proj_w_,
-                       "hib_mod_projection"))  
+                       "HibProj"))  
   # Check for aoa_res as a list in proj_w_aoa
   expect_true(is.list(proj_w_$aoa))
   

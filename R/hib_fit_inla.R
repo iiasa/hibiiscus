@@ -465,7 +465,7 @@ hib_fit_inla <- function(obj,
   
   
   # instantiate an inla_mod class
-  mod_obj <- hib_inla_model$new(
+  mod_obj <- HibModelINLA$new(
     db_obj = obj,
     mod_df = mod_df,
     inla_obj = m0,

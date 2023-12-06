@@ -9,7 +9,7 @@ set_lu_legend(obj, leg)
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}}.}
 
-\item{leg}{A \code{\link{hib_lu_legend}}.}
+\item{leg}{A \code{\link{HibLULegend}}.}
 }
 \description{
 This function adds a land-use legend to a database - specifically modifying the

@@ -5,10 +5,10 @@
 #' This function estimates an AOA, for each of the cross-validation approaches, 
 #' following the methods of Meyer and Pebesma 2021
 #' @details
-#' Expects a [`hib_X_model`] object, a [`hib_cv_res`] object, and data used to 
+#' Expects a [`HibModelXXXX`] object, a [`HibCV`] object, and data used to 
 #' make a projection.
-#' @param mod_obj A [`hib_X_model`] object.
-#' @param cv_obj A [`hib_cv_res`] object, based on the above mod_obj.
+#' @param mod_obj A [`HibModelXXXX`] object.
+#' @param cv_obj A [`HibCV`] object, based on the above mod_obj.
 #' @param proj_data A [`data.frame`], [`SpatRaster`] or list of [`SpatRaster`], 
 #' containing covariates for projecting the model.
 #' @keywords model, projections, 
@@ -23,15 +23,15 @@ hib_calc_aoa <- function(mod_obj,
   # Note: proj_data should not include prediction - just covars...
   
   assertthat::assert_that(
-    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"), # obj is a hib model
-    inherits(cv_obj, "hib_cv_res"),
+    inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
+    inherits(cv_obj, "HibCV"),
     is.data.frame(proj_data) || inherits(proj_data, "SpatRaster") || ( is.list(proj_data) & !is.data.frame(proj_data) & all(unlist(lapply(proj_data, function(x){inherits(x, "SpatRaster")}))) )
   )
   
 
   # Get covars and response names
   # lme4:
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(stats::formula(mod_obj$model)))))
     rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
@@ -40,7 +40,7 @@ hib_calc_aoa <- function(mod_obj,
   }
   
   # inla:
-  if (inherits(mod_obj, "hib_inla_model")){
+  if (inherits(mod_obj, "HibModelINLA")){
     # Package check
     if (!requireNamespace("INLA", quietly = TRUE)) {
       stop(
@@ -62,7 +62,7 @@ hib_calc_aoa <- function(mod_obj,
   }
   
   # brms:
-  if (inherits(mod_obj, "hib_brms_model")){
+  if (inherits(mod_obj, "HibModelBRMS")){
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$model$formula$formula))))
     rand_vars <- names(brms::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]

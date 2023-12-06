@@ -4,8 +4,8 @@
 #' This function projects a fitted hib model using the supplied model object and
 #' data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 #' @details 
-#' Expects a [`hib_model`] object.
-#' @param mod_obj A [`hib_model`] object - either lme4, inla, or brms.
+#' Expects a [`HibModelXXXX`] object.
+#' @param mod_obj A [`HibModelXXXX`] object - either lme4, inla, or brms.
 #' @param data Either a dataframe-like object or a raster stack that can be used
 #' to project onto
 #' @param backtransform A [`function`] that will backtransform the model response
@@ -32,7 +32,7 @@
 #' effects to condition on when predicting a brms (formula, NULL, or NA).
 #' @param calc_aoa A [`logical`] to indicate whether or non the 'Area-of-applicability' 
 #' (AOA) should be estimated - following Meyer and Pebesma (2021)
-#' @param cv_obj A [`hib_cv_res`] object, used in AOA estimation.
+#' @param cv_obj A [`HibCV`] object, used in AOA estimation.
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -58,7 +58,7 @@ hib_mod_project <- function(mod_obj,
   # Assertions 
   # is data a df/tibble/ raster/stack 
   assertthat::assert_that(
-    inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"), # obj is a hib model
+    inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
@@ -69,7 +69,7 @@ hib_mod_project <- function(mod_obj,
     is.list(inla_specs) || is.null(inla_specs),
     is.list(brms_specs) || is.null(brms_specs),
     is.logical(calc_aoa),
-    inherits(cv_obj, "hib_cv_res") || is.null(cv_obj)
+    inherits(cv_obj, "HibCV") || is.null(cv_obj)
   )
   
 
@@ -77,7 +77,7 @@ hib_mod_project <- function(mod_obj,
   # TODO: - incl calculation of DI/AOA
   # Need to also incl cv res
   if (calc_aoa){
-    assertthat::assert_that(inherits(cv_obj, "hib_cv_res"))  
+    assertthat::assert_that(inherits(cv_obj, "HibCV"))  
     message(crayon::green("Estimating Area-of-Applicability...\n"))
     aoa_res <- hib_calc_aoa(mod_obj, cv_obj, data)
   }
@@ -91,7 +91,7 @@ hib_mod_project <- function(mod_obj,
   # %%%%%
   # LME4
   # %%%%%
-  if (inherits(mod_obj, "hib_lme4_model")){
+  if (inherits(mod_obj, "HibModelLME4")){
     message(crayon::green("lme4 model detected! Projection in progress...\n"))
     # TODO: wrap in hib_mod_proj_lme4??
     
@@ -292,7 +292,7 @@ hib_mod_project <- function(mod_obj,
   # %%%%%
   # INLA
   # %%%%%
-  else if (inherits(mod_obj, "hib_inla_model")){
+  else if (inherits(mod_obj, "HibModelINLA")){
 
     # Package check
     if (!requireNamespace("INLA", quietly = TRUE)) {
@@ -690,7 +690,7 @@ hib_mod_project <- function(mod_obj,
     # %%%%%
     # BRMS
     # %%%%%
-  } else if (inherits(mod_obj, "hib_brms_model")){
+  } else if (inherits(mod_obj, "HibModelBRMS")){
     message(crayon::green("brms model detected! Projection in progress...\n"))
     
     # %%%%
@@ -890,7 +890,7 @@ hib_mod_project <- function(mod_obj,
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
   # message(crayon::green"Creating projection object...\n"))
-  proj <- hib_mod_projection$new(obj = mod_obj,
+  proj <- HibProj$new(obj = mod_obj,
                                  proj = data,
                                  backtransform = backtransform,
                                  rescale_pred = rescale_pred,
@@ -911,7 +911,7 @@ hib_mod_project <- function(mod_obj,
 #' @details 
 #' Expects a [`SpatRaster`].
 #' @param data A [`SpatRaster`] that can be used to project a model.
-#' @param obj A [`hib_model`] object - either lme4 or inla.
+#' @param obj A [`HibModelXXXX`] object - either lme4 or brms
 #' @param backtransform A [`function`] that will backtransform the model response
 #' to the scale of the original variable, e.g., exp() as the inverse of log()
 #' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
@@ -943,7 +943,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
   # TODO: maybe change to @NoRd
   # assertions
   assertthat::assert_that(
-    inherits(obj, "hib_lme4_model") || inherits(obj, "hib_brms_model"),
+    inherits(obj, "HibModelLME4") || inherits(obj, "HibModelBRMS"),
     inherits(data, "SpatRaster"), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
@@ -962,7 +962,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
 
   # Extract important re_form_vars
   re_form_vars <- NA
-  if (inherits(obj, "hib_lme4_model")){
+  if (inherits(obj, "HibModelLME4")){
     if (inherits(lme4_specs$re_form, "formula")){
       re_form_vars <- all.vars(lme4_specs$re_form)
       assertthat::assert_that(all(re_form_vars %in% rand_vars), 
@@ -972,7 +972,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       re_form_vars <- rand_vars
     }
   }
-  if (inherits(obj, "hib_brms_model")){
+  if (inherits(obj, "HibModelBRMS")){
     if (inherits(brms_specs$re_form, "formula")){
       re_form_vars <- all.vars(brms_specs$re_form)
       assertthat::assert_that(all(re_form_vars %in% rand_vars), 
@@ -1000,7 +1000,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     # if it is, check all data[,var] are in obj$data[,var
     check_covar_levels(obj$model, data, fix_vars)
 
-    if (inherits(obj, "hib_lme4_model")){
+    if (inherits(obj, "HibModelLME4")){
       # TODO: Random covar checks
       if (inherits(lme4_specs$re_form, "formula")){
         # print("Checking random variables")
@@ -1015,7 +1015,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # TODO: incorp uncertainty
       data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_specs)#lme4_boot, n_boot)
     }
-    if (inherits(obj, "hib_brms_model")){
+    if (inherits(obj, "HibModelBRMS")){
       # TODO: change to fitted...??
       # TODO: Random covar checks
       if (inherits(brms_specs$re_form, "formula")){
@@ -1082,11 +1082,11 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       if (inherits(obj$model, "brmsfit")){
         fit_dat <- obj$model$data
       }
-      # inla fit data
+      # inla fit data - not aplicable
       # if (class(obj$model) == "inla"){
-      if (inherits(obj$model, "inla")){
-        fit_dat <- obj$model$.args$data
-      }
+      # if (inherits(obj$model, "inla")){
+      #   fit_dat <- obj$model$.args$data
+      # }
       # 
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
@@ -1288,7 +1288,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         # if it is, check all data[,var] are in obj$data[,var
         check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], fix_vars)
         
-        if (inherits(obj, "hib_lme4_model")){
+        if (inherits(obj, "HibModelLME4")){
           # TODO : ranef covar check
           if (inherits(lme4_specs$re_form, "formula")){
             check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
@@ -1302,7 +1302,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                                         backtransform,
                                                         lme4_specs)
         }
-        if (inherits(obj, "hib_brms_model")){
+        if (inherits(obj, "HibModelBRMS")){
           # TODO : ranef covar check
           if (inherits(brms_specs$re_form, "formula")){
             check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
@@ -1394,7 +1394,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
       # TODO : ranef covar check
 
       # Predict
-      if (inherits(obj, "hib_lme4_model")){
+      if (inherits(obj, "HibModelLME4")){
         if (inherits(lme4_specs$re_form, "formula")){
             check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
         }
@@ -1406,7 +1406,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                           lme4_specs)
                                           # lme4_boot, n_boot)
       }
-      if (inherits(obj, "hib_brms_model")){
+      if (inherits(obj, "HibModelBRMS")){
         if (inherits(brms_specs$re_form, "formula")){
             check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
         }
@@ -1563,8 +1563,8 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' @description 
 #' This function projects/predicts the supplied model using the SpatRaster 
 #' @details 
-#' Expects a hib lme4 model and a [`SpatRaster`].
-#' @param mod A fitted hib_lme4_mod object 
+#' Expects a fitted lme4 model and a [`SpatRaster`].
+#' @param mod A [`merMod`] object 
 #' @param data A [`SpatRaster`], prepared for projection
 #' @param backtransform A [`function`] that can backtransform the response variable
 #' to its original/natual scale.
@@ -1755,8 +1755,8 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 #' @description 
 #' This function projects/predicts the supplied model using the SpatRaster 
 #' @details 
-#' Expects a hib lme4 model and a [`SpatRaster`].
-#' @param mod A fitted hib_brms_mod object 
+#' Expects a fitted brms model and a [`SpatRaster`].
+#' @param mod A [`brmsfit`]  object 
 #' @param data A [`SpatRaster`], prepared for projection
 #' @param backtransform A [`function`] that can backtransform the response variable
 #' to its original/natual scale.
@@ -1937,7 +1937,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs
 #' @details 
 #' Expects a [`SpatRaster`].
 #' @param data A [`SpatRaster`] that can be used to project a model.
-#' @param obj A [`hib_model`] object -inla.
+#' @param obj A [`HibModelINLA`] object.
 #' @param fix_vars Model fixed effects
 #' @param rand_vars Model random effects
 #' @param re_form_vars Model random effects to condition upon when predicting
@@ -1953,7 +1953,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
   
   # assertions
   assertthat::assert_that(
-    inherits(obj, "hib_inla_model"),
+    inherits(obj, "HibModelINLA"),
     inherits(data, "SpatRaster"), 
     is.character(fix_vars),
     is.character(rand_vars) || is.na(c(rand_vars)) || is.null(rand_vars),
@@ -2031,14 +2031,14 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
       # # lme4 fit data,
       # TODO: convert class().. to inherits(obj, "class")
       # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
-      if ((inherits(obj$model, "lmerMod") || inherits(obj$model, "glmerMod"))){
-        fit_dat <- obj$model@frame
-      }
-      # brms fit data
-      # if (class(obj$model) == "brmsfit"){
-      if (inherits(obj$model, "brmsfit")){
-        fit_dat <- obj$model$data
-      }
+      # if ((inherits(obj$model, "lmerMod") || inherits(obj$model, "glmerMod"))){
+      #   fit_dat <- obj$model@frame
+      # }
+      # # brms fit data
+      # # if (class(obj$model) == "brmsfit"){
+      # if (inherits(obj$model, "brmsfit")){
+      #   fit_dat <- obj$model$data
+      # }
       # inla fit data
       # if (class(obj$model) == "inla"){
       if (inherits(obj$model, "inla")){

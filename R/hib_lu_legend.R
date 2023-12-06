@@ -1,7 +1,7 @@
 #' Create an lu legend
 #' 
 #' @description 
-#' This function creates a [`R6`] object containing the loaded land-use legend. 
+#' This function creates a [`R6`] HibLULegend object containing the loaded land-use legend. 
 #' 
 #' This object is then used in other functions of this package to prepare or filter
 #' associated databases and enable ecological impact analyses. 
@@ -28,7 +28,7 @@ create_lu_legend <- function(input){
   # ------ #
   message("Creating land-use legend...\n")
   
-  leg <- lu_legend$new(input = input,
+  leg <- HibLULegend$new(input = input,
                       input_chr = deparse(substitute(input)) )
   
   return(leg)
@@ -43,7 +43,7 @@ create_lu_legend <- function(input){
 #' place.
 #' @details 
 #' Expecting a file with \code{rds} ending.
-#' @param leg A land-use [`legend`].
+#' @param leg A [`HibLULegend`].
 #' @param output_path A [`character`] pointing to a filename.
 #' @keywords save, land-use, legend
 #' @export
@@ -77,7 +77,7 @@ load_lu_legend <- function(path_input){
   
   # Sensitivity checks that the object is correct
   assertthat::assert_that(
-    inherits(leg, "lu_legend")
+    inherits(leg, "HibLULegend")
   )
   leg$checkself()
   
@@ -98,7 +98,7 @@ load_lu_legend <- function(path_input){
 #' sites dataframe.
 #'
 #' @param obj A [`HibDatabase`].
-#' @param leg A [`hib_lu_legend`].
+#' @param leg A [`HibLULegend`].
 #' @keywords database, land-use, legend
 #' @examples
 #' \dontrun{
@@ -109,7 +109,7 @@ load_lu_legend <- function(path_input){
 set_lu_legend <- function(obj, leg){
   assertthat::assert_that(
     inherits(obj, "HibDatabase") ,
-    inherits(leg, "lu_legend") 
+    inherits(leg, "HibLULegend") 
   )
   message(crayon::green("Setting land-use legend for HibDatabase...\n"))
   
