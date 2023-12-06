@@ -1,5 +1,5 @@
 #' Template objects for databases 
-#' @title Database Object
+#' @title HibDatabase Object
 #' @description 
 #' This is the template object for a database containing PREDICTS or PREDICTS-like data.
 #' It contains all the functions inherent to the database. Any functions in the package that is 
@@ -8,8 +8,8 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-Database <- R6Class("Database",
-                  # HibDatabase
+HibDatabase <- R6Class("HibDatabase",
+                  
                   # Public data objects and functions
                   public = list(
                     #' @field version (`character()`)\cr
@@ -65,7 +65,8 @@ Database <- R6Class("Database",
                     initialize = function(version, paths){
                       assertthat::assert_that(
                         is.character(version), 
-                        is.list(paths))
+                        is.list(paths)
+                        )
                       
                       # path$sites/species is character - already checked in create_hib
                       # ------ #
@@ -413,6 +414,7 @@ Database <- R6Class("Database",
                     #' @param output_path (`character()`)
                     #' @return (`NULL`).
                     save_hib = function(output_path = NULL){
+                      # hib_save ??
                       assertthat::assert_that(
                         is.character(output_path)
                       )
@@ -453,7 +455,7 @@ Database <- R6Class("Database",
                     #' of a site is scaled relative to the maximum value per study,
                     #' and multiplied by the original measure of diversity.
                     #'
-                    #' @return (`Database`).
+                    #' @return (`HibDatabase`).
                     hib_effort_correction = function(){
                       # Assume data is in self$species?
                       # Check that relevant columns are present
@@ -483,7 +485,7 @@ Database <- R6Class("Database",
                     
                     #' @description
                     #' Function to generate figures summarising the data present
-                    #' in the Database.
+                    #' in the HibDatabase.
                     #' 
                     #' @param type (`character()`) Options are: "map-sites", 
                     #' "map-studies", "biome-N", "ecoregion-N", "realm-N", "class-N".

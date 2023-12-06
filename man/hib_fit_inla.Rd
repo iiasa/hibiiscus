@@ -20,7 +20,7 @@ hib_fit_inla(
 )
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{response_fixed_form}{A \code{\link{formula}} with the response and fixed effects}
 
@@ -52,7 +52,7 @@ This function fits an inla(bru) model using the supplied database, formula and o
 function arguments tuning the model fitting process
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

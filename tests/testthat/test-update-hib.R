@@ -1,9 +1,12 @@
 # Testthat checks for update_hib.R
 
 test_that("Check that update_hib works as desired.", {
-  
-  tmp_db_1 <- load_hib(#"data/dummy_database.rds"
-                       system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db_1 <- load_hib(#"data/dummy_database.rds"
+  #                      system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # Create a second db from random simul func - saved...
   # tmp_spp_2 <- create_dummy_data("species", 15)
@@ -11,13 +14,13 @@ test_that("Check that update_hib works as desired.", {
   
   # -Doesn't work if ....
   # -Path to new data is missing
-  expect_error(update_hib(tmp_db_1, 
+  expect_error(update_hib(tmp_db, 
                           path_species = NULL,
                           version = "custom",
                           custom_version_name = "dummy_data_2"),
                regexp = "path_species is not a character vector")
   # -Path to new data is wrong
-  expect_error(update_hib(tmp_db_1, 
+  expect_error(update_hib(tmp_db, 
                           path_species = "data/not_real_dummy_data.rds",
                           version = "custom",
                           custom_version_name = "dummy_data_2"),
@@ -27,17 +30,17 @@ test_that("Check that update_hib works as desired.", {
                           path_species = "data/not_real_dummy_data.rds",
                           version = "custom",
                           custom_version_name = "dummy_data_2"),
-               regexp = "obj does not inherit from class Database")
+               regexp = "obj does not inherit from class HibDatabase")
   
   
   # Does work
-  tmp_db_upd <- update_hib(tmp_db_1, 
+  tmp_db_upd <- update_hib(tmp_db, 
                            # path_species = "data/dummy_species_rc_2.rds",
                            path_species = system.file("extdata", "dummy_species_rc_2.rds", package = "hibiiscus", mustWork = TRUE),
                            version = "custom",
                            custom_version_name = "dummy_data_2")
   expect_true(inherits(tmp_db_upd,
-                       "Database"))
+                       "HibDatabase"))
   # tmp_db_upd$version
   # 
 })

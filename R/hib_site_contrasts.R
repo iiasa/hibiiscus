@@ -4,8 +4,8 @@
 #' This function calculates dissimilarity measures between sites within a study,
 #' for use as covariates in models of comopositional dis/similarity
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param metrics A [`character`] vector of 'distance' metrics
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
 #' which compositional dis/similarity is calculated per study - should match the 
@@ -28,7 +28,7 @@ hib_calc_site_contrasts <- function(obj,
   
   # Assertion checks
   assertthat::assert_that(
-    inherits(obj, "Database"),
+    inherits(obj, "HibDatabase"),
     is.character(metrics),
     # is.logical(primin_baseline) 
     is.character(baseline_lui) || is.null(baseline_lui)

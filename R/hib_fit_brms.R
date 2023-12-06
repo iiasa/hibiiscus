@@ -4,8 +4,8 @@
 #' This function fits a brms model using the supplied database, formula and other
 #' function arguments tuning the model fitting process
 #' @details 
-#' Expects a database object...
-#' @param obj A [`Database`] object or a list of them.
+#' Expects a HibDatabase object...
+#' @param obj A [`HibDatabase`] object or a list of them.
 #' @param form A [`formula`] in the style of brms (as in lme4) - including fixed and random 
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by brms
@@ -46,7 +46,7 @@ hib_fit_brms <- function(obj,
   
   # Add assertions
   assertthat::assert_that(
-    inherits(obj, "Database") || ( is.list(obj) & all(unlist(lapply(obj, function(x){inherits(x, "Database")}))) ) , # obj is a hib database
+    inherits(obj, "HibDatabase") || ( is.list(obj) & all(unlist(lapply(obj, function(x){inherits(x, "HibDatabase")}))) ) , # obj is a hib database
     # form can be a formula,
     inherits(form, "formula") || inherits(form, "brmsformula") || inherits(form, "mvbrmsformula"),
     is.function(family) || is.character(family), # family is character or function
@@ -145,7 +145,7 @@ hib_fit_brms <- function(obj,
                            calc_N_spp(.x, .y, resp)
                          }) |> unlist()
   }
-  if (inherits(obj, "Database")){
+  if (inherits(obj, "HibDatabase")){
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)

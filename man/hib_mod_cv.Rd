@@ -18,7 +18,7 @@ hib_mod_cv(
 \arguments{
 \item{mod_obj}{A \code{\link{hib_XX_model}} object.}
 
-\item{db_obj}{A \code{\link{hib_database}} object, or, if modelling used multiple data-
+\item{db_obj}{A \code{\link{HibDatabase}} object, or, if modelling used multiple data-
 sources, a list of database objects}
 
 \item{fold_type}{A \code{\link{character}} indicating the type of cross-validation; one

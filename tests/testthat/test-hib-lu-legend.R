@@ -85,8 +85,12 @@ test_that("Check load_lu_legend works as intended.", {
 # set_lu_legend
 # %%%%%%%%%%
 test_that("Check set_lu_legend works correctly.", {
-  tmp_db <- load_hib(#"data/dummy_database.rds"
-                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db <- load_hib(#"data/dummy_database.rds"
+  #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   alt_lu_df <- tmp_db$sites[,c("SSBS", "Predominant_land_use", "Use_intensity")] |>
     dplyr::mutate(Predominant_land_use = dplyr::case_when(Predominant_land_use == "Primary" ~ "Natural/Semi-natural",
@@ -108,7 +112,7 @@ test_that("Check set_lu_legend works correctly.", {
   # - only works if obj is a Database and leg is a lu_legend
   expect_error(set_lu_legend("hello",
                              tmp_leg),
-               regexp = "obj does not inherit from class Database")
+               regexp = "obj does not inherit from class HibDatabase")
   expect_error(set_lu_legend(tmp_db,
                              c(1,0,1,0)),
                regexp = "leg does not inherit from class lu_legend")
@@ -120,7 +124,7 @@ test_that("Check set_lu_legend works correctly.", {
   
   # - correct functionality
   expect_true(inherits(tmp_db, 
-                       "Database"))
+                       "HibDatabase"))
     
 })
 

@@ -12,18 +12,31 @@
 #' @import R6
 #' @noRd
 hib_mod_projection <- R6Class("hib_mod_projection",
-                              # HibProj
+                              # "HibProj"
                               # Public data objects and functions
                               public = list(
                                 # version = NULL,
+                                #' @field last_update (`character`)\cr
+                                #' Identifies the most recent update to the object (YYYY-MM-DD).
                                 last_update = NULL,
+                                
+                                #' @field model_type (`character`)\cr
+                                #' Identifies the type of model; one of "hib_lme4_model", 
+                                #' "hib_inla_model", "hib_brms_model".
                                 model = NULL, # should this be a whole model class??
-                                # input_data = NULL,
-                                projection = NULL ,
+                                
+                                #' @param projection (`data.frame`, `SpatRaster`, or `list`)\cr
+                                #' The results of model projection.
+                                projection = NULL,
+                                
+                                #' @param projection_specs (`list`)\cr
+                                #' List of specifications used for modelling.
                                 projection_specs = NULL,
-                                # Other things to add
-                                # aoa, metric of dissimilarity
+                                
+                                #' @param aoa (`list`)\cr
+                                #' Results of Area-of-Applicability calculations.
                                 aoa = NULL,
+                                
                                 # processing_flags = NULL,
                                 
                                 #' @description

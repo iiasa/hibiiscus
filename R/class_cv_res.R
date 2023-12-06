@@ -9,7 +9,7 @@
 #' @import R6
 #' @noRd
 hib_cv_res <- R6Class("hib_cv_res",
-                      # HibCV
+                      # "HibCV"
                       # Public data objects and functions
                       public = list(
                         # version = NULL,

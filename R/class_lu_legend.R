@@ -24,7 +24,7 @@
 #' @import R6
 #' @noRd
 lu_legend <- R6Class("lu_legend",
-                    # HibLULegend ??
+                    # "HibLULegend"
                      
                     # Public data objects and functions
                     public = list(

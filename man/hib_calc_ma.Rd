@@ -7,13 +7,13 @@
 hib_calc_ma(obj)
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 }
 \description{
 This function calculates arithmetic mean abundance for each site measuring abundance.
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

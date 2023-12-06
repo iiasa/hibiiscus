@@ -5,7 +5,7 @@
 #' function arguments tuning the model fitting process
 #' @details 
 #' Expects a database object and various other arguments.
-#' @param obj A [`Database`] object, or a list of databases.
+#' @param obj A [`HibDatabase`] object, or a list of databases.
 #' @param form A [`formula`] in the style of lme4 - including fixed and random 
 #' effects.
 #' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by lme4
@@ -66,7 +66,7 @@ hib_fit_lme4 <- function(obj,
   
   # Add assertions
   assertthat::assert_that(
-    inherits(obj, "Database") || ( is.list(obj) & all(unlist(lapply(obj, function(x){inherits(x, "Database")}))) ), # obj is a hib database
+    inherits(obj, "HibDatabase") || ( is.list(obj) & all(unlist(lapply(obj, function(x){inherits(x, "HibDatabase")}))) ), # obj is a hib database
     # form can be a formula,
     is.function(family) || is.character(family), # family is character or function
     is.logical(REML), # REML is bool
@@ -112,7 +112,7 @@ hib_fit_lme4 <- function(obj,
                            calc_N_spp(.x, .y, resp)
                          }) |> unlist()
   }
-  if (inherits(obj, "Database")){
+  if (inherits(obj, "HibDatabase")){
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
@@ -140,7 +140,7 @@ hib_fit_lme4 <- function(obj,
   # first, check if family is a function or character...
   if (is.character(family)){
     if (family == "gaussian"){
-      if (inherits(obj, "Database")){
+      if (inherits(obj, "HibDatabase")){
         m0 <- lme4::lmer(form, 
                          data = mod_df,
                          REML = REML)
@@ -153,7 +153,7 @@ hib_fit_lme4 <- function(obj,
       }
     }
     if (family != "gaussian"){
-      if (inherits(obj, "Database")){
+      if (inherits(obj, "HibDatabase")){
         m0 <- lme4::glmer(form, 
                           family = family,
                           data = mod_df)
@@ -169,7 +169,7 @@ hib_fit_lme4 <- function(obj,
   }
   if (is.function(family)){
     if (family()$family == "gaussian"){
-      if (inherits(obj, "Database")){
+      if (inherits(obj, "HibDatabase")){
         m0 <- lme4::lmer(form, 
                          data = mod_df,
                          REML = REML)
@@ -182,7 +182,7 @@ hib_fit_lme4 <- function(obj,
       }
     }
     if (family()$family != "gaussian"){
-      if (inherits(obj, "Database")){
+      if (inherits(obj, "HibDatabase")){
         m0 <- lme4::glmer(form, 
                           family = family,
                           data = mod_df)  
@@ -257,8 +257,8 @@ hib_fit_lme4 <- function(obj,
 #' This function collects the data needed for the model fitting process, based on 
 #' the supplied response and covariables
 #' @details 
-#' Expects a database object...
-#' @param obj A [`Database`] object.
+#' Expects a HibDatabase object...
+#' @param obj A [`HibDatabase`] object.
 #' @param mod_resp A [`character`] indicating the response variable.
 #' @param mod_covars A [`character`] indicating the model covariates.
 #' @keywords data processing
@@ -270,6 +270,12 @@ hib_fit_lme4 <- function(obj,
 get_model_data <- function(obj,
                            mod_resp,
                            mod_covars){
+  
+  assertthat::assert_that(
+    inherits(obj, "HibDatabase"),
+    is.character(mod_resp),
+    is.character(mod_covars)
+    )
   
   within_site_resp <- purrr::map(obj$diversity_within$Data,
                                  colnames) |>

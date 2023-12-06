@@ -97,7 +97,7 @@ load_lu_legend <- function(path_input){
 #' This function adds a land-use legend to a database - specifically modifying the 
 #' sites dataframe.
 #'
-#' @param obj A [`hib_database`].
+#' @param obj A [`HibDatabase`].
 #' @param leg A [`hib_lu_legend`].
 #' @keywords database, land-use, legend
 #' @examples
@@ -108,10 +108,10 @@ load_lu_legend <- function(path_input){
 #' @export
 set_lu_legend <- function(obj, leg){
   assertthat::assert_that(
-    inherits(obj, "Database") ,
+    inherits(obj, "HibDatabase") ,
     inherits(leg, "lu_legend") 
   )
-  message(crayon::green("Setting land-use legend for hib database...\n"))
+  message(crayon::green("Setting land-use legend for HibDatabase...\n"))
   
   # Make some sensitivity checks that the inputs are okay
   obj$checkself()

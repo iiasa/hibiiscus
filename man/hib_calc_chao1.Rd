@@ -7,13 +7,13 @@
 hib_calc_chao1(obj)
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 }
 \description{
 This function calculates Chao-1 species richness per site
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

@@ -28,7 +28,8 @@ paste("Custom - ", custom_version_name). Only used if version == "custom"}
 \item{...}{Other non-specified parameters.}
 }
 \description{
-This function creates a \code{\link{R6}} object containing the loaded \code{PREDICTS} database.
+This function creates a \code{\link{R6}} \code{HibDatabase} object containing the loaded
+\code{PREDICTS} database.
 It assumes that a species database is present, with a site database being optional.
 All files are loaded and compiled in a single database that can be stored for future use.
 

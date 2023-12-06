@@ -3,7 +3,7 @@
 #' @description 
 #' This function returns a database object containing only sites whose characteristics 
 #' are retained.
-#' @param obj A [`Database`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param condition An expression identifying how to filter the sites dataframe. 
 #' @keywords database filtering
 #' @examples
@@ -16,7 +16,7 @@ hib_filter_sites <- function(obj, condition){
   # str_cond <- gsub("\"", "'", str_cond)
   
   assertthat::assert_that(
-    inherits(obj, "Database")
+    inherits(obj, "HibDatabase")
     )
 
   # TODO: Is there a way to check the condition is a condition
@@ -39,7 +39,7 @@ hib_filter_sites <- function(obj, condition){
   str_cond <- gsub("\"", "'", str_cond)
   str_cond <- gsub("  ", "", str_cond)
   
-  message(crayon::green(paste("Filtering database using:", 
+  message(crayon::green(paste("Filtering HibDatabase using:", 
                               str_cond,
                               "...\n")))
   
@@ -89,7 +89,7 @@ hib_filter_sites <- function(obj, condition){
 #' @description 
 #' This function returns a database object containing only species (and associated
 #' sites) whose characteristics are retained.
-#' @param obj A [`Database`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param condition An expression identifying how to filter the species dataframe
 #' @keywords database, filtering
 #' @examples
@@ -102,7 +102,7 @@ hib_filter_species <- function(obj, condition){
   # str_cond <- deparse(rlang::quo_get_expr(dplyr:::dplyr_quosures({{condition}})[[1]]))
   # str_cond <- gsub("\"", "'", str_cond)
   assertthat::assert_that(
-    inherits(obj, "Database")
+    inherits(obj, "HibDatabase")
     )
   # TODO: Is there a way to check the condition is a condition
 
@@ -115,7 +115,7 @@ hib_filter_species <- function(obj, condition){
   str_cond <- gsub("\"", "'", str_cond)
   str_cond <- gsub("  ", "", str_cond)
   
-  message(crayon::green(paste("Filtering database using:", 
+  message(crayon::green(paste("Filtering HibDatabase using:", 
                               str_cond,
                               "...\n")))
   

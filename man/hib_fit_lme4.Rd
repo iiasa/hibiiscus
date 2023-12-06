@@ -19,7 +19,7 @@ hib_fit_lme4(
 )
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object, or a list of databases.}
+\item{obj}{A \code{\link{HibDatabase}} object, or a list of databases.}
 
 \item{form}{A \code{\link{formula}} in the style of lme4 - including fixed and random
 effects.}

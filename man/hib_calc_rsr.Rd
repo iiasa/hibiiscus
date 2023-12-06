@@ -7,13 +7,13 @@
 hib_calc_rsr(obj)
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 }
 \description{
 This function calculates rarefied species richness per site
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

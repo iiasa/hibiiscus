@@ -15,7 +15,7 @@ hib_fit_brms(
 )
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object or a list of them.}
+\item{obj}{A \code{\link{HibDatabase}} object or a list of them.}
 
 \item{form}{A \code{\link{formula}} in the style of brms (as in lme4) - including fixed and random
 effects.}
@@ -47,7 +47,7 @@ This function fits a brms model using the supplied database, formula and other
 function arguments tuning the model fitting process
 }
 \details{
-Expects a database object...
+Expects a HibDatabase object...
 }
 \examples{
 \dontrun{

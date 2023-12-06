@@ -7,7 +7,7 @@
 hib_filter_species(obj, condition)
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{condition}{An expression identifying how to filter the species dataframe}
 }

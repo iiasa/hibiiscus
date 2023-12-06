@@ -5,8 +5,12 @@
 # %%%%%%%%%%
 
 test_that("Check that within-sample diversity metrics work.", {
-  tmp_db <- load_hib(#"data/dummy_database.rds"
-                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db <- load_hib(#"data/dummy_database.rds"
+  #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # -Won't work if metric is not supported
   expect_error(hib_calc_div_within(tmp_db,
@@ -24,7 +28,7 @@ test_that("Check that within-sample diversity metrics work.", {
                                 within_site_metrics)
   
   expect_true(inherits(tmp_db,
-                       "Database"))
+                       "HibDatabase"))
   
   expect_true(is.data.frame(tmp_db$diversity_within))
   expect_true(nrow(tmp_db$diversity_within) == length(within_site_metrics))
@@ -43,8 +47,12 @@ test_that("Check that within-sample diversity metrics work.", {
 # devtools::load_all()
 
 test_that("Check that between-sample diversity metrics work.", {
-  tmp_db <- load_hib(#"data/dummy_database.rds"
-                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db <- load_hib(#"data/dummy_database.rds"
+  #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   # -Won't work if metric is not supported
   expect_error(hib_calc_div_between(tmp_db,
@@ -60,7 +68,7 @@ test_that("Check that between-sample diversity metrics work.", {
                                  baseline_lui = "Primary_Minimal_use")
   
   expect_true(inherits(tmp_db,
-                       "Database"))
+                       "HibDatabase"))
   
   expect_true(is.data.frame(tmp_db$diversity_between))
   expect_true(nrow(tmp_db$diversity_between) == length(between_site_metrics))

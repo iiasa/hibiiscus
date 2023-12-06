@@ -14,7 +14,7 @@ hib_calc_div_between(
 )
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{metrics}{A \code{\link{character}} vector of dissimilarity metrics, any/all of ...}
 
@@ -37,7 +37,7 @@ which compositional dis/similarity is calculated per study}
 This function calculates compositional dissimilarity between sites within a study
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

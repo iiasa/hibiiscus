@@ -4,8 +4,8 @@
 #' This function calculates the number of species contributing to a model fit based
 #' on the metric (model response) of interest. Intended for internal use.
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param mod_df A [`data.frame`] object created as part of data preparation for
 #' model fitting.
 #' @param mod_resp A [`character`] object indicating the modelled response variable.
@@ -19,6 +19,12 @@ calc_N_spp <- function(obj,
                        mod_df,
                        mod_resp){
   
+  # TODO: assertions??
+  assertthat::assert_that(
+    inherits(obj, "HibDatabase"),
+    is.data.frame(mod_df),
+    is.character(mod_resp)
+    )
 
   # TODO: what if abundance is zero - currently, included, but do these "species"
   # actually count?? 

@@ -5,8 +5,8 @@
 #' @description 
 #' This function calculates total abundance for each site measuring this metric
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -85,8 +85,8 @@ hib_calc_ta <- function(obj){
 #' @description 
 #' This function calculates species richness for each site
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -203,8 +203,8 @@ hib_calc_sr <- function(obj){
 #' @description 
 #' This function calculates simpson's diversity per site
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -315,8 +315,8 @@ hib_calc_simpson <- function(obj){
 #' @description 
 #' This function calculates Chao-1 species richness per site
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -498,8 +498,8 @@ hib_calc_chao1 <- function(obj){
 #' @description 
 #' This function calculates rarefied species richness per site
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -691,8 +691,8 @@ hib_calc_rsr <- function(obj){
 #' @description 
 #' This function calculates arithmetic mean abundance for each site measuring abundance.
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -783,8 +783,8 @@ hib_calc_ma <- function(obj){
 #' @description 
 #' This function calculates geometric mean abundance for each site measuring abundance.
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -885,8 +885,8 @@ hib_calc_gma <- function(obj){
 #' @description 
 #' This function calculates shannon diversity for each site measuring abundance
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1005,8 +1005,8 @@ hib_calc_shannon <- function(obj){
 #' @description 
 #' This function calculates PIE per site.
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1068,8 +1068,8 @@ hib_calc_pie <- function(obj){
 #' @description 
 #' This function calculates diversity per site, wrapper for the above functions
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param metrics A [`character`] vector, any/all of "Total_abundance", "Species_richness", 
 #' "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
 #' "Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
@@ -1083,6 +1083,7 @@ hib_calc_pie <- function(obj){
 hib_calc_div_within <- function(obj, metrics){
   # Assertions
   assertthat::assert_that(
+    inherits(obj, "HibDatabase"),
     assertthat::has_name(obj$species, "SSBS"),
     assertthat::has_name(obj$species, "SS"),
     assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
@@ -1110,7 +1111,7 @@ hib_calc_div_within <- function(obj, metrics){
     metrics <- metrics[new_metrics_idx]
     dropped_metrics <- metrics_tc[metrics_tc %in% obj$diversity_within$Metric]
     message(crayon::yellow(paste0("Warning: the following metrics have already been ",
-                                  "added to the hib database and so will not be ",
+                                  "added to the HibDatabase and so will not be ",
                                   "recalculted; ",
                                   paste(dropped_metrics, collapse = ", "),
                                   "\n")))
@@ -1617,8 +1618,8 @@ hib_calc_nonveg <- function(spp_site_data,
 #' @description 
 #' This function calculates compositional dissimilarity between sites within a study
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param metrics A [`character`] vector of dissimilarity metrics, any/all of ...
 #' @param binary A [`logical`] vector applicable for vegan-based metrics, see [`vegdist`], 
 #' for non-vegan metrics, this will be ignored
@@ -1653,7 +1654,7 @@ hib_calc_div_between <- function(obj,
   # Assertions
   assertthat::assert_that(
     
-    inherits(obj, "Database"),
+    inherits(obj, "HibDatabase"),
     # input checks
     is.character(metrics),
     is.logical(binary),
@@ -1723,7 +1724,7 @@ hib_calc_div_between <- function(obj,
     metrics_spec_df <- metrics_spec_df[new_metrics_idx, ]
     dropped_metrics <- metrics_tc[metrics_tc %in% obj$diversity_between$Metric]
     message(crayon::yellow(paste0("Warning: the following metrics have already been ",
-                                  "added to the hib database and so will not be ",
+                                  "added to the HibDatabase and so will not be ",
                                   "recalculted: ",
                                   paste(dropped_metrics, collapse = ", "),
                                   "\n")))

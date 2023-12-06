@@ -7,7 +7,7 @@
 save_hib(obj, output_path)
 }
 \arguments{
-\item{obj}{A \code{\link{hib_database}}.}
+\item{obj}{A \code{\link{HibDatabase}}.}
 
 \item{output_path}{A \code{\link{character}} pointing to a filename.}
 }

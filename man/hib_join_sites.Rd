@@ -2,18 +2,18 @@
 % Please edit documentation in R/hib_joininfo.R
 \name{hib_join_sites}
 \alias{hib_join_sites}
-\title{Joins external site information to a database object}
+\title{Joins external site information to a HibDatabase object}
 \usage{
 hib_join_sites(obj, site_info)
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{site_info}{A \code{\link{data.frame}} or similar of categorical or numeric information
 to be added to the database. Must share atleast one column with obj$sites.}
 }
 \description{
-This function joins external information to a \code{\link{Database}} object. Such
+This function joins external information to a \code{\link{HibDatabase}} object. Such
 information could be for example additional site-specific data that are not
 already present in the database.
 }

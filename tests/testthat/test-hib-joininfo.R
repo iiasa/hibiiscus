@@ -6,8 +6,12 @@
 # %%%%%%%%%%
 
 test_that("Check that hib_join_sites works correctly.", {
-  tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
-                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
+  #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   # tmp_db$sites$Predominant_land_use |> unique()
   # Default levels of dummy data are: "Primary" "Secondary" "Cropland" "Urban"
   # Simplified levels: "Natural/Semi-natural" "Human"
@@ -24,7 +28,7 @@ test_that("Check that hib_join_sites works correctly.", {
   # tmp_db$processing_flags
   # -Successful join
   expect_true(inherits(tmp_db, 
-                       "Database")
+                       "HibDatabase")
   )
   # -No compatible columns
   expect_error(hib_join_sites(tmp_db,
@@ -37,7 +41,7 @@ test_that("Check that hib_join_sites works correctly.", {
   # -Not a database for obj
   expect_error(hib_join_sites("Hello",
                               tmp_df),
-               regexp = "obj does not inherit from class Database"
+               regexp = "obj does not inherit from class HibDatabase"
   )
   # -Not a dataframe for site_info
   expect_error(hib_join_sites(tmp_db,
@@ -52,8 +56,12 @@ test_that("Check that hib_join_sites works correctly.", {
 # %%%%%%%%%%
 
 test_that("Check that hib_join_species works correctly.", {
-  tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
-                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
+  #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   # tmp_db$sites$Predominant_land_use |> unique()
   # Default levels of dummy data are: "Primary" "Secondary" "Cropland" "Urban"
   # Simplified levels: "Natural/Semi-natural" "Human"
@@ -69,7 +77,7 @@ test_that("Check that hib_join_species works correctly.", {
   # tmp_db$processing_flags
   # -Successful join
   expect_true(inherits(tmp_db, 
-                       "Database")
+                       "HibDatabase")
   )
   # -No compatible columns
   expect_error(hib_join_species(tmp_db,
@@ -81,7 +89,7 @@ test_that("Check that hib_join_species works correctly.", {
   # -Not a database for obj
   expect_error(hib_join_species("Hello",
                                 tmp_df),
-               regexp = "obj does not inherit from class Database"
+               regexp = "obj does not inherit from class HibDatabase"
   )
   # -Not a dataframe for site_info
   expect_error(hib_join_species(tmp_db,

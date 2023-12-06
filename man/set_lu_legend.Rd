@@ -7,7 +7,7 @@
 set_lu_legend(obj, leg)
 }
 \arguments{
-\item{obj}{A \code{\link{hib_database}}.}
+\item{obj}{A \code{\link{HibDatabase}}.}
 
 \item{leg}{A \code{\link{hib_lu_legend}}.}
 }

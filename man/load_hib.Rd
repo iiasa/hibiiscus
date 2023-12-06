@@ -10,7 +10,7 @@ load_hib(path_input)
 \item{path_input}{A \code{\link{character}} pointing to a filename.}
 }
 \description{
-The function \code{\link{load_hib}} loads a previously created \code{\link{Database}}.
+The function \code{\link{load_hib}} loads a previously created and saved \code{\link{HibDatabase}}.
 }
 \details{
 Expecting a file with \code{rds} ending.

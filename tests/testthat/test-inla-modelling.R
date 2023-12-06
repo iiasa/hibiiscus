@@ -1,8 +1,12 @@
 # Testthat checks for hib_fit_inla.R, cv, projection
 
 test_that("Check inla modelling pipeline works as desired.", {
-  tmp_db <- load_hib(#"data/dummy_database.rds"
-                     system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
+  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+                       path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
+                       version = "custom",
+                       custom_version_name = "dummy_data")
+  # tmp_db <- load_hib(#"data/dummy_database.rds"
+  #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   
   tmp_db <- hib_calc_div_within(tmp_db,
                                 c("Total_abundance", "Species_richness",

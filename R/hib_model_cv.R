@@ -7,7 +7,7 @@
 #' @details 
 #' Expects a hib model object...
 #' @param mod_obj A [`hib_XX_model`] object.
-#' @param db_obj A [`hib_database`] object, or, if modelling used multiple data-
+#' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
 #' of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", 
@@ -46,7 +46,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
   # Assertion checks
   assertthat::assert_that(
     inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),     
-    inherits(db_obj, "Database") || ( is.list(db_obj) & all(unlist(lapply(obj, function(x){inherits(x, "Database")}))) ),    
+    inherits(db_obj, "HibDatabase") || ( is.list(db_obj) & all(unlist(lapply(db_obj, function(x){inherits(x, "HibDatabase")}))) ),    
     is.character(fold_type),
     is.character(custom_col) || is.null(custom_col),
     is.numeric(random_seed) || is.null(random_seed),
@@ -424,7 +424,7 @@ hib_mod_cv <- function(mod_obj, db_obj, fold_type,
 #' @details 
 #' Expects a hib_XX_model object...
 #' @param mod_obj A [`hib_XX_model`] object.
-#' @param db_obj A [`hib_database`] object, or, if modelling used multiple data-
+#' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
 #' of: ..., <spatial_options>, ..., "Custom" - ?"Random-5", "Random-10"?
@@ -464,7 +464,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   # Assertion checks 
   assertthat::assert_that(
     inherits(mod_obj, "hib_lme4_model") || inherits(mod_obj, "hib_inla_model") || inherits(mod_obj, "hib_brms_model"),
-    inherits(db_obj, "Database") || is.list(db_obj), 
+    inherits(db_obj, "HibDatabase") || ( is.list(db_obj) & all(unlist(lapply(db_obj, function(x){inherits(x, "HibDatabase")}))) ),
     is.character(fold_type),
     is.character(fold_col),
     is.numeric(random_seed) || is.null(random_seed),
@@ -495,7 +495,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   if (fold_type %in% c("Source_ID", "SS", "Country", "UN_subregion", "UN_region",
                        "Biome", "Realm", "Custom")){
     # Check fold_col is in db_obj$site
-    if(inherits(db_obj, "Database")){
+    if(inherits(db_obj, "HibDatabase")){
       assertthat::assert_that(
         assertthat::has_name(db_obj$sites, fold_col)
       )

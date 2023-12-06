@@ -14,7 +14,7 @@ update_hib(
 )
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{path_species}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted occurrence database.}
 
@@ -35,7 +35,7 @@ This function can update an existing database, for example by adding the 2022
 or a custom PREDICTS version to it.
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

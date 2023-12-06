@@ -1,9 +1,9 @@
-#' Joins external species information to a database object
+#' Joins external species information to a HibDatabase object
 #' 
 #' @description 
-#' This function joins external information to a [`Database`] object. Such 
+#' This function joins external information to a [`HibDatabase`] object. Such 
 #' information could be for example prepared data on species traits.
-#' @param obj A [`Database`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param spp_info A [`data.frame`] or similar of categorical or numeric information 
 #' to be added to the database. Must share atleast one column with obj$species.
 #' @keywords database, external
@@ -12,7 +12,7 @@ hib_join_species <- function(obj, spp_info){
 
   # Assertions
   assertthat::assert_that(
-    inherits(obj, "Database"),
+    inherits(obj, "HibDatabase"),
     is.data.frame(spp_info)
     )
   # Tests
@@ -30,7 +30,7 @@ hib_join_species <- function(obj, spp_info){
   )
   
   # TODO: joining data message
-  message(crayon::green("Joining species-related data into hib database...\n"))
+  message(crayon::green("Joining species-related data into HibDatabase...\n"))
   
   obj$species <- dplyr::left_join(obj$species,
                                   spp_info)  
@@ -60,13 +60,13 @@ hib_join_species <- function(obj, spp_info){
   return(obj)
 }
 
-#' Joins external site information to a database object
+#' Joins external site information to a HibDatabase object
 #' 
 #' @description 
-#' This function joins external information to a [`Database`] object. Such 
+#' This function joins external information to a [`HibDatabase`] object. Such 
 #' information could be for example additional site-specific data that are not 
 #' already present in the database.
-#' @param obj A [`Database`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param site_info A [`data.frame`] or similar of categorical or numeric information 
 #' to be added to the database. Must share atleast one column with obj$sites.
 #' @keywords database, external
@@ -74,7 +74,7 @@ hib_join_species <- function(obj, spp_info){
 hib_join_sites <- function(obj, site_info){
   # Assertions
   assertthat::assert_that(
-    inherits(obj, "Database"),
+    inherits(obj, "HibDatabase"),
     is.data.frame(site_info)
     )
 
@@ -92,7 +92,7 @@ hib_join_sites <- function(obj, site_info){
     msg = "Columns in site_info are not compatible with the current site data."
   )
   
-  message(crayon::green("Joining site-related data into hib database...\n"))
+  message(crayon::green("Joining site-related data into HibDatabase...\n"))
   
   obj$sites <- dplyr::left_join(obj$sites,
                          site_info)

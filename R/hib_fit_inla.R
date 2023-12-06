@@ -4,8 +4,8 @@
 #' This function fits an inla(bru) model using the supplied database, formula and other
 #' function arguments tuning the model fitting process
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @param response_fixed_form A [`formula`] with the response and fixed effects
 #' @param random_covar  A [`formula`] with random, non-spatial, iid effects specified
 #' @param family A [`character`] indicating the model family, e.g., "gaussian"
@@ -61,7 +61,7 @@ hib_fit_inla <- function(obj,
   
   # Assertions
   assertthat::assert_that(
-    inherits(obj, "Database"), # obj is a hib database
+    inherits(obj, "HibDatabase"), # obj is a hib database
     assertthat::assert_that(attr(response_fixed_form, "class") == "formula"),
     assertthat::assert_that(attr(random_covar, "class") == "formula"), # could be null??
     is.character(family), # family is character

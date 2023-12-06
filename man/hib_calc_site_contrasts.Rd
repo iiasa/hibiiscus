@@ -11,7 +11,7 @@ hib_calc_site_contrasts(
 )
 }
 \arguments{
-\item{obj}{A \code{\link{Database}} object.}
+\item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{metrics}{A \code{\link{character}} vector of 'distance' metrics}
 
@@ -24,7 +24,7 @@ This function calculates dissimilarity measures between sites within a study,
 for use as covariates in models of comopositional dis/similarity
 }
 \details{
-Expects a \code{\link{Database}} object.
+Expects a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{

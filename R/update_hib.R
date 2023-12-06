@@ -4,8 +4,8 @@
 #' This function can update an existing database, for example by adding the 2022 
 #' or a custom PREDICTS version to it.
 #' @details 
-#' Expects a [`Database`] object.
-#' @param obj A [`Database`] object.
+#' Expects a [`HibDatabase`] object.
+#' @param obj A [`HibDatabase`] object.
 #' @inheritParams create_hib
 #' @keywords database, preparation
 #' @examples 
@@ -15,9 +15,9 @@
 #' @export
 update_hib <- function(obj, path_species, path_sites = "", 
                        version = "2022", custom_version_name = "", ...){
-
+# hib_db_update ??
   assertthat::assert_that(
-    inherits(obj, "Database"),
+    inherits(obj, "HibDatabase"),
     is.character(path_species),
     file.exists(path_species),
     (is.character(path_sites) & file.exists(path_sites) ) || (is.character(path_sites) & path_sites == ""),
@@ -47,17 +47,17 @@ update_hib <- function(obj, path_species, path_sites = "",
     
     # Ensure that the version isn't already in the database
     assertthat::assert_that(!version %in% obj$version,
-                            msg = "This version of PREDICTS is already in the database object!")
+                            msg = "This version of PREDICTS is already in the HibDatabase object!")
 
     # Checks of the existing database
     obj$checkself()
     
-    message(crayon::green("Updating database object...\n"))
+    message(crayon::green("Updating HibDatabase object...\n"))
     
     names(path_species) <- version
     names(path_sites) <- version
     # Create new object
-    new_obj <- Database$new(
+    new_obj <- HibDatabase$new(
       version = version,
       paths = list(sites = path_sites,
                    species = path_species)#,
@@ -69,7 +69,7 @@ update_hib <- function(obj, path_species, path_sites = "",
     new_sites_to_rm <- unique(new_obj$sites$SSBS)[unique(new_obj$sites$SSBS) %in% unique(obj$sites$SSBS)]
     if (length(new_sites_to_rm) > 0 ){
       message(crayon::yellow(paste0("Warning: ", length(new_sites_to_rm),
-                                    " sites in the new data are alrady present in the database!",
+                                    " sites in the new data are alrady present in the HibDatabase!",
                                     "\n",
                                     "These sites will not be updated.\n")))
       print(new_sites_to_rm)
@@ -98,5 +98,9 @@ update_hib <- function(obj, path_species, path_sites = "",
     # TODO
     # Potential extra issues - previous filtering of old version/div object?
     # Can rm diversity?, but filtering etc can't be undone
+
+    # Checks of the updated database
+    obj$checkself()
+    
     return(obj)
 }

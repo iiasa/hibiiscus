@@ -9,7 +9,7 @@
 #' @import R6
 #' @noRd
 hib_inla_model <- R6Class("hib_inla_model",
-                          # HibModelINLA
+                          # "HibModelINLA"
                           # Public data objects and functions
                           public = list(
                             #' @field version (`character`)\cr
@@ -29,7 +29,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                             model = NULL,
                             
                             #' @field processing_flags (`list()`)\cr
-                            #' Identifies the processing steps used for the Database 
+                            #' Identifies the processing steps used for the HibDatabase 
                             #' object that was used for model fitting.
                             processing_flags = NULL,
                             
@@ -88,8 +88,8 @@ hib_inla_model <- R6Class("hib_inla_model",
                             #' Creates a new instance of this [R6][R6::R6Class] class.
                             #' Note, this object is constructed via the [hib_fit_inla]
                             #' function found within this package.
-                            #' @param db_obj (`Database`, or `list`)\cr
-                            #'   The Database object/s used to fit the model.
+                            #' @param db_obj (`HibDatabase`, or `list`)\cr
+                            #'   The HibDatabase object/s used to fit the model.
                             #' @param mod_df (`data.frame`)\cr
                             #'   The data.frame of the data used in model fitting.
                             #' @param inla_obj (`inla`)\cr
@@ -147,7 +147,7 @@ hib_inla_model <- R6Class("hib_inla_model",
                               assertthat::assert_that(
                                 # Check database obj
                                 # db_obj$checkself(),
-                                inherits(db_obj, "Database"),
+                                inherits(db_obj, "HibDatabase"),
                                 # Check model data
                                 is.data.frame(mod_df),
                                 # Check model
