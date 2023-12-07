@@ -42,7 +42,7 @@ HibProjection <- R6Class("HibProjection",
                                 
                                 #' @description
                                 #' Creates a new instance of this [R6][R6::R6Class] class.
-                                #' Note, this object is constructed via the [hib_mod_project]
+                                #' Note, this object is constructed via the [hib_project_model]
                                 #' function found within this package.
                                 #' @param obj (`HibModelXXXX`)\cr
                                 #'   The model object used in cross-validation.
@@ -267,47 +267,46 @@ HibProjection <- R6Class("HibProjection",
                                   )
                                   
                                 },
-                                # Save object
                                 
-                                #' @description
-                                #' Function to save the object to the specified file-path 
-                                #' ('output_path', must be '.rds').
-                                #'
-                                #' @param output_path (`character()`)
-                                #' @return (`NULL`).
-                                # TODO - have a generic save_hib function for all hib datatypes
-                                # Everything is just an RDS anyway
-                                save_projection = function(output_path = NULL){
-                                  # TODO: check this works with a terra-based projection
-                                  # terra objects are pointer-associated...
-                                  assertthat::assert_that(
-                                    is.character(output_path)
-                                  )
+                                # #' @description
+                                # #' Function to save the object to the specified file-path 
+                                # #' ('output_path', must be '.rds').
+                                # #'
+                                # #' @param output_path (`character()`)
+                                # #' @return (`NULL`).
+                                # # TODO - have a generic save_hib function for all hib datatypes
+                                # # Everything is just an RDS anyway
+                                # save_projection = function(output_path = NULL){
+                                #   # TODO: check this works with a terra-based projection
+                                #   # terra objects are pointer-associated...
+                                #   assertthat::assert_that(
+                                #     is.character(output_path)
+                                #   )
                                   
-                                  if(!assertthat::has_extension(output_path, "rds")){
-                                    output_path <- paste0(output_path, ".rds")
-                                  }
+                                #   if(!assertthat::has_extension(output_path, "rds")){
+                                #     output_path <- paste0(output_path, ".rds")
+                                #   }
                                   
-                                  if (!dir.exists(dirname(output_path))){
-                                    message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                                                                  "\n",
-                                                                  "This folder will be created.\n")))
-                                    dir.create(dirname(output_path), recursive = T)
-                                  }
+                                #   if (!dir.exists(dirname(output_path))){
+                                #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
+                                #                                   "\n",
+                                #                                   "This folder will be created.\n")))
+                                #     dir.create(dirname(output_path), recursive = T)
+                                #   }
                                   
-                                  if (file.exists(output_path)){
-                                    message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                                                                  "\n",
-                                                                  "This file will be updated.\n")))
-                                  }
+                                #   if (file.exists(output_path)){
+                                #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
+                                #                                   "\n",
+                                #                                   "This file will be updated.\n")))
+                                #   }
                                   
-                                  message(crayon::green(paste0("Saving projection to: '", output_path, "'\n")) )
+                                #   message(crayon::green(paste0("Saving projection to: '", output_path, "'\n")) )
                                   
-                                  saveRDS(self, output_path)
-                                  assertthat::assert_that(file.exists(output_path),
-                                                          msg = "Writing a copy of the projection failed...")
-                                  invisible()
-                                },
+                                #   saveRDS(self, output_path)
+                                #   assertthat::assert_that(file.exists(output_path),
+                                #                           msg = "Writing a copy of the projection failed...")
+                                #   invisible()
+                                # },
                                 
                                 #' @description
                                 #' Function to generate figures summarising the

@@ -11,7 +11,7 @@
 HibCV <- R6Class("HibCV",
                       # "HibCV"
                       # TODO: @export
-                      
+
                       # Public data objects and functions
                       public = list(
                         # version = NULL,
@@ -47,7 +47,7 @@ HibCV <- R6Class("HibCV",
                         # Executed when created
                         #' @description
                         #' Creates a new instance of this [R6][R6::R6Class] class.
-                        #' Note, this object is constructed via the [hib_mod_cv]
+                        #' Note, this object is constructed via the [hib_cv_model]
                         #' function found within this package.
                         #' @param mod_obj (`HibModelXXXX`)\cr
                         #'   The model object used in cross-validation.
@@ -367,41 +367,41 @@ HibCV <- R6Class("HibCV",
                           
                         },
                         
-                        #' @description
-                        #' Function to save the object to the specified file-path 
-                        #' ('output_path', must be '.rds').
-                        #'
-                        #' @param output_path (`character()`)
-                        #' @return (`NULL`).
-                        save_hib = function(output_path = NULL){
-                          assertthat::assert_that(
-                            is.null(output_path) || is.character(output_path)
-                          )
+                        # #' @description
+                        # #' Function to save the object to the specified file-path 
+                        # #' ('output_path', must be '.rds').
+                        # #'
+                        # #' @param output_path (`character()`)
+                        # #' @return (`NULL`).
+                        # save_hib = function(output_path = NULL){
+                        #   assertthat::assert_that(
+                        #     is.null(output_path) || is.character(output_path)
+                        #   )
                           
-                          if(!assertthat::has_extension(output_path, "rds")){
-                            output_path <- paste0(output_path, ".rds")
-                          }
+                        #   if(!assertthat::has_extension(output_path, "rds")){
+                        #     output_path <- paste0(output_path, ".rds")
+                        #   }
                           
-                          if (!dir.exists(dirname(output_path))){
-                            message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                                                          "\n",
-                                                          "This folder will be created.\n")))
-                            dir.create(dirname(output_path), recursive = T)
-                          }
+                        #   if (!dir.exists(dirname(output_path))){
+                        #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
+                        #                                   "\n",
+                        #                                   "This folder will be created.\n")))
+                        #     dir.create(dirname(output_path), recursive = T)
+                        #   }
                           
-                          if (file.exists(output_path)){
-                            message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                                                          "\n",
-                                                          "This file will be updated.\n")))
-                          }
+                        #   if (file.exists(output_path)){
+                        #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
+                        #                                   "\n",
+                        #                                   "This file will be updated.\n")))
+                        #   }
                           
-                          message(crayon::green(paste0("Saving cross-validation results to: '", output_path, "'\n")) )
+                        #   message(crayon::green(paste0("Saving cross-validation results to: '", output_path, "'\n")) )
                           
-                          saveRDS(self, output_path)
-                          assertthat::assert_that(file.exists(output_path),
-                                                  msg = "Writing a copy of the results failed...")
-                          invisible()
-                        },
+                        #   saveRDS(self, output_path)
+                        #   assertthat::assert_that(file.exists(output_path),
+                        #                           msg = "Writing a copy of the results failed...")
+                        #   invisible()
+                        # },
                         
                         #' @description
                         #' Function to generate figures summarising the cross-

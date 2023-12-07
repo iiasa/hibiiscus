@@ -58,7 +58,7 @@ HibLULegend <- R6Class("HibLULegend",
                       # Executed when created
                       #' @description
                       #' Creates a new instance of this [R6][R6::R6Class] class.
-                      #' Note, this object is constructed via the [create_lu_legend]
+                      #' Note, this object is constructed via the [hib_create_lu_legend]
                       #' function found within this package.
                       #' @param input (`character()` or `data.frame`)\cr
                       #'   The source data used to generate the LU legend
@@ -186,41 +186,41 @@ HibLULegend <- R6Class("HibLULegend",
                         
                       },
                       
-                      #' @description
-                      #' Function to save the object to the specified  file-path 
-                      #' ('output_path', must be '.rds').
-                      #'
-                      #' @param output_path (`character()`)
-                      #' @return (`NULL`).
-                      save_legend = function(output_path = NULL){
-                        assertthat::assert_that(
-                          is.character(output_path)
-                        )
+                      # #' @description
+                      # #' Function to save the object to the specified  file-path 
+                      # #' ('output_path', must be '.rds').
+                      # #'
+                      # #' @param output_path (`character()`)
+                      # #' @return (`NULL`).
+                      # save_legend = function(output_path = NULL){
+                      #   assertthat::assert_that(
+                      #     is.character(output_path)
+                      #   )
                         
-                        if(!assertthat::has_extension(output_path, "rds")){
-                          output_path <- paste0(output_path, ".rds")
-                        }
+                      #   if(!assertthat::has_extension(output_path, "rds")){
+                      #     output_path <- paste0(output_path, ".rds")
+                      #   }
                         
-                        if (!dir.exists(dirname(output_path))){
-                          message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                                                        "\n",
-                                                        "This folder will be created.\n")))
-                          dir.create(dirname(output_path), recursive = T)
-                        }
+                      #   if (!dir.exists(dirname(output_path))){
+                      #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
+                      #                                   "\n",
+                      #                                   "This folder will be created.\n")))
+                      #     dir.create(dirname(output_path), recursive = T)
+                      #   }
                         
-                        if (file.exists(output_path)){
-                          message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                                                        "\n",
-                                                        "This file will be updated.\n")))
-                        }
+                      #   if (file.exists(output_path)){
+                      #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
+                      #                                   "\n",
+                      #                                   "This file will be updated.\n")))
+                      #   }
                         
-                        message(crayon::green(paste0("Saving land-use legend to: '", output_path, "'\n")) )
+                      #   message(crayon::green(paste0("Saving land-use legend to: '", output_path, "'\n")) )
                         
-                        saveRDS(self, output_path)
-                        assertthat::assert_that(file.exists(output_path),
-                                                msg = "Writing a copy of the legend failed...")
-                        invisible()
-                      },
+                      #   saveRDS(self, output_path)
+                      #   assertthat::assert_that(file.exists(output_path),
+                      #                           msg = "Writing a copy of the legend failed...")
+                      #   invisible()
+                      # },
                       
                       #' @description
                       #' Function to generate figures summarising the data present

@@ -236,41 +236,41 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         
                       },
                       
-                      #' @description
-                      #' Function to save the object to the specified file-path 
-                      #' ('output_path', must be '.rds').
-                      #'
-                      #' @param output_path (`character()`)
-                      #' @return (`NULL`).
-                      save_hib = function(output_path = NULL){
-                        assertthat::assert_that(
-                          is.null(output_path) || is.character(output_path)
-                        )
+                      # #' @description
+                      # #' Function to save the object to the specified file-path 
+                      # #' ('output_path', must be '.rds').
+                      # #'
+                      # #' @param output_path (`character()`)
+                      # #' @return (`NULL`).
+                      # save_hib = function(output_path = NULL){
+                      #   assertthat::assert_that(
+                      #     is.null(output_path) || is.character(output_path)
+                      #   )
 
-                        if(!assertthat::has_extension(output_path, "rds")){
-                          output_path <- paste0(output_path, ".rds")
-                        }
+                      #   if(!assertthat::has_extension(output_path, "rds")){
+                      #     output_path <- paste0(output_path, ".rds")
+                      #   }
                         
-                        if (!dir.exists(dirname(output_path))){
-                          message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                                                        "\n",
-                                                        "This folder will be created.\n")))
-                          dir.create(dirname(output_path), recursive = T)
-                        }
+                      #   if (!dir.exists(dirname(output_path))){
+                      #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
+                      #                                   "\n",
+                      #                                   "This folder will be created.\n")))
+                      #     dir.create(dirname(output_path), recursive = T)
+                      #   }
                         
-                        if (file.exists(output_path)){
-                          message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                                                        "\n",
-                                                        "This file will be updated.\n")))
-                        }
+                      #   if (file.exists(output_path)){
+                      #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
+                      #                                   "\n",
+                      #                                   "This file will be updated.\n")))
+                      #   }
                         
-                        message(crayon::green(paste0("Saving hib model to: '", output_path, "'\n")) )
+                      #   message(crayon::green(paste0("Saving hib model to: '", output_path, "'\n")) )
                         
-                        saveRDS(self, output_path)
-                        assertthat::assert_that(file.exists(output_path),
-                                                msg = "Writing a copy of the model failed...")
-                        invisible()
-                      },
+                      #   saveRDS(self, output_path)
+                      #   assertthat::assert_that(file.exists(output_path),
+                      #                           msg = "Writing a copy of the model failed...")
+                      #   invisible()
+                      # },
                       
                       #' @description
                       #' Function to generate figures summarising the model.

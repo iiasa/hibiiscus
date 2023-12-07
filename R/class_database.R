@@ -56,8 +56,8 @@ HibDatabase <- R6Class("HibDatabase",
                     # Executed when created
                     #' @description
                     #' Creates a new instance of this [R6][R6::R6Class] class.
-                    #' Note, this object is constructed via the [create_hib] and 
-                    #' [update_hib] functions found within this package.
+                    #' Note, this object is constructed via the [hib_create_db] and 
+                    #' [hib_update_db] functions found within this package.
                     #' @param version (`character()`)\cr
                     #'   Text indicating the version of the database being created.
                     #' @param paths (`list()`)\cr
@@ -407,47 +407,47 @@ HibDatabase <- R6Class("HibDatabase",
                       
                     },
                     
-                    #' @description
-                    #' Function to save the Database object to the specified 
-                    #' file-path ('output_path', must be '.rds').
-                    #'
-                    #' @param output_path (`character()`)
-                    #' @return (`NULL`).
-                    save_hib = function(output_path = NULL){
-                      # hib_save ??
-                      assertthat::assert_that(
-                        is.character(output_path)
-                      )
-                      # if (is.null(output_path)){
-                      #   output_path <- self$paths$path_output
-                      # }
+                    # #' @description
+                    # #' Function to save the Database object to the specified 
+                    # #' file-path ('output_path', must be '.rds').
+                    # #'
+                    # #' @param output_path (`character()`)
+                    # #' @return (`NULL`).
+                    # save_hib = function(output_path = NULL){
+                    #   # hib_save ??
+                    #   assertthat::assert_that(
+                    #     is.character(output_path)
+                    #   )
+                    #   # if (is.null(output_path)){
+                    #   #   output_path <- self$paths$path_output
+                    #   # }
                       
-                      if(!assertthat::has_extension(output_path, "rds")){
-                        output_path <- paste0(output_path, ".rds")
-                      }
+                    #   if(!assertthat::has_extension(output_path, "rds")){
+                    #     output_path <- paste0(output_path, ".rds")
+                    #   }
                       
-                      if (!dir.exists(dirname(output_path))){
-                        message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                                                      "\n",
-                                                      "This folder will be created.\n")))
-                        dir.create(dirname(output_path), recursive = T)
-                      }
-                      if (file.exists(output_path)){
-                        message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                                                      "\n",
-                                                      "This file will be updated.\n")))
-                      }
+                    #   if (!dir.exists(dirname(output_path))){
+                    #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
+                    #                                   "\n",
+                    #                                   "This folder will be created.\n")))
+                    #     dir.create(dirname(output_path), recursive = T)
+                    #   }
+                    #   if (file.exists(output_path)){
+                    #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
+                    #                                   "\n",
+                    #                                   "This file will be updated.\n")))
+                    #   }
                       
-                      message(crayon::green(paste0("Saving HibDatabase to: '", output_path, "'\n")) )
+                    #   message(crayon::green(paste0("Saving HibDatabase to: '", output_path, "'\n")) )
                       
-                      # Note: currently doesn't make the folder or check parent folders exist...
-                      # Could include - with a warning...
+                    #   # Note: currently doesn't make the folder or check parent folders exist...
+                    #   # Could include - with a warning...
 
-                      saveRDS(self, output_path)
-                      assertthat::assert_that(file.exists(output_path),
-                                              msg = "Writing a copy of the database failed...")
-                      invisible()
-                    },
+                    #   saveRDS(self, output_path)
+                    #   assertthat::assert_that(file.exists(output_path),
+                    #                           msg = "Writing a copy of the database failed...")
+                    #   invisible()
+                    # },
                     
                     #' @description
                     #' Function to apply effort correction to the species data. 
