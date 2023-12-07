@@ -10,7 +10,8 @@
 #' @import R6
 #' @noRd
 HibModelBRMS <- R6Class("HibModelBRMS",
-                          # hib_brms_model "HibModelBRMS" HibBRMSModel
+                          # hib_brms_model 
+                          # TODO: @export
                           # Public data objects and functions
                           public = list(
                             #' @field version (`character`)\cr

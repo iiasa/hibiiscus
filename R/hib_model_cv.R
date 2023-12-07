@@ -35,12 +35,13 @@
 #'   cv_out <- hib_mod_cv(mod_obj, db_obj, fold_type = "UN_region")
 #' } 
 #' @export
-hib_mod_cv <- function(mod_obj, db_obj, fold_type, 
+hib_cv_model <- function(mod_obj, db_obj, fold_type, 
                        custom_col = NULL,
                        random_seed = NULL,
                        re_form = list(NA),
                        backtransform = NULL,
                        use_original_mesh = NULL){
+  # hib_mod_cv
   # TODO: option to just use original mesh for inla cv - override mesh_source
   
   # Assertion checks

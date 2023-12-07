@@ -9,7 +9,7 @@
 #' @import R6
 #' @noRd
 HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
-                          
+                          # TODO: @export
                           # Public data objects and functions
                           public = list(
                             #' @field version (`character`)\cr

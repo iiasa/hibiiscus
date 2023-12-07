@@ -6,16 +6,17 @@
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
-#' @inheritParams create_hib
+#' @inheritParams hib_create_db
 #' @keywords database, preparation
 #' @examples 
 #' \dontrun{
 #'   obj <- update_hib(obj1, obj2)
 #' } 
 #' @export
-update_hib <- function(obj, path_species, path_sites = "", 
+hib_update_db <- function(obj, path_species, path_sites = "", 
                        version = "2022", custom_version_name = "", ...){
-# hib_db_update ??
+# update_hib
+
   assertthat::assert_that(
     inherits(obj, "HibDatabase"),
     is.character(path_species),
@@ -52,7 +53,7 @@ update_hib <- function(obj, path_species, path_sites = "",
     # Checks of the existing database
     obj$checkself()
     
-    message(crayon::green("Updating HibDatabase object...\n"))
+    message(crayon::green("Updating HibDatabase ...\n"))
     
     names(path_species) <- version
     names(path_sites) <- version
@@ -101,6 +102,6 @@ update_hib <- function(obj, path_species, path_sites = "",
 
     # Checks of the updated database
     obj$checkself()
-    
+
     return(obj)
 }

@@ -9,7 +9,7 @@
 #' @import R6
 #' @noRd
 HibDatabase <- R6Class("HibDatabase",
-                  
+                  # TODO: @export
                   # Public data objects and functions
                   public = list(
                     #' @field version (`character()`)\cr
@@ -438,7 +438,7 @@ HibDatabase <- R6Class("HibDatabase",
                                                       "This file will be updated.\n")))
                       }
                       
-                      message(crayon::green(paste0("Saving hib database to: '", output_path, "'\n")) )
+                      message(crayon::green(paste0("Saving HibDatabase to: '", output_path, "'\n")) )
                       
                       # Note: currently doesn't make the folder or check parent folders exist...
                       # Could include - with a warning...

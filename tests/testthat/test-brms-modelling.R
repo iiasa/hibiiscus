@@ -1,7 +1,7 @@
 # Testthat checks for hib_fit_brms.R, cv, projection
 
 test_that("Check brms modelling pipeline works as desired.", {
-  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+  tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")
@@ -48,14 +48,14 @@ test_that("Check brms modelling pipeline works as desired.", {
   # mod_b$plot()
   
   # cv
-  suppressWarnings(cv_w <- hib_mod_cv(mod_w,
+  suppressWarnings(cv_w <- hib_cv_model(mod_w,
                                       tmp_db,
                                       c("Random-2"),
                                       backtransform = function(x){exp(x) - 1}))
   expect_true(inherits(cv_w,
                        "HibCV"))
   
-  suppressWarnings(cv_b <- hib_mod_cv(mod_b,
+  suppressWarnings(cv_b <- hib_cv_model(mod_b,
                                       tmp_db,
                                       c("Random-2")))
   expect_true(inherits(cv_b,
@@ -83,16 +83,16 @@ test_that("Check brms modelling pipeline works as desired.", {
   
   
   # project for df, ?and terra rast?
-  proj_w <- hib_mod_project(mod_w,
+  proj_w <- hib_project_model(mod_w,
                             proj_df_w,
                             backtransform = function(x){exp(x) - 1})
   expect_true(inherits(proj_w,
-                       "HibProj"))  
+                       "HibProjection"))  
   
-  proj_b <- hib_mod_project(mod_b,
+  proj_b <- hib_project_model(mod_b,
                             proj_df_b)
   expect_true(inherits(proj_b,
-                       "HibProj")) 
+                       "HibProjection")) 
   
   # proj_w$plot()
   # proj_b$plot()
@@ -116,11 +116,11 @@ test_that("Check brms modelling pipeline works as desired.", {
   )
   names(proj_rast_w) <- "LUI"
   
-  proj_w_ <- hib_mod_project(mod_w,
+  proj_w_ <- hib_project_model(mod_w,
                              proj_rast_w,
                              backtransform = function(x){exp(x) - 1})
   expect_true(inherits(proj_w_,
-                       "HibProj"))  
+                       "HibProjection"))  
   
   
   proj_rast_b <- proj_df_b |>
@@ -145,8 +145,8 @@ test_that("Check brms modelling pipeline works as desired.", {
   
   proj_rast_b <- c(proj_rast_b, proj_rast_b_)
   
-  proj_b_ <- hib_mod_project(mod_b,
+  proj_b_ <- hib_project_model(mod_b,
                              proj_rast_b)
   expect_true(inherits(proj_b_,
-                       "HibProj"))  
+                       "HibProjection"))  
 })

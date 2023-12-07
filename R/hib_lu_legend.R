@@ -14,7 +14,8 @@
 #'   lu_leg
 #' }
 #' @export
-create_lu_legend <- function(input){
+hib_create_lu_legend <- function(input){
+  # hib_create_lu_legend
   # %%%
   assertthat::assert_that(
     is.character(input) || is.data.frame(input)
@@ -36,54 +37,55 @@ create_lu_legend <- function(input){
   
 }
 
-#' Save a previously created legend
-#' 
-#' @description 
-#' The function [`save_legend`] saves the output of the formatted [`legend`] object in a specific
-#' place.
-#' @details 
-#' Expecting a file with \code{rds} ending.
-#' @param leg A [`HibLULegend`].
-#' @param output_path A [`character`] pointing to a filename.
-#' @keywords save, land-use, legend
-#' @export
-save_legend <- function(leg, output_path) leg$save_legend(output_path)
+# #' Save a previously created legend
+# #' 
+# #' @description 
+# #' The function [`save_legend`] saves the output of the formatted [`legend`] object in a specific
+# #' place.
+# #' @details 
+# #' Expecting a file with \code{rds} ending.
+# #' @param leg A [`HibLULegend`].
+# #' @param output_path A [`character`] pointing to a filename.
+# #' @keywords save, land-use, legend
+# #' @export
+# save_legend <- function(leg, output_path) leg$save_legend(output_path)
 
 
 
-#' Load a saved lu legend
-#' 
-#' @description 
-#' This function loads a previously created [`R6`] object containing a land-use legend class. 
-#' 
-#' @param path_input A [`character`] pointing to a saved RDS file.
-#' @keywords database, land-use, legend
-#' @examples
-#' \dontrun{
-#'   lu_leg <- load_lu_legend("../Data/landuse_legend.RDS")
-#'   lu_leg
-#' }
-#' @export
-load_lu_legend <- function(path_input){
-  assertthat::assert_that(
-    is.character(path_input),
-    file.exists(path_input),
-    assertthat::has_extension(path_input, "rds")
-  )
-  # Try and read in the legend
-  message(crayon::green(paste0("Loading land-use legend from: '", path_input, "...\n")))
+# #' Load a saved lu legend
+# #' 
+# #' @description 
+# #' This function loads a previously created [`R6`] object containing a land-use legend class. 
+# #' 
+# #' @param path_input A [`character`] pointing to a saved RDS file.
+# #' @keywords database, land-use, legend
+# #' @examples
+# #' \dontrun{
+# #'   lu_leg <- load_lu_legend("../Data/landuse_legend.RDS")
+# #'   lu_leg
+# #' }
+# #' @export
+# load_lu_legend <- function(path_input){
+#   # hib_load_lu_legend
+#   assertthat::assert_that(
+#     is.character(path_input),
+#     file.exists(path_input),
+#     assertthat::has_extension(path_input, "rds")
+#   )
+#   # Try and read in the legend
+#   message(crayon::green(paste0("Loading land-use legend from: '", path_input, "...\n")))
   
-  leg <- readr::read_rds(path_input)
+#   leg <- readr::read_rds(path_input)
   
-  # Sensitivity checks that the object is correct
-  assertthat::assert_that(
-    inherits(leg, "HibLULegend")
-  )
-  leg$checkself()
+#   # Sensitivity checks that the object is correct
+#   assertthat::assert_that(
+#     inherits(leg, "HibLULegend")
+#   )
+#   leg$checkself()
   
-  return(leg)
+#   return(leg)
   
-}
+# }
 
 
 # TODO:
@@ -106,7 +108,8 @@ load_lu_legend <- function(path_input){
 #'   obj
 #' }
 #' @export
-set_lu_legend <- function(obj, leg){
+hib_set_lu_legend <- function(obj, leg){
+  # hib_set_lu_legend
   assertthat::assert_that(
     inherits(obj, "HibDatabase") ,
     inherits(leg, "HibLULegend") 

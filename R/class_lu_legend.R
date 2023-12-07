@@ -25,7 +25,7 @@
 #' @noRd
 HibLULegend <- R6Class("HibLULegend",
                     # "lu_legend"
-                     
+                    # TODO: @export
                     # Public data objects and functions
                     public = list(
                       #' @field last_update (`character()`)\cr
@@ -99,52 +99,20 @@ HibLULegend <- R6Class("HibLULegend",
                                                     "')")
                         }
                         
+                        # To make subsequent data manipulation easier - e.g site_contrasts 
+                        # etc - particular column names are enforced:
+                        # Predominant_land_use, Use_intensity, LUI - as in PREDICTS
                         
-                        # print(lu_df)
-                        
-                        # TODO:
-                        # To make subsequent data manipulation easier - e.g site_contrasts etc
-                        # It might be better to enforce particular column names
-                        # E.g., Predominant_land_use, Use_intensity, LUI - as in PREDICTS?
-                        
-                        # Check column names - SSBS, LU or similar, Management or similar, LUI or similar
+                        # Check column names 
                         assertthat::assert_that(
                           assertthat::has_name(lu_df, "SSBS"),
-                          # any(c("Predominant_land_use", "Predominant_habitat", "Land_use") %in% colnames(lu_df)),
-                          # any(c("Management_intensity", "Use_intensity") %in% colnames(lu_df)),
-                          # any(c("Land_use_intensity", "LUI") %in% colnames(lu_df))
-                          # (assertthat::has_name(lu_df, "Predominant_land_use") || assertthat::has_name(lu_df, "Predominant_habitat") || assertthat::has_name(lu_df, "Land_use")),
-                          # (assertthat::has_name(lu_df, "Management_intensity") || assertthat::has_name(lu_df, "Use_intensity")),
-                          # (assertthat::has_name(lu_df, "Land_use_intensity") || assertthat::has_name(lu_df, "LUI"))
-              
+                          
                           assertthat::has_name(lu_df, "Predominant_land_use"),
                           assertthat::has_name(lu_df, "Use_intensity"),
                           assertthat::has_name(lu_df, "LUI")
                         )
                         
                         # Get unique land-uses and intensities
-                        # lu_col <- c("Predominant_land_use", "Predominant_habitat", "Land_use")
-                        # lu_col <- lu_col[lu_col %in% colnames(lu_df)]
-                        # assertthat::assert_that(
-                        #   length(lu_col) == 1
-                        # )
-                        # 
-                        # i_col <- c("Management_intensity", "Use_intensity")
-                        # i_col <- i_col[i_col %in% colnames(lu_df)]
-                        # assertthat::assert_that(
-                        #   length(i_col) == 1
-                        # )
-                        # 
-                        # lui_col <- c("Land_use_intensity", "LUI")
-                        # lui_col <- lui_col[lui_col %in% colnames(lu_df)]
-                        # assertthat::assert_that(
-                        #   length(lui_col) == 1
-                        # )
-                        
-                        # un_lu <- unique(lu_df[[lu_col]])
-                        # un_i <- unique(lu_df[[i_col]])
-                        # un_lui <- unique(lu_df[[lui_col]])
-                        
                         un_lu <- unique(lu_df$Predominant_land_use)
                         un_i <- unique(lu_df$Use_intensity)
                         un_lui <- unique(lu_df$LUI)
@@ -177,19 +145,13 @@ HibLULegend <- R6Class("HibLULegend",
 
                         assertthat::assert_that(
                           assertthat::has_name(df, "SSBS"),
-                          # any(c("Predominant_land_use", "Predominant_habitat", "Land_use") %in% colnames(df)),
-                          # any(c("Management_intensity", "Use_intensity") %in% colnames(df)),
-                          # any(c("Land_use_intensity", "LUI") %in% colnames(df))
-                          # assertthat::has_name(lu_df, "Predominant_land_use") || assertthat::has_name(lu_df, "Predominant_habitat") || assertthat::has_name(lu_df, "Land_use"),
-                          # assertthat::has_name(lu_df, "Management_intensity") || assertthat::has_name(lu_df, "Use_intensity"),
-                          # assertthat::has_name(lu_df, "Land_use_management") || assertthat::has_name(lu_df, "LUM") ||assertthat::has_name(lu_df, "Land_use_intensity") || assertthat::has_name(lu_df, "LUI")
+                          
                           assertthat::has_name(df, "Predominant_land_use"),
                           assertthat::has_name(df, "Use_intensity"),
                           assertthat::has_name(df, "LUI")
                           
                         )
-                        # Finally, check that all sites are in species
-                        # NOTE RC - source ID is just the paper...
+                        
                         assertthat::assert_that(
                           nrow(df) > 0,
                           length(unique(df$SSBS)) > 0
@@ -288,13 +250,6 @@ HibLULegend <- R6Class("HibLULegend",
                         # Groupy by var
                         # N Sites (SSBS)
                         if (x_var == "land-use"){
-                          # lu_col <- c("Predominant_land_use", "Predominant_habitat", "Land_use")
-                          # lu_col <- lu_col[lu_col %in% colnames(self$lu_df)]
-                          # 
-                          # df <- self$lu_df |>
-                          #   dplyr::group_by(!!sym(lu_col)) |>
-                          #   dplyr::summarise(N = n_distinct(SSBS))
-                          # print(head(df))
                           
                           df <- self$lu_df |>
                             dplyr::group_by(Predominant_land_use) |>
@@ -324,13 +279,6 @@ HibLULegend <- R6Class("HibLULegend",
                         }
                         
                         if (x_var == "use-intensity"){
-                          # i_col <- c("Management_intensity", "Use_intensity")
-                          # i_col <- i_col[i_col %in% colnames(self$lu_df)]
-                          # 
-                          # df <- self$lu_df |>
-                          #   dplyr::group_by(!!sym(i_col)) |>
-                          #   dplyr::summarise(N = n_distinct(SSBS))
-                          # print(head(df))
                           
                           df <- self$lu_df |>
                             dplyr::group_by(Use_intensity) |>
@@ -360,17 +308,6 @@ HibLULegend <- R6Class("HibLULegend",
                         
                         
                         if (x_var == "land-use:use-intensity"){
-                          
-                          # lu_col <- c("Predominant_land_use", "Predominant_habitat", "Land_use")
-                          # lu_col <- lu_col[lu_col %in% colnames(self$lu_df)]
-                          # 
-                          # i_col <- c("Management_intensity", "Use_intensity")
-                          # i_col <- i_col[i_col %in% colnames(self$lu_df)]
-                          # 
-                          # df <- self$lu_df |>
-                          #   dplyr::group_by(!!sym(lu_col), !!sym(i_col)) |>
-                          #   dplyr::summarise(N = n_distinct(SSBS))
-                          # print(head(df))
                           
                           df <- self$lu_df |>
                               dplyr::group_by(Predominant_land_use, Use_intensity) |>
@@ -406,53 +343,6 @@ HibLULegend <- R6Class("HibLULegend",
                                   aspect.ratio = 0.75)
                           
                         }
-                        # %%%
-                        # lu_col <- c("Predominant_land_use", "Predominant_habitat", "Land_use")
-                        # lu_col <- lu_col[lu_col %in% colnames(lu_df)]
-                        # assertthat::assert_that(
-                        #   length(lu_col == 1)
-                        # )
-                        # 
-                        # i_col <- c("Management_intensity", "Use_intensity")
-                        # i_col <- i_col[i_col %in% colnames(lu_df)]
-                        # assertthat::assert_that(
-                        #   length(i_col == 1)
-                        # )
-                        # 
-                        # lui_col <- c("Land_use_intensity", "LUI")
-                        # lui_col <- lui_col[lui_col %in% colnames(lu_df)]
-                        # assertthat::assert_that(
-                        #   length(lui_col == 1)
-                        # )
-                        # %%%
-                        
-                        # plot
-                        # %%%
-                        # df |>
-                        #   ggplot() +
-                        #   geom_hline(yintercept = 0, colour = "darkgrey", lty = 1) +
-                        #   geom_hline(yintercept = 100, colour = "darkgrey", lty = 2) +
-                        #   geom_point(aes(x = var, y = N,
-                        #                  group = Use_intensity,
-                        #                  shape = Use_intensity),
-                        #              size = 2,
-                        #              position = position_dodge(0.4)) +
-                        #   geom_text(aes(x = var,
-                        #                 y = -100,
-                        #                 label = N_tot),
-                        #             data = df |>
-                        #               group_by(var) |>
-                        #               summarise(N_tot = sum(N)) ) +
-                        #   labs(x = "Land use",
-                        #        y = "Count",
-                        #        shape = "Use intensity") +
-                        #   theme_bw() +
-                        #   basic_thm + 
-                        #   theme(axis.text.x = element_text(angle = 50,
-                        #                                    hjust = 1,
-                        #                                    vjust = 1),
-                        #         aspect.ratio = 0.75)
-                        # # %%%
                         
                         (plt)
                       }

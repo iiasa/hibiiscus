@@ -10,7 +10,7 @@
 #' @import R6
 #' @noRd
 HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
-                    # "HibModelLME4"    HibLME4Model
+                    # TODO: @export
                     
                     # Public data objects and functions
                     public = list(

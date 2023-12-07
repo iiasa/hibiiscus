@@ -1,7 +1,7 @@
-# Testthat checks for update_hib.R
+# Testthat checks for hib_update.R
 
 test_that("Check that update_hib works as desired.", {
-  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+  tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")
@@ -14,19 +14,19 @@ test_that("Check that update_hib works as desired.", {
   
   # -Doesn't work if ....
   # -Path to new data is missing
-  expect_error(update_hib(tmp_db, 
+  expect_error(hib_update_db(tmp_db, 
                           path_species = NULL,
                           version = "custom",
                           custom_version_name = "dummy_data_2"),
                regexp = "path_species is not a character vector")
   # -Path to new data is wrong
-  expect_error(update_hib(tmp_db, 
+  expect_error(hib_update_db(tmp_db, 
                           path_species = "data/not_real_dummy_data.rds",
                           version = "custom",
                           custom_version_name = "dummy_data_2"),
                regexp = "Path 'data/not_real_dummy_data.rds' does not exist")
   # -Original object is not a hib database
-  expect_error(update_hib("not a database", 
+  expect_error(hib_update_db("not a database", 
                           path_species = "data/not_real_dummy_data.rds",
                           version = "custom",
                           custom_version_name = "dummy_data_2"),
@@ -34,7 +34,7 @@ test_that("Check that update_hib works as desired.", {
   
   
   # Does work
-  tmp_db_upd <- update_hib(tmp_db, 
+  tmp_db_upd <- hib_update_db(tmp_db, 
                            # path_species = "data/dummy_species_rc_2.rds",
                            path_species = system.file("extdata", "dummy_species_rc_2.rds", package = "hibiiscus", mustWork = TRUE),
                            version = "custom",

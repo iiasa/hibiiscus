@@ -39,8 +39,7 @@
 #'   proj <- hib_mod_project(hib_model, proj_data)
 #' } 
 #' @export
-# TODO: replace obj with mod_obj
-hib_mod_project <- function(mod_obj, 
+hib_project_model <- function(mod_obj, 
                             data,
                             backtransform = NULL,
                             rescale_pred = FALSE,
@@ -55,6 +54,7 @@ hib_mod_project <- function(mod_obj,
                             calc_aoa = FALSE,
                             cv_obj = NULL
                             ){
+  # hib_mod_project
   # Assertions 
   # is data a df/tibble/ raster/stack 
   assertthat::assert_that(
@@ -890,7 +890,7 @@ hib_mod_project <- function(mod_obj,
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
   # message(crayon::green"Creating projection object...\n"))
-  proj <- HibProj$new(obj = mod_obj,
+  proj <- HibProjection$new(obj = mod_obj,
                                  proj = data,
                                  backtransform = backtransform,
                                  rescale_pred = rescale_pred,

@@ -1,7 +1,7 @@
 # Testthat checks for hib_filter.R
 
 test_that("Check hib_filter correctly filters database",{
-  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+  tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")

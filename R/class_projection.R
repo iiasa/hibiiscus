@@ -11,8 +11,9 @@
 #' @keywords internal
 #' @import R6
 #' @noRd
-HibProj <- R6Class("HibProj",
-                              # hib_mod_projection "HibProj"
+HibProjection <- R6Class("HibProjection",
+  # TODO: @export
+                              # hib_mod_projection "HibProjection"
                               # Public data objects and functions
                               public = list(
                                 # version = NULL,

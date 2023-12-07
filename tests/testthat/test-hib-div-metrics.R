@@ -5,7 +5,7 @@
 # %%%%%%%%%%
 
 test_that("Check that within-sample diversity metrics work.", {
-  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+  tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")
@@ -47,7 +47,7 @@ test_that("Check that within-sample diversity metrics work.", {
 # devtools::load_all()
 
 test_that("Check that between-sample diversity metrics work.", {
-  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+  tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")

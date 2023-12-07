@@ -10,6 +10,8 @@
 #' @noRd
 HibCV <- R6Class("HibCV",
                       # "HibCV"
+                      # TODO: @export
+                      
                       # Public data objects and functions
                       public = list(
                         # version = NULL,

@@ -1,7 +1,7 @@
 # Testthat checks for hib_fit_inla.R, cv, projection
 
 test_that("Check inla modelling pipeline works as desired.", {
-  tmp_db <- create_hib(#path_species = "inst/extdata/dummy_species_rc.rds",
+  tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        version = "custom",
                        custom_version_name = "dummy_data")
@@ -43,7 +43,7 @@ test_that("Check inla modelling pipeline works as desired.", {
   # mod_b$plot()
   
   # cv
-  suppressWarnings(cv_w <- hib_mod_cv(mod_w,
+  suppressWarnings(cv_w <- hib_cv_model(mod_w,
                                       tmp_db,
                                       c("Random-2"),
                                       backtransform = function(x){exp(x) - 1}))
@@ -78,13 +78,13 @@ test_that("Check inla modelling pipeline works as desired.", {
   
   
   # project for df, ?and terra rast?
-  proj_w <- hib_mod_project(mod_w,
+  proj_w <- hib_project_model(mod_w,
                             proj_df_w,
                             backtransform = function(x){exp(x) - 1},
                             calc_aoa = T,
                             cv_obj = cv_w)
   expect_true(inherits(proj_w,
-                       "HibProj"))  
+                       "HibProjection"))  
   # Check for aoa_res as a list in proj_w_aoa
   expect_true(is.list(proj_w$aoa))
   
@@ -115,13 +115,13 @@ test_that("Check inla modelling pipeline works as desired.", {
   )
   names(proj_rast_w) <- "LUI"
   
-  proj_w_ <- hib_mod_project(mod_w,
+  proj_w_ <- hib_project_model(mod_w,
                              proj_rast_w,
                              backtransform = function(x){exp(x) - 1},
                              calc_aoa = T,
                              cv_obj = cv_w)
   expect_true(inherits(proj_w_,
-                       "HibProj"))  
+                       "HibProjection"))  
   # Check for aoa_res as a list in proj_w_aoa
   expect_true(is.list(proj_w_$aoa))
   
