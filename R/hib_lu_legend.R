@@ -140,6 +140,8 @@ hib_set_lu_legend <- function(obj, leg){
   obj$processing_flags$lu_legend_source <- leg$input_data
   # %%%
   
+  obj$last_update <- lubridate::now()
+  
   return(obj)
   
 }

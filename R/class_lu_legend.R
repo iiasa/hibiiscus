@@ -78,8 +78,9 @@ HibLULegend <- R6Class("HibLULegend",
                         
                         # ------ #
                         # Load and prepare data
+                        # HibLULegend 
                         if (is.character(input)){
-                          message(crayon::green(paste0("Initializing land-use legend from file: ",
+                          message(crayon::green(paste0("\nInitialising HibLULegend from file: ",
                                                        input)) )
                           lu_df <- readr::read_rds(input)
                           self$input_data <- paste0("file ('", 
@@ -88,12 +89,13 @@ HibLULegend <- R6Class("HibLULegend",
                             
                         }
                         if (is.data.frame(input)){
-                          message(crayon::green(paste0("Initializing land-use legend from dataframe")) )
+                          message(crayon::green(paste0("\nInitialising HibLULegend from data.frame: ",
+                                                       input_chr)) )
                           # : ",
                           # deparse(substitute(input))
                           
                           lu_df <- input
-                          self$input_data <- paste0("dataframe ('", 
+                          self$input_data <- paste0("data.frame ('", 
                                                     input_chr,
                                                     # deparse(substitute(input)),
                                                     "')")
@@ -119,7 +121,7 @@ HibLULegend <- R6Class("HibLULegend",
                         
                         
                         # Store legend object (list of data)
-                        self$last_update <- lubridate::today()
+                        self$last_update <- lubridate::now()
                         
                         self$lu_df <- lu_df
                         
@@ -174,7 +176,7 @@ HibLULegend <- R6Class("HibLULegend",
                         
                         message(
                           paste0("Hibiiscus land-use legend \n",
-                                 "(Last updated: ", crayon::green( self$last_update ), ")",
+                                 "Last updated: ", crayon::green( self$last_update ),
                                  "\n",
                                  "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                  "\t N land use types:              ", crayon::green(stats$number_lu), "\n",

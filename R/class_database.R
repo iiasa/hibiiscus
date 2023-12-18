@@ -71,7 +71,7 @@ HibDatabase <- R6Class("HibDatabase",
                       # path$sites/species is character - already checked in create_hib
                       # ------ #
 
-                      message(crayon::green(paste0("Initializing input datasets for ", 
+                      message(crayon::green(paste0("\nInitialising HibDatabase using ", 
                                                    version, " data ...\n")) )
                       
                       # %%%%%
@@ -229,7 +229,7 @@ HibDatabase <- R6Class("HibDatabase",
                       
                       # Save inputs in list
                       self$version <- version
-                      self$last_update <- lubridate::today() # lubridate::now()
+                      self$last_update <- lubridate::now()
                       self$paths <- paths
                       self$sites <- sites
                       self$species <- species
@@ -238,6 +238,7 @@ HibDatabase <- R6Class("HibDatabase",
                       self$processing_flags <- list(measures_effort_corrected = F,
                                                     abundance_rescaled = F,
                                                     filtering_steps = list(),
+                                                    database_updates = list(),
                                                     joined_information = list(),
                                                     lu_legend_source = "Original LU/I legend."
                                                     )
@@ -326,9 +327,11 @@ HibDatabase <- R6Class("HibDatabase",
 
                                     div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
                                     div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", "),
-                                    # TODO: site contrast info
+                                    
                                     site_contrast_metrics = paste(sort(unique(colnames(self$site_contrasts)[colnames(self$site_contrasts) %in% site_contrasts_poss])), 
-                                                                  collapse = ", ")
+                                                                  collapse = ", "),
+                                    # TODO: updated information
+                                    database_updates = paste(self$processing_flags$database_updates, collapse = "; ")
                                     )  
                       
                       
@@ -373,9 +376,13 @@ HibDatabase <- R6Class("HibDatabase",
                       if (length(self$processing_flags$joined_information) == 0){
                         stats$joined_information <- "NA"
                       }
+
+                      if (length(self$processing_flags$database_updates) == 0){
+                        stats$database_updates <- "NA"
+                      }
                       message(
-                        paste0("Hibiiscus PREDICTS-like database (including version/s: ", crayon::bold(self$version),")","\n",
-                               "(Last updated: ", crayon::green( self$last_update ), ")",
+                        paste0("Hibiiscus database (including version/s: ", crayon::bold(self$version),")","\n",
+                               "Last updated: ", crayon::green( self$last_update ),
                                "\n",
                                "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                "\t Number of species:             ", crayon::green(stats$number_species), "\n",
@@ -385,6 +392,8 @@ HibDatabase <- R6Class("HibDatabase",
 
                                "\t LU/I legend sourced from:      ", crayon::green(stats$lu_legend_source), "\n",
                                
+                               "\t Database updates:              ", crayon::green(stats$database_updates), "\n",
+                               
                                "\n",
                                
                                "\t Effort-correction applied:     ", crayon::green(self$processing_flags$measures_effort_corrected), "\n",
@@ -393,7 +402,7 @@ HibDatabase <- R6Class("HibDatabase",
                                                                                         ";\n\t                                ",
                                                                                         stats$filters_applied)), "\n",
 
-                               "\t Data added to database:        ", crayon::green(gsub("; ", 
+                               "\t Data columns added:            ", crayon::green(gsub("; ", 
                                                                                         ";\n\t                                ",
                                                                                         stats$joined_information)), "\n",
 
@@ -467,7 +476,7 @@ HibDatabase <- R6Class("HibDatabase",
                       )
 
                       # add a message...
-                      message(crayon::green("Correcting measuremnts for sampling effort...\n"))
+                      message(crayon::green("\nCorrecting biodiversity measurements for sampling effort ...\n"))
                       
                       self$species <- self$species |>
                         dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
@@ -479,7 +488,7 @@ HibDatabase <- R6Class("HibDatabase",
                                                                                       T ~ Measurement))
                       # Add a flag to some background info - Measures are effort corrected = T
                       self$processing_flags$measures_effort_corrected <- T
-                      self$last_update <- lubridate::today()
+                      self$last_update <- lubridate::now()
                       invisible(self)
                     } ,
                     

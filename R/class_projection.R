@@ -82,10 +82,10 @@ HibProjection <- R6Class("HibProjection",
                                   )
                                   
                                   # ------ #
-                                  message(crayon::green("Initializing model projection class...") )
+                                  message(crayon::green("\nInitialising HibProjection object ...") )
                                   
                                   # Store projection object (list of data)
-                                  self$last_update <- lubridate::today()
+                                  self$last_update <- lubridate::now()
                                   
                                   self$model <- obj
                                   self$projection <- proj

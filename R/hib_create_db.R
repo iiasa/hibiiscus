@@ -83,7 +83,9 @@ hib_create_db <- function(path_species, path_sites = "",
   # }
   
   # ------ #
-  message(crayon::green("Creating HibDatabase object...\n"))
+  # ??
+  # message(crayon::green("Creating HibDatabase object...\n"))
+  
   names(path_species) <- version
   names(path_sites) <- version
   

@@ -312,6 +312,8 @@ hib_calc_site_contrasts <- function(obj,
     obj$site_contrasts <- site_comp_df
   }
   
+  obj$last_update <- lubridate::now()
+  
   return(obj)
 
 }

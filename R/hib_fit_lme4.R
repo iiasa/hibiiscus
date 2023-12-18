@@ -134,7 +134,7 @@ hib_fit_lme4 <- function(obj,
   # rlang::f_rhs(test_formula)
   
   # Specify lmer v glmer
-  message(crayon::green("Fitting model (this may take some time) ..."))
+  message(crayon::green("Fitting model (this may take some time) ...\n"))
   
   
   # first, check if family is a function or character...
@@ -202,7 +202,7 @@ hib_fit_lme4 <- function(obj,
   
   # class(m0)
   # Collate model coefs../metrics - AICc, Rsq ...
-  message(crayon::green("Collating model details ..."))
+  message(crayon::green("Collating model details ...\n"))
   
   fixef_df <- as.data.frame(lme4::fixef(m0))
   colnames(fixef_df) <- "Coefficient_value"
@@ -276,7 +276,7 @@ get_model_data <- function(obj,
     is.character(mod_resp),
     is.character(mod_covars)
     )
-  
+
   within_site_resp <- purrr::map(obj$diversity_within$Data,
                                  colnames) |>
     unlist() |>

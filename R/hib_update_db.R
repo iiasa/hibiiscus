@@ -89,8 +89,10 @@ hib_update_db <- function(obj, path_species, path_sites = "",
                            new_obj$sites)    
     
     # Update version info and update info
+    old_version <- obj$version
+
     obj$version <- paste(obj$version, version, sep = "; ")
-    obj$last_update <- lubridate::today()
+    obj$last_update <- lubridate::now()
     
     # Add paths...
     obj$paths$species <- c(obj$paths$species, new_obj$paths$species)
@@ -99,6 +101,21 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     # TODO
     # Potential extra issues - previous filtering of old version/div object?
     # Can rm diversity?, but filtering etc can't be undone
+    
+    # Add in a processing flag for update:
+    # "Updated HibDatabase: added <X> data to <Y> data."
+    # %%%%%
+    # Append update flag to database object
+    upd_idx <- length(obj$processing_flags$database_updates) + 1
+  
+    obj$processing_flags$database_updates[[join_idx]] <- paste0(as.character(join_idx),
+                                                                  ": ",
+                                                                  "Updatated database - Added '",
+                                                                  version,
+                                                                  "' to '",
+                                                                  old_version, 
+                                                                  "'.")
+    # %%%%%
 
     # Checks of the updated database
     obj$checkself()

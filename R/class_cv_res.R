@@ -78,7 +78,7 @@ HibCV <- R6Class("HibCV",
                           )
                           
                           # ------ #
-                          message(crayon::green("Initialising cross-validation object ...") )
+                          message(crayon::green("\nInitialising HibCV object ...") )
                           
                           # %%%%%%%%%%%%%%%
                           
@@ -146,7 +146,7 @@ HibCV <- R6Class("HibCV",
                           self$cv_results <- cv_res
                           self$insample_results <- insamp_res
                           
-                          self$last_update <- lubridate::today()
+                          self$last_update <- lubridate::now()
                           
                           # %%%%%%%%%%%%%%%
                           
@@ -327,9 +327,19 @@ HibCV <- R6Class("HibCV",
                               dplyr::bind_rows(missing_cv_specs)
                           }
                           
+                          mtype_shrt <- NA 
+                          if (self$model_type == "HibModelLME4"){
+                            mtype_shrt <- "lme4"
+                          }
+                          if (self$model_type == "HibModelBRMS"){
+                            mtype_shrt <- "brms"
+                          }
+                          if (self$model_type == "HibModelLME4"){
+                            mtype_shrt <- "INLA"
+                          }
                           message(
-                            paste0("Cross-validated ", self$model_type, " \n\n",
-                                   "(Last updated: ", crayon::green( self$last_update ), ")",
+                            paste0("Hibiiscus cross-validated model (", mtype_shrt, ")\n",
+                                   "Last updated: ", crayon::green( self$last_update ),
                                    "\n\n",
                                    "--------------------\n\n",
                                    "Summary of cross-validated model\n\n",

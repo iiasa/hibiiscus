@@ -168,7 +168,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               )
                               
                               # ------ #
-                              message(crayon::green("Initialising fitted hib model object ...") )
+                              message(crayon::green("\nInitialising HibModelINLA object ...") )
                               
                               # %%%%%%%%%%%%%%%
                               
@@ -215,7 +215,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               }
                               self$site_locations <- loc_df
                               
-                              self$last_update <- lubridate::today()
+                              self$last_update <- lubridate::now()
                               
                               # %%%%%%%%%%%%%%%
                               
@@ -255,11 +255,11 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               
                               message(
                                 paste0("Hibiiscus fitted model (INLA)\n\n",
-                                       "(Last updated: ", crayon::green( self$last_update ), ")",
+                                       "Last updated: ", crayon::green( self$last_update ), 
                                        "\n",
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
-                                       "\n\n",
+                                       "\n",
                                        "--------------------\n\n",
                                        "Summary of fitted model\n\n",
                                        "Formula:\n",

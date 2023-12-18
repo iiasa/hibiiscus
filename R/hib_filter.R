@@ -39,7 +39,7 @@ hib_filter_sites <- function(obj, condition){
   str_cond <- gsub("\"", "'", str_cond)
   str_cond <- gsub("  ", "", str_cond)
   
-  message(crayon::green(paste("Filtering HibDatabase using:", 
+  message(crayon::green(paste("\nFiltering HibDatabase using:", 
                               str_cond,
                               "...\n")))
   
@@ -58,7 +58,7 @@ hib_filter_sites <- function(obj, condition){
 
   if (nrow_site_new == nrow_site_orig){
     message(crayon::yellow(paste("Warning: the number of rows in the sites data",
-                                 "has not changed following filtering.")))
+                                 "has not changed following filtering.\n")))
   }
   # %%%
 
@@ -71,7 +71,7 @@ hib_filter_sites <- function(obj, condition){
   obj$processing_flags$filtering_steps[[filter_idx]] <- paste0(as.character(filter_idx),
                                                                ": ",
                                                                str_cond)
-  obj$last_update <- lubridate::today()
+  obj$last_update <- lubridate::now()
   
   obj$checkself()
   # Print updated summary of database
@@ -115,7 +115,7 @@ hib_filter_species <- function(obj, condition){
   str_cond <- gsub("\"", "'", str_cond)
   str_cond <- gsub("  ", "", str_cond)
   
-  message(crayon::green(paste("Filtering HibDatabase using:", 
+  message(crayon::green(paste("\nFiltering HibDatabase using:", 
                               str_cond,
                               "...\n")))
   
@@ -142,7 +142,7 @@ hib_filter_species <- function(obj, condition){
   nrow_spp_new <- nrow(species_upd)
   if (nrow_spp_new == nrow_spp_orig){
     message(crayon::yellow(paste("Warning: the number of rows in the species data",
-                                 "has not changed following filtering.")))
+                                 "has not changed following filtering.\n")))
   }
   # %%%
 
@@ -155,7 +155,7 @@ hib_filter_species <- function(obj, condition){
   obj$processing_flags$filtering_steps[[filter_idx]] <- paste0(as.character(filter_idx),
                                                                ": ",
                                                                str_cond)
-  obj$last_update <- lubridate::today()
+  obj$last_update <- lubridate::now()
   
   obj$checkself()
   

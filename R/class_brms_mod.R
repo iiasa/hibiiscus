@@ -103,7 +103,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               )
                               
                               # ------ #
-                              message(crayon::green("Initialising fitted hib model object ...") )
+                              message(crayon::green("\nInitialising HibModelBRMS object ...") )
                               
                               # %%%%%%%%%%%%%%%
                               
@@ -155,7 +155,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               }
                               self$site_locations <- loc_df
 
-                              self$last_update <- lubridate::today()
+                              self$last_update <- lubridate::now()
                               
                               # %%%%%%%%%%%%%%%
                            
@@ -204,13 +204,13 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               
                               message(
                                 paste0("Hibiiscus fitted model (brms)\n",
-                                       "(Last updated: ", crayon::green( self$last_update ), ")",
+                                       "Last updated: ", crayon::green( self$last_update ),
                                        "\n",
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                        # "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                        # crayon::green(stats$number_lui), "\n",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
-                                       "\n\n",
+                                       "\n",
                                        "--------------------\n\n",
                                        "Summary of fitted model\n"
                                        # "Fixed effects:"

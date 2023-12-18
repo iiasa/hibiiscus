@@ -1,4 +1,5 @@
 # TODO: check for na rm in div calcs - need to be robust to NAs in data...
+# TODO: noRd for helpers...
 
 #' Calculate total abundance
 #' 
@@ -14,8 +15,8 @@
 #' } 
 #' @export
 hib_calc_ta <- function(obj){
-  message(crayon::green("Calculating total abundance...\n"))
-  # TODO:
+  message(crayon::white("\tTotal abundance ...\n"))
+  # TODO: crayon::white() ??
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SS"),
@@ -94,7 +95,7 @@ hib_calc_ta <- function(obj){
 #' } 
 #' @export
 hib_calc_sr <- function(obj){
-  message(crayon::green("Calculating species richness...\n"))
+  message(crayon::white("\tSpecies richness ...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -205,14 +206,23 @@ hib_calc_sr <- function(obj){
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
+#' @param msg A [`logical`], indicating if default progress message should be 
+#' displayed or not.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
 #'   obj <- hib_calc_simpson(obj)
 #' } 
 #' @export
-hib_calc_simpson <- function(obj){
-  message(crayon::green("Calculating within-site Simpson's diversity ...\n"))
+hib_calc_simpson <- function(obj, msg = TRUE){
+  # TODO: optional message - drop if used for Hill-Simpson
+  assertthat::assert_that(
+    is.logical(msg)
+  )
+  if (msg){
+    message(crayon::white("\tSimpson diversity ...\n")) # Calculating within-site   
+  }
+  
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -324,7 +334,7 @@ hib_calc_simpson <- function(obj){
 #' } 
 #' @export
 hib_calc_chao1 <- function(obj){
-  message(crayon::green("Calculating Chao1 species richness ...\n"))
+  message(crayon::white("\tChao1 species richness ...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -507,7 +517,7 @@ hib_calc_chao1 <- function(obj){
 #' } 
 #' @export
 hib_calc_rsr <- function(obj){
-  message(crayon::green("Calculating rarefied species richness ...\n"))
+  message(crayon::white("\tRarefied species richness ...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -700,7 +710,7 @@ hib_calc_rsr <- function(obj){
 #' } 
 #' @export
 hib_calc_ma <- function(obj){
-  message(crayon::green("Calculating mean abundance...\n"))
+  message(crayon::white("\tMean abundance ...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -792,7 +802,7 @@ hib_calc_ma <- function(obj){
 #' } 
 #' @export
 hib_calc_gma <- function(obj){
-  message(crayon::green("Calculating geometric mean abundance...\n"))
+  message(crayon::white("\tGeometric mean abundance ...\n"))
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -887,14 +897,22 @@ hib_calc_gma <- function(obj){
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
+#' @param msg A [`logical`], indicating if default progress message should be 
+#' displayed or not.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
 #'   obj <- hib_calc_shannon(obj)
 #' } 
 #' @export
-hib_calc_shannon <- function(obj){
-  message(crayon::green("Calculating Shannon diversity...\n"))
+hib_calc_shannon <- function(obj, msg = TRUE){
+  assertthat::assert_that(
+    is.logical(msg)
+  )
+  if (msg){
+    message(crayon::white("\tShannon diversity ...\n"))  
+  }
+  
   # TODO:
   # Assertion checks
   assertthat::assert_that(
@@ -1014,7 +1032,8 @@ hib_calc_shannon <- function(obj){
 #' } 
 #' @export
 hib_calc_pie <- function(obj){
-  message(crayon::green("Calculating within-site Probability of Interspecific Encounter (PIE) ...\n"))
+  message(crayon::white("\tProbability of Interspecific Encounter (PIE) ...\n"))
+  # Calculating within-site 
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SSBS"),
@@ -1091,7 +1110,17 @@ hib_calc_div_within <- function(obj, metrics){
     assertthat::has_name(obj$species, "Best_guess_binomial"),
     is.character(metrics)
   )
-  
+  # TODO: lower-case metrics 
+  # metrics <- tolower(metrics)
+  # metrics <- match.arg(metrics,
+  #                      c("total_abundance", "species_richness", "chao1_diversity",  
+  #                        "simpson_diversity", "rarefied_species_richness", #),
+  #                        "mean_abundance", "geometric_mean_abundance",
+  #                        "shannon_diversity", "evenness",
+  #                        "hillshannon_diversity", "hillsimpson_diversity",
+  #                        "pie"),
+  #                      several.ok = T)
+
   # Match supplied metrics to options.
   metrics <- match.arg(metrics,
                        c("Total_abundance", "Species_richness", "Chao1_diversity",  
@@ -1106,6 +1135,16 @@ hib_calc_div_within <- function(obj, metrics){
   # TODO: if metric is already in hib$diversity_within,
   if (!is.null(obj$diversity_within)){
     metrics_tc <- tools::toTitleCase(metrics)
+    
+    # %%%
+    # TODO - "HillShannon_diversity", "HillSimpson_diversity", "PIE" need to be
+    # separately edited from lowercase to 'tc' equivalents
+    # metrics_tc <- metrics
+    # metrics_tc[metrics_tc == “hillshannon_diversity”] <- "HillShannon_diversity"
+    # metrics_tc[metrics_tc == “hillsimpson_diversity”] <- "HillSimpson_diversity"
+    # metrics_tc[metrics_tc == “pie”] <- "PIE"
+    # metrics_tc <- tools::toTitleCase(metrics_tc)
+    # %%%
     new_metrics_idx <- which(!(metrics_tc %in% obj$diversity_within$Metric))
     # drop from metrics and print the dropped metrics...
     metrics <- metrics[new_metrics_idx]
@@ -1118,8 +1157,8 @@ hib_calc_div_within <- function(obj, metrics){
   }
   # %%%
 
-  message(crayon::green("Calculating within-site diversity metrics ...\n"))
-  
+  message(crayon::green("\nCalculating within-site biodiversity metrics ...\n"))
+  # TODO: convert metric == to lower-case version
   out_tib <- purrr::map(.x = metrics, 
                        .f = function(metric = .x, db_obj = obj){
                          if (metric == "Total_abundance"){
@@ -1153,8 +1192,8 @@ hib_calc_div_within <- function(obj, metrics){
                          # %%%
                          # Evenness (Shannon/log(N_spp))
                          if (metric == "Evenness"){
-                           message(crayon::green("Calculating Evenness ...\n"))
-                           tmp <- hib_calc_shannon(db_obj)
+                           message(crayon::white("\tEvenness ...\n"))
+                           tmp <- hib_calc_shannon(db_obj, msg = FALSE)
                            tmp$Metric <- "Evenness"
                            tmp$Data[[1]]$Evenness <- tmp$Data[[1]]$Shannon_diversity / tmp$Data[[1]]$logN
                            tmp$Data[[1]] <- tmp$Data[[1]] |>
@@ -1164,44 +1203,32 @@ hib_calc_div_within <- function(obj, metrics){
                          # %%%
                          # Hill-Shannon: exp(shannon)
                          if (metric == "HillShannon_diversity"){
-                           message(crayon::green("Calculating Hill-Shannon diversity ...\n"))
-                           tmp <- hib_calc_shannon(db_obj)
+                           message(crayon::white("\tHill-Shannon diversity ...\n"))
+                           tmp <- hib_calc_shannon(db_obj, msg = FALSE)
                            tmp$Metric <- "HillShannon_diversity"
                            tmp$Data[[1]]$HillShannon_diversity <- exp(tmp$Data[[1]]$Shannon_diversity)
                            
-                           # tmp$Data[[1]] <- tmp$Data[[1]] |> 
-                           #   dplyr::group_by(SS) |>
-                           #   dplyr::mutate(Rescaled_HillShannon_diversity = HillShannon_diversity / max(HillShannon_diversity)) |>
-                           #   dplyr::ungroup()
-                           
                            tmp$Data[[1]] <- tmp$Data[[1]] |>
                              dplyr::select(SSBS, SS, HillShannon_diversity)
-                           # , Rescaled_HillShannon_diversity
                            return(tmp)
                          }
                          
                          # Hill-Simpson: 1/simpson 
                          if (metric == "HillSimpson_diversity"){
-                           message(crayon::green("Calculating Hill-Simpson diversity ...\n"))
-                           tmp <- hib_calc_simpson(db_obj)
+                           message(crayon::white("\tHill-Simpson diversity ...\n"))
+                           tmp <- hib_calc_simpson(db_obj, msg = FALSE)
                            tmp$Metric <- "HillSimpson_diversity"
                            tmp$Data[[1]]$HillSimpson_diversity <- 1 / ( 1 - tmp$Data[[1]]$Simpson_diversity )
                            
-                           # tmp$Data[[1]] <- tmp$Data[[1]] |> 
-                           #   dplyr::group_by(SS) |>
-                           #   dplyr::mutate(Rescaled_HillSimpson_diversity = HillSimpson_diversity / max(HillSimpson_diversity)) |>
-                           #   dplyr::ungroup()
-                           
                            tmp$Data[[1]] <- tmp$Data[[1]] |>
                              dplyr::select(SSBS, SS, HillSimpson_diversity)
-                           # , Rescaled_HillSimpson_diversity
                            return(tmp)
                          }
                          
                          if (metric == "PIE"){
                            return(hib_calc_pie(db_obj))
                          }
-                         # TODO: S_PIE (1 / (1 – PIE); OR 1/ sum(p^2))
+                         
                          # %%%
                          }
                        ) |> dplyr::bind_rows()
@@ -1215,6 +1242,9 @@ hib_calc_div_within <- function(obj, metrics){
     obj$diversity_within <- out_tib
   }
   
+  # TODO:
+  obj$last_update <- lubridate::now()
+
   return(obj)
 }
 # %%%%%
@@ -1679,7 +1709,7 @@ hib_calc_div_between <- function(obj,
     assertthat::has_name(obj$sites, "SS")
   )
   
-  message(crayon::green("Preparing site-contrasts to calculate compositional dis/similarity...\n"))
+  message(crayon::green("\nPreparing site-contrasts to calculate compositional dissimilarity ...\n"))
   
   veg_metrics <- c("manhattan", "euclidean", "canberra", "clark", "bray", 
                    "kulczynski", "jaccard", "gower", "altGower", 
@@ -1696,7 +1726,8 @@ hib_calc_div_between <- function(obj,
   
   metrics_ <- c(veg_metrics, non_veg_metrics)
   
-
+  # TODO: lower-case metrics
+  # metrics <- tolower(metrics)
 
   # first, combine metrics, binary, rel_abund and rescale into a df
   metrics_spec_df <- data.frame(metric    = metrics,
@@ -1705,7 +1736,7 @@ hib_calc_div_between <- function(obj,
                                 rescale   = rescale)
   
   matchable_metrics_idx <- !is.na(pmatch(metrics_spec_df$metric,
-                                         metrics))
+                                         metrics_))
   
   # subset to matchable metrics
   metrics_spec_df <- metrics_spec_df[matchable_metrics_idx,]
@@ -1783,7 +1814,8 @@ hib_calc_div_between <- function(obj,
     
     site_tmp <- obj$sites |>
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) |>
+      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")]),
+                        by = "SSBS") |>
       droplevels()
     
   } else if (is.null(baseline_lui)){
@@ -1842,29 +1874,33 @@ hib_calc_div_between <- function(obj,
     return(site_comparisons)
   })
   
-  # TODO: if nrow(site_comp_df == 0) stop...
+  # if nrow(site_comp_df == 0) stop...
   if (nrow(site_comp_df) == 0){
     message(crayon::red(paste0("\nError: no site comparisons possible...\n\n",
                                "Maybe check that the specified baseline LUI ('", baseline_lui,
-                               "') is present...\n"))
+                               "') is present ...\n"))
     )
     stop("Unable to generate any site comparisons, see above for details.")
   }
 
 
   message(crayon::green(paste0(nrow(site_comp_df), 
-                               " site comparisons to make...\n"))
+                               " site comparisons to make ..."))
           )
   
-  message(crayon::green("Calculating compositional dis/similarity...\n"))
+  message(crayon::green("\nCalculating compositional dissimilarity ...\n"))
   
   # do vegan-based metrics...
   # %%%
   veg_df <- NULL
   
   if (nrow(veg_metrics_df) > 0){
-    message(crayon::green("Calculating vegan-based dissimilarity metrics...\n"))
-    
+    # TODO? tools::toTitleCase(veg_metrics_df$metric)
+    message(crayon::white(paste0("\tVegan-based dissimilarity metrics (",
+                                 paste(veg_metrics_df$metric, collapse = ", "),
+                                 ") ...\n")))
+
+
     veg_df <- purrr::map_dfr(.x = studies,
                                  .f = function(ss = .x, 
                                                spp_data = spp_tmp,
@@ -1936,8 +1972,10 @@ hib_calc_div_between <- function(obj,
   non_veg_df <- NULL
   
   if (nrow(non_veg_metrics_df) > 0){
-    message(crayon::green("Calculating non-vegan dissimilarity metrics...\n"))
-    
+    # TODO? tools::toTitleCase(non_veg_metrics_df$metric)
+    message(crayon::white(paste0("\tNon-vegan dissimilarity metrics (",
+                                 paste(non_veg_metrics_df$metric, collapse = ", "),
+                                 ") ...\n")))
     # stop("TODO")
     non_veg_df <- purrr::map2_dfr(.x = site_comp_df$s1,
                               .y = site_comp_df$s2,
@@ -2131,6 +2169,8 @@ hib_calc_div_between <- function(obj,
     obj$diversity_between <- out_tib
   }
   
+  obj$last_update <- lubridate::now()
+
   return(obj)
 }
 

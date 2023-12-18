@@ -35,14 +35,14 @@ hib_join_species <- function(obj, spp_info){
   obj$species <- dplyr::left_join(obj$species,
                                   spp_info)  
   
-  obj$last_update <- lubridate::today()
+  obj$last_update <- lubridate::now()
   
   # %%%
   # TODO: would be useful to flag addition of data - source name/an id..
   spp_info_chr <- deparse(substitute(spp_info))
   new_cols_chr <- info_cols[!info_cols %in% obj_spp_cols]
 
-  # Append filtering flag to database object
+  # Append join flag to database object
   join_idx <- length(obj$processing_flags$joined_information) + 1
   
   obj$processing_flags$joined_information[[join_idx]] <- paste0(as.character(join_idx),
@@ -97,7 +97,7 @@ hib_join_sites <- function(obj, site_info){
   obj$sites <- dplyr::left_join(obj$sites,
                          site_info)
 
-  obj$last_update <- lubridate::today()
+  obj$last_update <- lubridate::now()
   
 
   
@@ -106,7 +106,7 @@ hib_join_sites <- function(obj, site_info){
   site_info_chr <- deparse(substitute(site_info))
   new_cols_chr <- info_cols[!info_cols %in% obj_site_cols]
 
-  # Append filtering flag to database object
+  # Append join flag to database object
   join_idx <- length(obj$processing_flags$joined_information) + 1
   
   obj$processing_flags$joined_information[[join_idx]] <- paste0(as.character(join_idx),

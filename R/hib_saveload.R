@@ -4,7 +4,7 @@
 #' The function saves the hibiiscus object in the specified file location.
 #' @details
 #' Saves a hibiiscus data object to file.
-#' @param obj A hibiiscus object one of: `HibDatabase`, `HibLULegend`, 
+#' @param obj A hibiiscus object, one of: `HibDatabase`, `HibLULegend`, 
 #' `HibModelLME4`, `HibModelINLA`, `HibModelBRMS`, `HibCV`, `HibProjection`.
 #' @param path A [`character`] pointing to a file (file names should have 
 #' a ".rds" extension. Non-rds extensions will be amended to rds).

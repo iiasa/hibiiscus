@@ -103,7 +103,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                           )
                         
                         # ------ #
-                        message(crayon::green("Initialising fitted HibModelLME4 object ...") )
+                        message(crayon::green("\nInitialising HibModelLME4 object ...") )
                         
                         # %%%%%%%%%%%%%%%
                         
@@ -154,7 +154,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         }
                         self$site_locations <- loc_df
 
-                        self$last_update <- lubridate::today()
+                        self$last_update <- lubridate::now()
                         
                         # %%%%%%%%%%%%%%%
                         
@@ -206,13 +206,13 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         
                         message(
                           paste0("Hibiiscus fitted model (lme4)\n",
-                                 "(Last updated: ", crayon::green( self$last_update ), ")",
+                                 "Last updated: ", crayon::green( self$last_update ),
                                  "\n",
                                  "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                  # "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                  # crayon::green(stats$number_lui), "\n",
                                  "\t Number of species:             ", crayon::green(stats$number_species), "\n",
-                                 "\n\n",
+                                 "\n",
                                  "--------------------\n\n",
                                  "Summary of fitted model\n"
                                  # "Fixed effects:"
