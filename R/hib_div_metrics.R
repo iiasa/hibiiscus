@@ -1,5 +1,8 @@
 # TODO: check for na rm in div calcs - need to be robust to NAs in data...
 # TODO: noRd for helpers...
+# TODO: recalculate arg - recalculates metrics specified - over-rules dropping of
+# previously calculated metrics - e.g if re-filtering DB...
+
 
 #' Calculate total abundance
 #' 
@@ -1111,25 +1114,27 @@ hib_calc_div_within <- function(obj, metrics){
     is.character(metrics)
   )
   # TODO: lower-case metrics 
-  # metrics <- tolower(metrics)
-  # metrics <- match.arg(metrics,
-  #                      c("total_abundance", "species_richness", "chao1_diversity",  
-  #                        "simpson_diversity", "rarefied_species_richness", #),
-  #                        "mean_abundance", "geometric_mean_abundance",
-  #                        "shannon_diversity", "evenness",
-  #                        "hillshannon_diversity", "hillsimpson_diversity",
-  #                        "pie"),
-  #                      several.ok = T)
-
-  # Match supplied metrics to options.
+  metrics <- tolower(metrics)
+  
   metrics <- match.arg(metrics,
-                       c("Total_abundance", "Species_richness", "Chao1_diversity",  
-                         "Simpson_diversity", "Rarefied_species_richness", #),
-                         "Mean_abundance", "Geometric_mean_abundance",
-                         "Shannon_diversity", "Evenness",
-                         "HillShannon_diversity", "HillSimpson_diversity",
-                         "PIE"),
+                       c("total_abundance", "species_richness", "chao1_diversity",  
+                         "simpson_diversity", "rarefied_species_richness", #),
+                         "mean_abundance", "geometric_mean_abundance",
+                         "shannon_diversity", "evenness",
+                         "hillshannon_diversity", "hillsimpson_diversity",
+                         "pie"),
                        several.ok = T)
+  metrics <- unique(metrics)
+  # message(paste(metrics, collapse = ", "))
+  # Match supplied metrics to options.
+  # metrics <- match.arg(metrics,
+  #                      c("Total_abundance", "Species_richness", "Chao1_diversity",  
+  #                        "Simpson_diversity", "Rarefied_species_richness", #),
+  #                        "Mean_abundance", "Geometric_mean_abundance",
+  #                        "Shannon_diversity", "Evenness",
+  #                        "HillShannon_diversity", "HillSimpson_diversity",
+  #                        "PIE"),
+  #                      several.ok = T)
   
   # %%%
   # TODO: if metric is already in hib$diversity_within,
@@ -1139,21 +1144,22 @@ hib_calc_div_within <- function(obj, metrics){
     # %%%
     # TODO - "HillShannon_diversity", "HillSimpson_diversity", "PIE" need to be
     # separately edited from lowercase to 'tc' equivalents
-    # metrics_tc <- metrics
-    # metrics_tc[metrics_tc == “hillshannon_diversity”] <- "HillShannon_diversity"
-    # metrics_tc[metrics_tc == “hillsimpson_diversity”] <- "HillSimpson_diversity"
-    # metrics_tc[metrics_tc == “pie”] <- "PIE"
-    # metrics_tc <- tools::toTitleCase(metrics_tc)
+    metrics_tc <- metrics
+    metrics_tc[metrics_tc == "hillshannon_diversity"] <- "HillShannon_diversity"
+    metrics_tc[metrics_tc == "hillsimpson_diversity"] <- "HillSimpson_diversity"
+    metrics_tc[metrics_tc == "pie"] <- "PIE"
+    metrics_tc <- tools::toTitleCase(metrics_tc)
     # %%%
     new_metrics_idx <- which(!(metrics_tc %in% obj$diversity_within$Metric))
     # drop from metrics and print the dropped metrics...
     metrics <- metrics[new_metrics_idx]
     dropped_metrics <- metrics_tc[metrics_tc %in% obj$diversity_within$Metric]
-    message(crayon::yellow(paste0("Warning: the following metrics have already been ",
+    message(crayon::yellow(paste0("\nWarning: the following metrics have already been ",
                                   "added to the HibDatabase and so will not be ",
-                                  "recalculted; ",
-                                  paste(dropped_metrics, collapse = ", "),
-                                  "\n")))
+                                  "recalculated;\n\t",
+                                  paste(dropped_metrics, collapse = ", ")
+                                  # "\n"
+                                  )))
   }
   # %%%
 
@@ -1161,29 +1167,29 @@ hib_calc_div_within <- function(obj, metrics){
   # TODO: convert metric == to lower-case version
   out_tib <- purrr::map(.x = metrics, 
                        .f = function(metric = .x, db_obj = obj){
-                         if (metric == "Total_abundance"){
+                         if (metric == "total_abundance"){
                            return(hib_calc_ta(db_obj))
                          }
-                         if (metric == "Species_richness"){
+                         if (metric == "species_richness"){
                            return(hib_calc_sr(db_obj))
                          }
-                         if (metric == "Chao1_diversity"){
+                         if (metric == "chao1_diversity"){
                            return(hib_calc_chao1(db_obj))
                          }
-                         if (metric == "Simpson_diversity"){
+                         if (metric == "simpson_diversity"){
                            return(hib_calc_simpson(db_obj))
                          }
-                         if (metric == "Rarefied_species_richness"){
+                         if (metric == "rarefied_species_richness"){
                            return(hib_calc_rsr(db_obj))
                          }
                          # %%%
-                         if (metric == "Mean_abundance"){
+                         if (metric == "mean_abundance"){
                            return(hib_calc_ma(db_obj))
                          }
-                         if (metric == "Geometric_mean_abundance"){
+                         if (metric == "geometric_mean_abundance"){
                            return(hib_calc_gma(db_obj))
                          }
-                         if (metric == "Shannon_diversity"){
+                         if (metric == "shannon_diversity"){
                           tmp <- hib_calc_shannon(db_obj)
                           tmp$Data[[1]] <- tmp$Data[[1]] |>
                              dplyr::select(SSBS, SS, Shannon_diversity)
@@ -1191,7 +1197,7 @@ hib_calc_div_within <- function(obj, metrics){
                          }
                          # %%%
                          # Evenness (Shannon/log(N_spp))
-                         if (metric == "Evenness"){
+                         if (metric == "evenness"){
                            message(crayon::white("\tEvenness ...\n"))
                            tmp <- hib_calc_shannon(db_obj, msg = FALSE)
                            tmp$Metric <- "Evenness"
@@ -1202,7 +1208,7 @@ hib_calc_div_within <- function(obj, metrics){
                          }
                          # %%%
                          # Hill-Shannon: exp(shannon)
-                         if (metric == "HillShannon_diversity"){
+                         if (metric == "hillshannon_diversity"){
                            message(crayon::white("\tHill-Shannon diversity ...\n"))
                            tmp <- hib_calc_shannon(db_obj, msg = FALSE)
                            tmp$Metric <- "HillShannon_diversity"
@@ -1214,7 +1220,7 @@ hib_calc_div_within <- function(obj, metrics){
                          }
                          
                          # Hill-Simpson: 1/simpson 
-                         if (metric == "HillSimpson_diversity"){
+                         if (metric == "hillsimpson_diversity"){
                            message(crayon::white("\tHill-Simpson diversity ...\n"))
                            tmp <- hib_calc_simpson(db_obj, msg = FALSE)
                            tmp$Metric <- "HillSimpson_diversity"
@@ -1225,7 +1231,7 @@ hib_calc_div_within <- function(obj, metrics){
                            return(tmp)
                          }
                          
-                         if (metric == "PIE"){
+                         if (metric == "pie"){
                            return(hib_calc_pie(db_obj))
                          }
                          
@@ -1727,7 +1733,8 @@ hib_calc_div_between <- function(obj,
   metrics_ <- c(veg_metrics, non_veg_metrics)
   
   # TODO: lower-case metrics
-  # metrics <- tolower(metrics)
+  metrics <- tolower(metrics)
+  metrics <- unique(metrics)
 
   # first, combine metrics, binary, rel_abund and rescale into a df
   metrics_spec_df <- data.frame(metric    = metrics,
@@ -1746,6 +1753,10 @@ hib_calc_div_between <- function(obj,
                                        metrics_,
                                        several.ok = T)
   
+  metrics_spec_df <- unique(metrics_spec_df)
+
+  # message(paste(metrics_spec_df$metric, collapse = ","))
+
   # %%%
   # TODO: if metric is already in hib$diversity_between,
   if (!is.null(obj$diversity_between)){
@@ -1754,11 +1765,12 @@ hib_calc_div_between <- function(obj,
     # drop from metrics and print the dropped metrics...
     metrics_spec_df <- metrics_spec_df[new_metrics_idx, ]
     dropped_metrics <- metrics_tc[metrics_tc %in% obj$diversity_between$Metric]
-    message(crayon::yellow(paste0("Warning: the following metrics have already been ",
+    message(crayon::yellow(paste0("\nWarning: the following metrics have already been ",
                                   "added to the HibDatabase and so will not be ",
-                                  "recalculted: ",
-                                  paste(dropped_metrics, collapse = ", "),
-                                  "\n")))
+                                  "recalculated;\n\t",
+                                  paste(dropped_metrics, collapse = ", ")
+                                  # "\n"
+                                  )))
   }
   # %%%
 
@@ -1777,8 +1789,8 @@ hib_calc_div_between <- function(obj,
                     Diversity_metric_type == "Abundance") |>
     dplyr::group_by(SS) |>
     dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
-           # Taxon_name_entered v best_guess_binomial ??
-           n_species = dplyr::n_distinct(Taxon_name_entered)) |>
+                  # Taxon_name_entered v best_guess_binomial ??
+                  n_species = dplyr::n_distinct(Taxon_name_entered)) |>
     dplyr::ungroup() |>
     dplyr::filter(n_sample_effort == 1 &
                     n_species > 1)
@@ -2030,7 +2042,8 @@ hib_calc_div_between <- function(obj,
   # combine veg and non_veg
   # s1, s2, ...
   if ((!is.null(veg_df)) & (!is.null(non_veg_df))){
-    veg_df <- dplyr::left_join(veg_df, non_veg_df) 
+    veg_df <- dplyr::left_join(veg_df, non_veg_df,
+                                by = c("SSBS1", "SSBS2", "SS")) 
   }
   if (is.null(veg_df) & (!is.null(non_veg_df))){
     veg_df <- non_veg_df
@@ -2065,8 +2078,8 @@ hib_calc_div_between <- function(obj,
   
     
   veg_df <- veg_df |>
-    dplyr::left_join(empty_sites1) |>
-    dplyr::left_join(empty_sites2)
+    dplyr::left_join(empty_sites1, by = "SSBS1") |>
+    dplyr::left_join(empty_sites2, by = "SSBS2")
   # 
   metrics_out <- colnames(veg_df)
   metrics_out <- metrics_out[!metrics_out %in% c("SSBS1", "SSBS2", "SS",
@@ -2101,7 +2114,7 @@ hib_calc_div_between <- function(obj,
   colnames(metrics_spec_df_) <- c("Metric", "Binary", "Relative_abundance", "Rescale",
                                   "Baseline_LUI")
   out_tib <- out_tib |>
-    dplyr::left_join(metrics_spec_df_)
+    dplyr::left_join(metrics_spec_df_, by = "Metric")
   
   # %%%%%
   # TODO: add in max_distance/max_values
@@ -2154,7 +2167,7 @@ hib_calc_div_between <- function(obj,
                              non_veg_max_df)
 
   out_tib <- out_tib |>
-    dplyr::left_join(max_df) |>
+    dplyr::left_join(max_df, by = "Metric") |>
     dplyr::mutate(Rescale = dplyr::case_when(is.na(Theoretical_max) ~ FALSE,
                                               T ~ TRUE))
 
