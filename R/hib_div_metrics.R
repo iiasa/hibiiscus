@@ -17,9 +17,10 @@
 #'   obj <- hib_calc_ta(obj)
 #' } 
 #' @export
+# @noRd
 hib_calc_ta <- function(obj){
   message(crayon::white("\tTotal abundance ...\n"))
-  # TODO: crayon::white() ??
+  
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(obj$species, "SS"),
@@ -1095,7 +1096,9 @@ hib_calc_pie <- function(obj){
 #' @param metrics A [`character`] vector, any/all of "Total_abundance", "Species_richness", 
 #' "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
 #' "Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
-#' "HillShannon_diversity", "HillSimpson_diversity", "PIE"
+#' "HillShannon_diversity", "HillSimpson_diversity", "PIE". 
+#' Metrics can be provided in upper or lower case - internal processing is done 
+#' using lower-case - and as as unambiguous abbreviations.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1446,8 +1449,9 @@ calc_cosine_sim <- function(x1, x2){
 #' @param metric A [`character`] - cosine, hypervolume
 #' @param binary A [`logical`] value - should distance be based on presence/absence
 #' @param rel_abund A [`logical`] value - whether relative abundance values should 
-#' be used; applicable for ...hypervolume
-#' @param rescale A [`logical`] value - should distance/similarity be rescaled relative to
+#' be used; applicable for hypervolume and baselga_ metrics. Cosine and theta are 
+#' unaffected by relative abundance v raw abundance.
+#' @param rescale A [`logical`] value - should distance be rescaled relative to
 #' theoretical max (if applicable and not 1)
 #' @keywords database, processing
 #' @examples 
@@ -1524,52 +1528,80 @@ hib_calc_nonveg <- function(spp_site_data,
     # return (out)
   }
   
-  else if (metric == "cosine"){
+  # TODO: can do cosine/theta for binary!!
+  # TODO: combine cosine and theta code block.
+  # %%%%
+  else if (metric %in% c("cosine", "theta")){
+    if (binary){
+      spp_site_data[spp_site_data > 0] <- 1
+    }
     x <- as.matrix(spp_site_data)
     # N rows == 2
     x1 <- x[1,]
     x2 <- x[2,]
-
-    out <- data.frame("Cosine" = calc_cosine_sim(x1, x2))
-    
-    # TODO - convert cosine to cosine dissimilarity : 1 - Cosine
-    out$Cosine <- 1 - out$Cosine
-
-    # cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
-    
-    # # if one of the sites doesn't have any individuals/species in it
-    # # i.e. the row sum is 0
-    # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
-    #   # then the similarity between sites should be 0
-    #   cosine <- 0
-    #   # if both sites have no individuals/species
-    # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
-    #   # then class the similarity as NA
-    #   cosine <- NA
-    # }
-    # out <- data.frame("Cosine" = cosine)
-    # return (out)
-  }
-  
-  # TODO: theta (angle between multidim points); acos(cosine); if rescale, set 0 to 0 angle, and 1 to 90deg? or ther way around
-  else if (metric == "theta"){
-    x <- as.matrix(spp_site_data)
-    # N rows == 2
-    x1 <- x[1,]
-    x2 <- x[2,]
-    # print("Here 1")
 
     cosine_sim <- calc_cosine_sim(x1, x2)
-    # print("Here 2")
 
-    theta <- acos(cosine_sim)
-    # print("Here 3")
-
-    if (rescale){
-      theta <- theta / (pi / 2)
+    if (metric == "cosine"){
+      out <- data.frame("Cosine" = 1 - cosine_sim)
     }
-    out <- data.frame("Theta" = theta)
+    if (metric == "theta"){
+      theta <- acos(cosine_sim)
+      # print("Here 3")
+
+      if (rescale){
+        theta <- theta / (pi / 2)
+      }
+      out <- data.frame("Theta" = theta)
+    }
   }
+  # %%%%
+  # else if (metric == "cosine"){
+  #   x <- as.matrix(spp_site_data)
+  #   # N rows == 2
+  #   x1 <- x[1,]
+  #   x2 <- x[2,]
+
+  #   out <- data.frame("Cosine" = calc_cosine_sim(x1, x2))
+    
+  #   # TODO - convert cosine to cosine dissimilarity : 1 - Cosine
+  #   out$Cosine <- 1 - out$Cosine
+
+  #   # cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
+    
+  #   # # if one of the sites doesn't have any individuals/species in it
+  #   # # i.e. the row sum is 0
+  #   # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
+  #   #   # then the similarity between sites should be 0
+  #   #   cosine <- 0
+  #   #   # if both sites have no individuals/species
+  #   # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
+  #   #   # then class the similarity as NA
+  #   #   cosine <- NA
+  #   # }
+  #   # out <- data.frame("Cosine" = cosine)
+  #   # return (out)
+  # }
+  
+  # # TODO: theta (angle between multidim points); acos(cosine); if rescale, set 0 to 0 angle, and 1 to 90deg? or ther way around
+  # else if (metric == "theta"){
+  #   x <- as.matrix(spp_site_data)
+  #   # N rows == 2
+  #   x1 <- x[1,]
+  #   x2 <- x[2,]
+  #   # print("Here 1")
+
+  #   cosine_sim <- calc_cosine_sim(x1, x2)
+  #   # print("Here 2")
+
+  #   theta <- acos(cosine_sim)
+  #   # print("Here 3")
+
+  #   if (rescale){
+  #     theta <- theta / (pi / 2)
+  #   }
+  #   out <- data.frame("Theta" = theta)
+  # }
 
   # else if (metric %in% c("jaccard", "sorensen")){
   #   # "baselga_jaccard", "baselga_sorensen"
@@ -1656,18 +1688,32 @@ hib_calc_nonveg <- function(spp_site_data,
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
-#' @param metrics A [`character`] vector of dissimilarity metrics, any/all of ...
-#' @param binary A [`logical`] vector applicable for vegan-based metrics, see [`vegdist`], 
-#' for non-vegan metrics, this will be ignored
+#' @param metrics A [`character`] vector of dissimilarity metrics. 
+#' Metrics available via \code{vegan::vegdist}: "manhattan", "euclidean", "canberra", "clark", 
+#' "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", 
+#' "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord", 
+#' "hellinger", "aitchison", "robust.aitchison".
+#' Other available metrics: "hypervolume", "cosine", "theta", "baselga_bray_balanced", 
+#' "baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient".
+#' Metrics can be provided in upper or lower case - internal processing is done 
+#' using lower-case - and as as unambiguous abbreviations.
+#' @param binary A [`logical`] vector, should metric be calculated using occurence
+#' values (if TRUE) or abundance (if FALSE, default).
 #' @param rel_abund A [`logical`] vector determining whether relative abundance 
 #' should be used to calculate the dissimilarity metric, only applicable for some metrics, 
 #' e.g., euclidean, hypervolume - Note: many metrics include rescaling to 'relative abundances'
-#' as part of the calculation
+#' as part of the calculation. 
+#' Default values is TRUE.
 #' @param rescale A [`logical`] vector determining if dissimilarity measure should 
 #' be rescaled relative to its maximum value - applies to metrics that are not 
-#' on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), chord, hellinger
+#' on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), 
+#' chord, hellinger
+#' Default values is "Primary vegetation_Minimal use" - the most pristine LUI within
+#' the PREDICTS database.
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
-#' which compositional dis/similarity is calculated per study
+#' which compositional dissimilarity is calculated per study. If NULL, compositional 
+#' dissimilarity is calculated between all sites within each studie.
+#' Default values is TRUE.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1732,7 +1778,7 @@ hib_calc_div_between <- function(obj,
   
   metrics_ <- c(veg_metrics, non_veg_metrics)
   
-  # TODO: lower-case metrics
+  # allow upper/lower-case metrics
   metrics <- tolower(metrics)
   metrics <- unique(metrics)
 
@@ -1758,7 +1804,8 @@ hib_calc_div_between <- function(obj,
   # message(paste(metrics_spec_df$metric, collapse = ","))
 
   # %%%
-  # TODO: if metric is already in hib$diversity_between,
+  # if metric is already in hib$diversity_between, ignore
+  # TODO: check recalculate...
   if (!is.null(obj$diversity_between)){
     metrics_tc <- tools::toTitleCase(metrics_spec_df$metric)
     new_metrics_idx <- which(!(metrics_tc %in% obj$diversity_between$Metric))
@@ -1795,26 +1842,6 @@ hib_calc_div_between <- function(obj,
     dplyr::filter(n_sample_effort == 1 &
                     n_species > 1)
   
-  # if (primin_baseline == T){
-  #   # TODO: should this be ammended to primary forest...
-  #   spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
-  #                                     grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
-  #   spp_tmp <- spp_tmp |>
-  #     dplyr::group_by(SS) |>
-  #     dplyr::mutate(n_primin_records = sum(prim_min)) |>
-  #     dplyr::filter(n_primin_records > 0) |>
-  #     dplyr::ungroup()
-  #   
-  #   site_tmp <- obj$sites |>
-  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-  #     left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) |>
-  #     droplevels()
-  #   
-  # } else if (primin_baseline == F){
-  #   site_tmp <- obj$sites |>
-  #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-  #     droplevels()
-  # }
   if (!is.null(baseline_lui)){
     spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
     
@@ -1907,9 +1934,10 @@ hib_calc_div_between <- function(obj,
   veg_df <- NULL
   
   if (nrow(veg_metrics_df) > 0){
-    # TODO? tools::toTitleCase(veg_metrics_df$metric)
+
     message(crayon::white(paste0("\tVegan-based dissimilarity metrics (",
-                                 paste(veg_metrics_df$metric, collapse = ", "),
+                                 paste(tools::toTitleCase(veg_metrics_df$metric), 
+                                       collapse = ", "),
                                  ") ...\n")))
 
 
@@ -1984,11 +2012,12 @@ hib_calc_div_between <- function(obj,
   non_veg_df <- NULL
   
   if (nrow(non_veg_metrics_df) > 0){
-    # TODO? tools::toTitleCase(non_veg_metrics_df$metric)
+    
     message(crayon::white(paste0("\tNon-vegan dissimilarity metrics (",
-                                 paste(non_veg_metrics_df$metric, collapse = ", "),
+                                 paste(tools::toTitleCase(non_veg_metrics_df$metric), 
+                                       collapse = ", "),
                                  ") ...\n")))
-    # stop("TODO")
+    
     non_veg_df <- purrr::map2_dfr(.x = site_comp_df$s1,
                               .y = site_comp_df$s2,
                               .f = function(s1 = .x, 
@@ -2117,7 +2146,7 @@ hib_calc_div_between <- function(obj,
     dplyr::left_join(metrics_spec_df_, by = "Metric")
   
   # %%%%%
-  # TODO: add in max_distance/max_values
+  # add in max_distance/max_values
   # Based on veg and non-veg...
 
   # veg
