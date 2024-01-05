@@ -7,7 +7,7 @@
 hib_save(obj, path, overwrite = FALSE)
 }
 \arguments{
-\item{obj}{A hibiiscus object one of: \code{HibDatabase}, \code{HibLULegend},
+\item{obj}{A hibiiscus object, one of: \code{HibDatabase}, \code{HibLULegend},
 \code{HibModelLME4}, \code{HibModelINLA}, \code{HibModelBRMS}, \code{HibCV}, \code{HibProjection}.}
 
 \item{path}{A \code{\link{character}} pointing to a file (file names should have

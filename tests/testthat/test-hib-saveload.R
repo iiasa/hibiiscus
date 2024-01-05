@@ -8,8 +8,7 @@
 test_that("Check that hib_save correctly saves data.", {
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
-                       version = "custom",
-                       custom_version_name = "dummy_data")
+                       dataset_name = "custom - dummy_data")
   # - check it fails if not path provided
   expect_error(hib_save(tmp_db),
                regexp = "argument \"path\" is missing, with no default")

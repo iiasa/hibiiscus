@@ -9,14 +9,17 @@ hib_calc_nonveg(spp_site_data, metric, binary, rel_abund, rescale)
 \arguments{
 \item{spp_site_data}{A dataframe/tibble object.}
 
-\item{metric}{A \code{\link{character}} - cosine, hypervolume}
+\item{metric}{A \code{\link{character}} - "hypervolume", "cosine", "theta",
+"baselga_bray_balanced", "baselga_bray_gradient", "baselga_ruzicka_balanced",
+"baselga_ruzicka_gradient".}
 
-\item{binary}{A \code{\link{logical}} value - should distance be based on presence/absence}
+\item{binary}{A \code{\link{logical}} - should distance be based on presence/absence}
 
-\item{rel_abund}{A \code{\link{logical}} value - whether relative abundance values should
-be used; applicable for ...hypervolume}
+\item{rel_abund}{A \code{\link{logical}} - whether relative abundance values should
+be used; applicable for hypervolume and baselga_ metrics. Cosine and theta are
+unaffected by relative abundance v raw abundance.}
 
-\item{rescale}{A \code{\link{logical}} value - should distance/similarity be rescaled relative to
+\item{rescale}{A \code{\link{logical}} - should distance be rescaled relative to
 theoretical max (if applicable and not 1)}
 }
 \description{

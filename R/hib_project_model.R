@@ -20,7 +20,7 @@
 #' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
 #' @param inla_specs A [`list`] containing details relevant to projecting an inla-style
 #' model.
-#' 're_form', as 're.form' in [`lpredict.merMod()`], used to specify random
+#' 're_form', as 're.form' in [`predict.merMod()`], used to specify random
 #' effects to condition on when predicting an inla model (formula, NULL, or NA).
 #' 'link_inverse' a function that is the invers of the link used to fit the model.
 #' Used to backtranform the global intercept for use in rescaling predictions.

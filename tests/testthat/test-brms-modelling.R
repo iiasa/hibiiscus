@@ -3,8 +3,7 @@
 test_that("Check brms modelling pipeline works as desired.", {
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
-                       version = "custom",
-                       custom_version_name = "dummy_data")
+                       dataset_name = "custom - dummy_data")
   # tmp_db <- load_hib(#"data/dummy_database.rds"
   #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   

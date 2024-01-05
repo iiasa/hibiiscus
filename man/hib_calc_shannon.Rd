@@ -4,10 +4,13 @@
 \alias{hib_calc_shannon}
 \title{Calculate shannon diversity}
 \usage{
-hib_calc_shannon(obj)
+hib_calc_shannon(obj, msg = TRUE)
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
+
+\item{msg}{A \code{\link{logical}}, indicating if default progress message should be
+displayed or not.}
 }
 \description{
 This function calculates shannon diversity for each site measuring abundance

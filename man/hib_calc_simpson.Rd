@@ -4,10 +4,13 @@
 \alias{hib_calc_simpson}
 \title{Calculate simpson's diversity}
 \usage{
-hib_calc_simpson(obj)
+hib_calc_simpson(obj, msg = TRUE)
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
+
+\item{msg}{A \code{\link{logical}}, indicating if default progress message should be
+displayed or not.}
 }
 \description{
 This function calculates simpson's diversity per site

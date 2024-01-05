@@ -14,8 +14,9 @@
 #' } 
 #' @export
 hib_update_db <- function(obj, path_species, path_sites = "", 
-                          # dataset_name = "", 
-                       version = "2022", custom_version_name = "", ...){
+                          dataset_name = "", 
+                       # version = "2022", custom_version_name = "", 
+                       ...){
 # update_hib
 
   assertthat::assert_that(
@@ -23,53 +24,53 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     is.character(path_species),
     file.exists(path_species),
     (is.character(path_sites) & file.exists(path_sites) ) || (is.character(path_sites) & path_sites == ""),
-    is.character(version),
-    is.character(custom_version_name)
-    # is.character(dataset_name)
+    # is.character(version),
+    # is.character(custom_version_name)
+    is.character(dataset_name)
     
   )
-  # TODO: replace version with dataset_name
-  # if (dataset_name == ""){
-  #   dataset_name <- tools::file_path_sans_ext(basename(path_species))
-  # }
 
-    # Check that version is correct
-    version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
+  if (dataset_name == ""){
+    dataset_name <- tools::file_path_sans_ext(basename(path_species))
+  }
+
+    # # Check that version is correct
+    # version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
     
-    if (version %in% c("2016", "2022")){
-      version <- paste("PREDICTS -", version)
-    }
-    # if version == "custom", add a bit more detail
-    if (version == "custom"){
-      # either from custom_version_name
-      if (custom_version_name != ""){
-        version <- paste("Custom -", custom_version_name)
-      }
-      # or basename(paths$species), but also get rid of extension
-      if (custom_version_name == ""){
-        custom_version_name <- tools::file_path_sans_ext(basename(path_species))
-        version <- paste("Custom -", custom_version_name)
-      }
-    }
+    # if (version %in% c("2016", "2022")){
+    #   version <- paste("PREDICTS -", version)
+    # }
+    # # if version == "custom", add a bit more detail
+    # if (version == "custom"){
+    #   # either from custom_version_name
+    #   if (custom_version_name != ""){
+    #     version <- paste("Custom -", custom_version_name)
+    #   }
+    #   # or basename(paths$species), but also get rid of extension
+    #   if (custom_version_name == ""){
+    #     custom_version_name <- tools::file_path_sans_ext(basename(path_species))
+    #     version <- paste("Custom -", custom_version_name)
+    #   }
+    # }
     
     # Ensure that the version isn't already in the database
-    assertthat::assert_that(!version %in% obj$version,
-                            msg = "This version of PREDICTS is already in the HibDatabase object!")
+    assertthat::assert_that(!dataset_name %in% obj$dataset_name,
+                            msg = "This dataset (dataset_name) is already in the HibDatabase object!")
     # This dataset (dataset_name) is ...
 
 
     # Checks of the existing database
     obj$checkself()
     
-    message(crayon::green("Updating HibDatabase ...\n"))
+    message(crayon::green("Updating HibDatabase ..."))
     
     # dataset_name
-    names(path_species) <- version
-    names(path_sites) <- version
+    names(path_species) <- dataset_name
+    names(path_sites) <- dataset_name
     # Create new object
     new_obj <- HibDatabase$new(
-      version = version,
-      # dataset_name = dataset_name,
+      # version = version,
+      dataset_name = dataset_name,
       paths = list(sites = path_sites,
                    species = path_species)#,
       # path_output = output)
@@ -98,11 +99,10 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     obj$sites <- dplyr::bind_rows(obj$sites,
                            new_obj$sites)    
     
-    # Update version info and update info
-    # dataset_name
-    old_version <- obj$version
+    # Update dataset_name info and update info
+    old_dat_nm <- obj$dataset_name
 
-    obj$version <- paste(obj$version, version, sep = "; ")
+    obj$dataset_name <- paste(obj$dataset_name, dataset_name, sep = "; ")
     obj$last_update <- lubridate::now()
     
     # Add paths...
@@ -120,12 +120,12 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     upd_idx <- length(obj$processing_flags$database_updates) + 1
   
     # dataset_name
-    obj$processing_flags$database_updates[[join_idx]] <- paste0(as.character(join_idx),
+    obj$processing_flags$database_updates[[upd_idx]] <- paste0(as.character(upd_idx),
                                                                   ": ",
                                                                   "Updatated database - Added '",
-                                                                  version,
+                                                                  dataset_name,
                                                                   "' to '",
-                                                                  old_version, 
+                                                                  old_dat_nm, 
                                                                   "'.")
     # %%%%%
 

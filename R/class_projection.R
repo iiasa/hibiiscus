@@ -16,8 +16,6 @@ HibProjection <- R6Class("HibProjection",
                               # hib_mod_projection "HibProjection"
                               # Public data objects and functions
                               public = list(
-                                # version = NULL,
-                                # dataset_name
                                 
                                 #' @field last_update (`character`)\cr
                                 #' Identifies the most recent update to the object (YYYY-MM-DD).

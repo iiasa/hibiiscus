@@ -333,15 +333,12 @@ get_model_data <- function(obj,
     all_covars <- unique(c(mod_covars, c("SSBS1", "SSBS2") ))
     missing_covars <- all_covars[!all_covars %in% colnames(obj$site_contrasts)]
 
-    # If version (or Version), in missing covars, ignore it as a missing covar, 
-    # add it to site_contrasts based on obj$sites[, c("SSBS", "version")]
-    # join to mod_df using SSBS1 
-    # left_join(, obj$sites[, c("SSBS", "version")], by = c("SSBS1" = "SSBS"))
-    # dataset_name
-    incl_version <- FALSE
-    if ("version" %in% all_covars){
-      missing_covars <- missing_covars[missing_covars != "version"]
-      incl_version <- TRUE
+    # If Dataset_name in missing covars, ignore it as a missing covar, 
+    # add it to site_contrasts 
+    incl_dat_nm <- FALSE
+    if ("Dataset_name" %in% all_covars){
+      missing_covars <- missing_covars[missing_covars != "Dataset_name"]
+      incl_dat_nm <- TRUE
     }
 
     if (length(missing_covars) > 0){
@@ -354,10 +351,10 @@ get_model_data <- function(obj,
     all_covars_sub <- all_covars[all_covars %in% colnames(obj$site_contrasts)]
     mod_df <- obj$site_contrasts[,all_covars_sub]
 
-    if (incl_version == TRUE){
-      message(crayon::green("Fetching 'version' information from HibDatabase\n"))
+    if (incl_dat_nm == TRUE){
+      message(crayon::green("Fetching 'Dataset_name' information from HibDatabase\n"))
       mod_df <- mod_df |>
-        dplyr::left_join(obj$sites[, c("SSBS", "version")], 
+        dplyr::left_join(obj$sites[, c("SSBS", "Dataset_name")], 
                          by = c("SSBS1" = "SSBS"))
     }
     # mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]

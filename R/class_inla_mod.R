@@ -12,10 +12,9 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                           # TODO: @export
                           # Public data objects and functions
                           public = list(
-                            #' @field version (`character`)\cr
-                            #' Identifies the version of data used.
-                            version = NULL,
-                            # dataset_name
+                            #' @field dataset_name (`character`)\cr
+                            #' Identifies the dataset used.
+                            dataset_name = NULL,
                             
                             #' @field last_update (`character`)\cr
                             #' Identifies the most recent update to the object (YYYY-MM-DD).
@@ -205,7 +204,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               
                               # TODO: allow for list dj_obj input for weighting.
                               # dataset_name
-                              self$version <- db_obj$version
+                              self$dataset_name <- db_obj$dataset_name
 
                               # TODO: store site locations
                               loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]

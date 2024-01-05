@@ -16,22 +16,36 @@ hib_calc_div_between(
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{metrics}{A \code{\link{character}} vector of dissimilarity metrics, any/all of ...}
+\item{metrics}{A \code{\link{character}} vector of dissimilarity metrics.
+Metrics available via \code{vegan::vegdist}: "manhattan", "euclidean", "canberra", "clark",
+"bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn",
+"mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord",
+"hellinger", "aitchison", "robust.aitchison".
+Other available metrics: "hypervolume", "cosine", "theta", "baselga_bray_balanced",
+"baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient".
+Metrics can be provided in upper or lower case - internal processing is done
+using lower-case - and as as unambiguous abbreviations.}
 
-\item{binary}{A \code{\link{logical}} vector applicable for vegan-based metrics, see \code{\link{vegdist}},
-for non-vegan metrics, this will be ignored}
+\item{binary}{A \code{\link{logical}} vector, should metric be calculated using occurence
+values (if TRUE) or abundance (if FALSE, default).}
 
 \item{rel_abund}{A \code{\link{logical}} vector determining whether relative abundance
 should be used to calculate the dissimilarity metric, only applicable for some metrics,
 e.g., euclidean, hypervolume - Note: many metrics include rescaling to 'relative abundances'
-as part of the calculation}
+as part of the calculation.
+Default values is TRUE.}
 
 \item{rescale}{A \code{\link{logical}} vector determining if dissimilarity measure should
 be rescaled relative to its maximum value - applies to metrics that are not
-on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), chord, hellinger}
+on a 0-1 scale by default - hypervolume, euclidean (if relative abundance),
+chord, hellinger
+Default values is "Primary vegetation_Minimal use" - the most pristine LUI within
+the PREDICTS database.}
 
 \item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
-which compositional dis/similarity is calculated per study}
+which compositional dissimilarity is calculated per study. If NULL, compositional
+dissimilarity is calculated between all sites within each studie.
+Default values is TRUE.}
 }
 \description{
 This function calculates compositional dissimilarity between sites within a study

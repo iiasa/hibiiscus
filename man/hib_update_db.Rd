@@ -4,14 +4,7 @@
 \alias{hib_update_db}
 \title{This function updates an existing Database object with further data}
 \usage{
-hib_update_db(
-  obj,
-  path_species,
-  path_sites = "",
-  version = "2022",
-  custom_version_name = "",
-  ...
-)
+hib_update_db(obj, path_species, path_sites = "", dataset_name = "", ...)
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
@@ -20,13 +13,9 @@ hib_update_db(
 
 \item{path_sites}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted site database, or "" otherwise.}
 
-\item{version}{A \code{\link{character}} denoting the version of the PREDICTS database to use. Has to be either
-\code{"2016"}, \code{"2022"} or \code{"custom"}. In the latter case it is important that formatting is consistent
-with earlier versions of the PREDICTS database (Default: \code{"2016"}).}
-
-\item{custom_version_name}{Optional \code{\link{character}} that will help indicate the source
-of a custom database - the create_hib function will internally generate
-paste("Custom - ", custom_version_name). Only used if version == "custom"}
+\item{dataset_name}{A \code{\link{character}} indicating the dataset used to create the
+HibDatabase. Default is ''. If '' is supplied, function will update parameter
+to the filename associated with \code{path_species}.}
 
 \item{...}{Other non-specified parameters.}
 }

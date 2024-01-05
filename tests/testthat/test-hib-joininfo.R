@@ -8,8 +8,7 @@
 test_that("Check that hib_join_sites works correctly.", {
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
-                       version = "custom",
-                       custom_version_name = "dummy_data")
+                       dataset_name = "custom - dummy_data")
   # tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
   #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   # tmp_db$sites$Predominant_land_use |> unique()
@@ -58,8 +57,7 @@ test_that("Check that hib_join_sites works correctly.", {
 test_that("Check that hib_join_species works correctly.", {
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
-                       version = "custom",
-                       custom_version_name = "dummy_data")
+                       dataset_name = "custom - dummy_data")
   # tmp_db <- load_hib(#"inst/extdata/dummy_database.rds"
   #                    system.file("extdata", "dummy_database.rds", package = "hibiiscus", mustWork = TRUE))
   # tmp_db$sites$Predominant_land_use |> unique()
@@ -99,3 +97,4 @@ test_that("Check that hib_join_species works correctly.", {
 })
 
 
+# %%%%%%%%% join_site_contrasts

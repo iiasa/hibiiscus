@@ -12,13 +12,10 @@ HibDatabase <- R6Class("HibDatabase",
                   # TODO: @export
                   # Public data objects and functions
                   public = list(
-                    #' @field version (`character()`)\cr
-                    #' Identifies the version of data used.
-                    version = NULL,
-                    # TODO
-                    # Need a better term - not just version, dataset_name, db_name
-                    # dataset_name = NULL,
-
+                    #' @field dataset_name (`character()`)\cr
+                    #' Identifies the dataset used.
+                    dataset_name = NULL,
+                    
                     #' @field last_update (`character()`)\cr
                     #' Identifies the most recent update to the Database (YYYY-MM-DD).
                     last_update = NULL,
@@ -61,14 +58,13 @@ HibDatabase <- R6Class("HibDatabase",
                     #' Creates a new instance of this [R6][R6::R6Class] class.
                     #' Note, this object is constructed via the [hib_create_db] and 
                     #' [hib_update_db] functions found within this package.
-                    #' @param version (`character()`)\cr
-                    #'   Text indicating the version of the database being created.
+                    #' @param dataset_name (`character()`)\cr
+                    #'   Text indicating the dataset contributing to the database being created.
                     #' @param paths (`list()`)\cr
                     #'   List of paths to the 'species' and 'site' data to be loaded.
-                    initialize = function(version, paths){
+                    initialize = function(dataset_name, paths){
                       assertthat::assert_that(
-                        is.character(version), 
-                        # is.character(dataset_name),
+                        is.character(dataset_name), 
                         is.list(paths)
                         )
                       
@@ -77,7 +73,7 @@ HibDatabase <- R6Class("HibDatabase",
 
                       # dataset_name
                       message(crayon::green(paste0("\nInitialising HibDatabase using ", 
-                                                   version, " data ...\n")) )
+                                                   dataset_name, " data ...\n")) )
                       
                       # %%%%%
                       # Load species data
@@ -87,8 +83,7 @@ HibDatabase <- R6Class("HibDatabase",
 
                       species <- readr::read_rds(paths$species)
 
-                      # dataset_name
-                      species$version <- version
+                      species$Dataset_name <- dataset_name
                       
                       # If predicts2022 column names, rename to align with 2016...
                       if ("Predominant_habitat" %in% colnames(species)){
@@ -119,7 +114,7 @@ HibDatabase <- R6Class("HibDatabase",
                       
                         sites <- readr::read_rds(paths$sites)
                         # dataset_name
-                        sites$version <- version
+                        sites$Dataset_name <- dataset_name
                         
                         if ("N_samples" %in% colnames(sites)){
                           if (inherits(sites$N_samples, "table")){
@@ -211,7 +206,7 @@ HibDatabase <- R6Class("HibDatabase",
                           dplyr::ungroup()
                         
                         # dataset_name
-                        sites$version <- version
+                        sites$Dataset_name <- dataset_name
                       }
                       
                       # %%%%%
@@ -236,7 +231,7 @@ HibDatabase <- R6Class("HibDatabase",
                       
                       # Save inputs in list
                       # dataset_name
-                      self$version <- version
+                      self$dataset_name <- dataset_name
                       self$last_update <- lubridate::now()
                       self$paths <- paths
                       self$sites <- sites
@@ -287,6 +282,8 @@ HibDatabase <- R6Class("HibDatabase",
                         assertthat::has_name(species, "Predominant_land_use"), 
                         assertthat::has_name(species, "Use_intensity"), 
                         assertthat::has_name(species, "LUI"), 
+
+                        # dataset_name ??
 
                         assertthat::has_name(species, "Diversity_metric_type"), 
 
@@ -390,7 +387,7 @@ HibDatabase <- R6Class("HibDatabase",
                       }
                       message(
                         # dataset_name
-                        paste0("Hibiiscus database (including version/s: ", crayon::bold(self$version),")","\n",
+                        paste0("Hibiiscus database (including dataset/s: ", crayon::bold(self$dataset_name),")","\n",
                                "Last updated: ", crayon::green( self$last_update ),
                                "\n",
                                "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
@@ -562,8 +559,7 @@ HibDatabase <- R6Class("HibDatabase",
                         }
                         if (type == "map-studies"){
                           plt_df <- self$sites |>
-                          # dataset_name
-                            dplyr::group_by(SS, version) |>
+                            dplyr::group_by(SS, dataset_name) |>
                             dplyr::summarise(N_sites = dplyr::n(),
                                              Longitude = mean(Longitude, na.rm = T),
                                              Latitude = mean(Latitude, na.rm = T))
@@ -604,8 +600,7 @@ HibDatabase <- R6Class("HibDatabase",
                         if (type == "map-sites"){
                           plt <- plt +
                             ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude, 
-                                           # dataset_name
-                                           colour = version),
+                                           colour = dataset_name),
                                        size = 0.15,
                                        alpha = 0.25,
                                        data = plt_df)
@@ -615,8 +610,7 @@ HibDatabase <- R6Class("HibDatabase",
                           plt <- plt +
                             ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude,
                                            size = N_sites,
-                                           # dataset_name
-                                           colour = version),
+                                           colour = dataset_name),
                                        alpha = 0.25,
                                        data = plt_df) +
                             ggplot2::labs(size = "No. studies")
@@ -639,8 +633,7 @@ HibDatabase <- R6Class("HibDatabase",
                           )
                         
                         count_df <- self$sites |>
-                        # dataset_name
-                          dplyr::group_by(!!sym(var_), version) |>
+                          dplyr::group_by(!!sym(var_), dataset_name) |>
                           dplyr::summarise(Sites = dplyr::n_distinct(SS),
                                            Studies = dplyr::n_distinct(SSBS)) |>
                           tidyr::pivot_longer(c(Sites, Studies),
@@ -649,8 +642,7 @@ HibDatabase <- R6Class("HibDatabase",
                         
                         plt <- ggplot2::ggplot(count_df) +
                           ggplot2::geom_bar(ggplot2::aes(x = !!sym(var_), y = N,
-                                       # dataset_name
-                                       fill = version),
+                                       fill = dataset_name),
                                    # fill = "#009E73",
                                    stat = "identity") +
                           ggplot2::labs(x = var_,
@@ -679,16 +671,14 @@ HibDatabase <- R6Class("HibDatabase",
                           assertthat::has_name(self$sites, "Class")
                           )
                         class_df <- self$species |>
-                        # dataset_name
-                          dplyr::group_by(Class, version) |>
+                          dplyr::group_by(Class, dataset_name) |>
                           dplyr::summarise(N_ = dplyr::n()) |>
                           # dplyr::filter(N_ > 0) |>
                           dplyr::filter(Class != "")
                         
                         plt <- ggplot2::ggplot(class_df) +
                           ggplot2::geom_bar(ggplot2::aes(x = Class, y = N_,
-                            # dataset_name
-                                       fill = version),
+                                       fill = dataset_name),
                                    # fill = "#E69F00",
                                    stat = "identity") +
                           ggplot2::labs(x = "Class",

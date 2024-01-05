@@ -14,9 +14,7 @@ HibCV <- R6Class("HibCV",
 
                       # Public data objects and functions
                       public = list(
-                        # version = NULL,
-                        # dataset_name
-                        
+
                         #' @field last_update (`character`)\cr
                         #' Identifies the most recent update to the object (YYYY-MM-DD).
                         last_update = NULL,
@@ -86,7 +84,7 @@ HibCV <- R6Class("HibCV",
                           
                           # Save inputs in self
                           # dataset_name
-                          core_items <- c("last_update", "version",
+                          core_items <- c("last_update", "dataset_name",
                                           "model", "processing_flags",
                                           "fixedef_coefficients",
                                           "site_locations")
