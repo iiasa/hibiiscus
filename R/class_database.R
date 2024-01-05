@@ -15,7 +15,10 @@ HibDatabase <- R6Class("HibDatabase",
                     #' @field version (`character()`)\cr
                     #' Identifies the version of data used.
                     version = NULL,
-                    
+                    # TODO
+                    # Need a better term - not just version, dataset_name, db_name
+                    # dataset_name = NULL,
+
                     #' @field last_update (`character()`)\cr
                     #' Identifies the most recent update to the Database (YYYY-MM-DD).
                     last_update = NULL,
@@ -65,12 +68,14 @@ HibDatabase <- R6Class("HibDatabase",
                     initialize = function(version, paths){
                       assertthat::assert_that(
                         is.character(version), 
+                        # is.character(dataset_name),
                         is.list(paths)
                         )
                       
                       # path$sites/species is character - already checked in create_hib
                       # ------ #
 
+                      # dataset_name
                       message(crayon::green(paste0("\nInitialising HibDatabase using ", 
                                                    version, " data ...\n")) )
                       
@@ -82,6 +87,7 @@ HibDatabase <- R6Class("HibDatabase",
 
                       species <- readr::read_rds(paths$species)
 
+                      # dataset_name
                       species$version <- version
                       
                       # If predicts2022 column names, rename to align with 2016...
@@ -112,6 +118,7 @@ HibDatabase <- R6Class("HibDatabase",
                           )
                       
                         sites <- readr::read_rds(paths$sites)
+                        # dataset_name
                         sites$version <- version
                         
                         if ("N_samples" %in% colnames(sites)){
@@ -203,7 +210,7 @@ HibDatabase <- R6Class("HibDatabase",
                                            N_samples = dplyr::n()) |>
                           dplyr::ungroup()
                         
-    
+                        # dataset_name
                         sites$version <- version
                       }
                       
@@ -228,6 +235,7 @@ HibDatabase <- R6Class("HibDatabase",
                       self$checkself(sites, species)
                       
                       # Save inputs in list
+                      # dataset_name
                       self$version <- version
                       self$last_update <- lubridate::now()
                       self$paths <- paths
@@ -381,6 +389,7 @@ HibDatabase <- R6Class("HibDatabase",
                         stats$database_updates <- "NA"
                       }
                       message(
+                        # dataset_name
                         paste0("Hibiiscus database (including version/s: ", crayon::bold(self$version),")","\n",
                                "Last updated: ", crayon::green( self$last_update ),
                                "\n",
@@ -482,6 +491,7 @@ HibDatabase <- R6Class("HibDatabase",
                         dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
                                                                          T ~ Sampling_effort)) |>
                         dplyr::group_by(SS) |>
+                        # TODO: above assumes SS are not shared across versions...
                         dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort)) |>
                         dplyr::ungroup() |>
                         dplyr::mutate(Effort_corrected_measurement = dplyr::case_when(Diversity_metric_is_effort_sensitive == T ~ Measurement / Rescaled_sampling_effort,
@@ -552,6 +562,7 @@ HibDatabase <- R6Class("HibDatabase",
                         }
                         if (type == "map-studies"){
                           plt_df <- self$sites |>
+                          # dataset_name
                             dplyr::group_by(SS, version) |>
                             dplyr::summarise(N_sites = dplyr::n(),
                                              Longitude = mean(Longitude, na.rm = T),
@@ -593,6 +604,7 @@ HibDatabase <- R6Class("HibDatabase",
                         if (type == "map-sites"){
                           plt <- plt +
                             ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude, 
+                                           # dataset_name
                                            colour = version),
                                        size = 0.15,
                                        alpha = 0.25,
@@ -603,6 +615,7 @@ HibDatabase <- R6Class("HibDatabase",
                           plt <- plt +
                             ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude,
                                            size = N_sites,
+                                           # dataset_name
                                            colour = version),
                                        alpha = 0.25,
                                        data = plt_df) +
@@ -626,6 +639,7 @@ HibDatabase <- R6Class("HibDatabase",
                           )
                         
                         count_df <- self$sites |>
+                        # dataset_name
                           dplyr::group_by(!!sym(var_), version) |>
                           dplyr::summarise(Sites = dplyr::n_distinct(SS),
                                            Studies = dplyr::n_distinct(SSBS)) |>
@@ -635,6 +649,7 @@ HibDatabase <- R6Class("HibDatabase",
                         
                         plt <- ggplot2::ggplot(count_df) +
                           ggplot2::geom_bar(ggplot2::aes(x = !!sym(var_), y = N,
+                                       # dataset_name
                                        fill = version),
                                    # fill = "#009E73",
                                    stat = "identity") +
@@ -664,6 +679,7 @@ HibDatabase <- R6Class("HibDatabase",
                           assertthat::has_name(self$sites, "Class")
                           )
                         class_df <- self$species |>
+                        # dataset_name
                           dplyr::group_by(Class, version) |>
                           dplyr::summarise(N_ = dplyr::n()) |>
                           # dplyr::filter(N_ > 0) |>
@@ -671,6 +687,7 @@ HibDatabase <- R6Class("HibDatabase",
                         
                         plt <- ggplot2::ggplot(class_df) +
                           ggplot2::geom_bar(ggplot2::aes(x = Class, y = N_,
+                            # dataset_name
                                        fill = version),
                                    # fill = "#E69F00",
                                    stat = "identity") +

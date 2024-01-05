@@ -17,6 +17,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                       #' @field version (`character`)\cr
                       #' Identifies the version of data used.
                       version = NULL,
+                      # dataset_name
                       
                       #' @field last_update (`character`)\cr
                       #' Identifies the most recent update to the object (YYYY-MM-DD).
@@ -135,11 +136,13 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         self$processing_flags$N_spp <- n_spp
                         
                         if (inherits(db_obj, "HibDatabase")){
+                          # dataset_name
                           self$version <- db_obj$version  
                           loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
 
                         }
                         if (is.list(db_obj)){
+                          # dataset_name
                           self$version <- lapply(db_obj, function(x){x$version})
                           loc_df <- lapply(db_obj, function(x){x$sites[, c("SSBS", "Longitude" ,"Latitude")]}) |>
                             dplyr::bind_rows()

@@ -299,6 +299,7 @@ get_model_data <- function(obj,
     if (length(missing_covars) > 0){
       message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
                                     "formula are missing; ",
+                                    # from HibDatabase$sites
                                     paste(missing_covars, colapse = ", "),
                                     "\n")))
     }
@@ -331,15 +332,34 @@ get_model_data <- function(obj,
 
     all_covars <- unique(c(mod_covars, c("SSBS1", "SSBS2") ))
     missing_covars <- all_covars[!all_covars %in% colnames(obj$site_contrasts)]
+
+    # If version (or Version), in missing covars, ignore it as a missing covar, 
+    # add it to site_contrasts based on obj$sites[, c("SSBS", "version")]
+    # join to mod_df using SSBS1 
+    # left_join(, obj$sites[, c("SSBS", "version")], by = c("SSBS1" = "SSBS"))
+    # dataset_name
+    incl_version <- FALSE
+    if ("version" %in% all_covars){
+      missing_covars <- missing_covars[missing_covars != "version"]
+      incl_version <- TRUE
+    }
+
     if (length(missing_covars) > 0){
       message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
                                     "formula are missing; ",
+                                    # from HibDatabase$site_contrasts
                                     paste(missing_covars, colapse = ", "),
                                     "\n")))
     }
     all_covars_sub <- all_covars[all_covars %in% colnames(obj$site_contrasts)]
     mod_df <- obj$site_contrasts[,all_covars_sub]
 
+    if (incl_version == TRUE){
+      message(crayon::green("Fetching 'version' information from HibDatabase\n"))
+      mod_df <- mod_df |>
+        dplyr::left_join(obj$sites[, c("SSBS", "version")], 
+                         by = c("SSBS1" = "SSBS"))
+    }
     # mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]
     
     # find relevant obj$diversity$Data[[]] - which one contains the response...

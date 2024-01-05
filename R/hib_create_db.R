@@ -32,6 +32,7 @@
 #' }
 #' @export
 hib_create_db <- function(path_species, path_sites = "", 
+                          # dataset_name = "", ...){
                        version = "2016", 
                        custom_version_name = "", ...){
 # create_hib  
@@ -50,9 +51,17 @@ hib_create_db <- function(path_species, path_sites = "",
     (file.exists(path_sites) || path_sites == ""),
     is.character(version),
     is.character(custom_version_name)
-    # is.null(output) || is.character(output)
+    # is.character(dataset_name)
   )
 
+  # TODO: replace version with dataset_name
+  # if (dataset_name == ""){
+  #   dataset_name <- tools::file_path_sans_ext(basename(path_species))
+  # }
+
+  # TODO: 'version' feels restrictive/wrong - can load non-PREDICTS databases
+  # Maybe replace with 'dataset_name'
+  # 
   # Check that version is correct
   version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
   
@@ -74,23 +83,17 @@ hib_create_db <- function(path_species, path_sites = "",
     }
   }
   
-  # # If output is null, create one
-  # if(is.null(output)){
-  #   output <- paste0(tempfile(),".rds")
-  # }
-  # if(!assertthat::has_extension(output, "rds")){
-  #   output <- paste0(output, ".rds")
-  # }
-  
   # ------ #
   # ??
   # message(crayon::green("Creating HibDatabase object...\n"))
   
+  # dataset_name
   names(path_species) <- version
   names(path_sites) <- version
   
   obj <- HibDatabase$new(
     version = version,
+    # dataset_name = dataset_name,
     paths = list(sites = path_sites,
                  species = path_species)
   )
@@ -98,58 +101,4 @@ hib_create_db <- function(path_species, path_sites = "",
   return(obj)
 }
 
-
-# # TODO: delete/rm below functions
-# #' Save a previously created database object
-# #' 
-# #' @description 
-# #' The function [`save_hib`] saves the output of the formatted [`HibDatabase`] object in a specific
-# #' place.
-# #' @details 
-# #' Expecting a file with \code{rds} ending.
-# #' @param obj A [`HibDatabase`].
-# #' @param output_path A [`character`] pointing to a filename.
-# #' @keywords save, database
-# #' @export
-# save_hib <- function(obj, output_path) obj$save_hib(output_path)
-
-
-# #' Load a previously created database object
-# #' 
-# #' @description 
-# #' The function [`load_hib`] loads a previously created and saved [`HibDatabase`]. 
-# #' @details 
-# #' Expecting a file with \code{rds} ending.
-# #' @param path_input A [`character`] pointing to a filename.
-# #' @keywords database, preparation
-# #' @examples 
-# #' \dontrun{
-# #'   obj <- load_hib(path_input)
-# #' } 
-# #' @export
-# load_hib <- function(path_input){
-
-#   # hib_db_load ?? hib_load_db
-#   assertthat::assert_that(
-#     is.character(path_input),
-#     file.exists(path_input),
-#     assertthat::has_extension(path_input, "rds")
-#   )
-#   # Try and read in the database
-#   message(crayon::green(paste0("Loading HibDatabase from: '", path_input, "...")))
-  
-#   obj <- readr::read_rds(path_input)
-  
-#   #Make some sensitivity checks that the object is correct
-#   # TODO: check its a Database
-#   # TODO: what about other hib datatypes... - models, cv, proj ??
-#   assertthat::assert_that(
-#     inherits(obj, "HibDatabase")
-#     )
-#   obj$checkself()
-  
-#   return(obj)
-# }
-
-# TODO: generic hib_save and hib_load function... - see hib_saveload
 

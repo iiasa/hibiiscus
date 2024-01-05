@@ -15,6 +15,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #' @field version (`character`)\cr
                             #' Identifies the version of data used.
                             version = NULL,
+                            # dataset_name
                             
                             #' @field last_update (`character`)\cr
                             #' Identifies the most recent update to the object (YYYY-MM-DD).
@@ -203,7 +204,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               }
                               
                               # TODO: allow for list dj_obj input for weighting.
-                              
+                              # dataset_name
                               self$version <- db_obj$version
 
                               # TODO: store site locations

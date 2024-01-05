@@ -252,7 +252,7 @@ hib_calc_site_contrasts <- function(obj,
   # }
 
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
-  if (any(c("geogr_dist_hav", "geogr_dist_geod") %in% metrics)){
+  if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
     # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
     site_comp_df <- site_comp_df |>
       # get the lat and long for s1
@@ -299,6 +299,9 @@ hib_calc_site_contrasts <- function(obj,
     dplyr::rename(SSB2 = SSB) |>
     dplyr::mutate(SSB = dplyr::case_when(SSB1 == SSB2 ~ SSB1,
                                          T ~ NA))
+  
+  # TODO:
+  # add in version info... ?
   
   # %%%
   # add site_contrasts to obj

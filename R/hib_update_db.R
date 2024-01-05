@@ -14,6 +14,7 @@
 #' } 
 #' @export
 hib_update_db <- function(obj, path_species, path_sites = "", 
+                          # dataset_name = "", 
                        version = "2022", custom_version_name = "", ...){
 # update_hib
 
@@ -24,8 +25,13 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     (is.character(path_sites) & file.exists(path_sites) ) || (is.character(path_sites) & path_sites == ""),
     is.character(version),
     is.character(custom_version_name)
-    # is.null(output) || is.character(output)
+    # is.character(dataset_name)
+    
   )
+  # TODO: replace version with dataset_name
+  # if (dataset_name == ""){
+  #   dataset_name <- tools::file_path_sans_ext(basename(path_species))
+  # }
 
     # Check that version is correct
     version <- match.arg(version, c("2016", "2022", "custom"), several.ok = F)
@@ -49,17 +55,21 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     # Ensure that the version isn't already in the database
     assertthat::assert_that(!version %in% obj$version,
                             msg = "This version of PREDICTS is already in the HibDatabase object!")
+    # This dataset (dataset_name) is ...
+
 
     # Checks of the existing database
     obj$checkself()
     
     message(crayon::green("Updating HibDatabase ...\n"))
     
+    # dataset_name
     names(path_species) <- version
     names(path_sites) <- version
     # Create new object
     new_obj <- HibDatabase$new(
       version = version,
+      # dataset_name = dataset_name,
       paths = list(sites = path_sites,
                    species = path_species)#,
       # path_output = output)
@@ -89,6 +99,7 @@ hib_update_db <- function(obj, path_species, path_sites = "",
                            new_obj$sites)    
     
     # Update version info and update info
+    # dataset_name
     old_version <- obj$version
 
     obj$version <- paste(obj$version, version, sep = "; ")
@@ -108,6 +119,7 @@ hib_update_db <- function(obj, path_species, path_sites = "",
     # Append update flag to database object
     upd_idx <- length(obj$processing_flags$database_updates) + 1
   
+    # dataset_name
     obj$processing_flags$database_updates[[join_idx]] <- paste0(as.character(join_idx),
                                                                   ": ",
                                                                   "Updatated database - Added '",

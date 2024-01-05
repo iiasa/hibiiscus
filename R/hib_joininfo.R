@@ -99,10 +99,8 @@ hib_join_sites <- function(obj, site_info){
 
   obj$last_update <- lubridate::now()
   
-
-  
   # %%%
-  # TODO: would be useful to flag addition of data - source name/an id..
+  # Flag addition of data - source name/an id..
   site_info_chr <- deparse(substitute(site_info))
   new_cols_chr <- info_cols[!info_cols %in% obj_site_cols]
 
@@ -115,6 +113,85 @@ hib_join_sites <- function(obj, site_info){
                                                                   paste(new_cols_chr, collapse = "', '"),
                                                                   "' - from '",
                                                                   site_info_chr, 
+                                                                  "'.")
+  # %%%
+
+  obj$checkself()
+
+  return(obj)
+}
+
+
+# hib_join_site_contrasts
+# as above, but link to site_contrast data - for complex models using 
+# site contrasts not provided in package...
+
+#' Joins external site-contrast information to a HibDatabase object
+#' 
+#' @description 
+#' This function joins external information to a [`HibDatabase`] object. Such 
+#' information could be for example additional site-contrast-specific data that are not 
+#' already present in the database.
+#' @param obj A [`HibDatabase`] object.
+#' @param site_contrast_info A [`data.frame`] or similar of categorical or numeric information 
+#' to be added to the database. Must share atleast one column with obj$site_contrasts.
+#' @keywords database, external
+#' @export
+hib_join_site_contrasts <- function(obj, site_contrast_info){
+  # Assertions
+  assertthat::assert_that(
+    inherits(obj, "HibDatabase"),
+    is.data.frame(site_contrast_info)
+    )
+
+  # Tests
+  # columns in site_contrast_info 
+  # - at least 1 must be in obj$sites
+  # - at least 1 must not be in obj$sites
+  # Check that site_contrasts exists, if not, create
+
+  if (!is.null(obj$site_contrasts)){
+    obj_site_contr_cols <- colnames(obj$site_contrasts)
+    info_cols <- colnames(site_contrast_info)
+    
+    n_matching_cols <- sum(info_cols %in% obj_site_contr_cols)
+    
+    assertthat::assert_that(
+      n_matching_cols > 0 & n_matching_cols < length(info_cols),
+      msg = "Columns in site_contrast_info are not compatible with the current site_contrast data."
+    )
+    
+    message(crayon::green("Joining site-contrast-related data into HibDatabase...\n"))
+    
+    obj$site_contrasts <- dplyr::left_join(obj$site_contrasts,
+                                           site_contrast_info)
+  }
+
+  # if site_contrasts exists, left_join
+  if (is.null(obj$site_contrasts)){
+    # Check SSBS1, SSBS2...
+    # Refuse to create?
+    # obj$site_contrasts
+    message(crayon::red("Site-contrast data not present in HibDatabase, cannot join new data...\n"))
+    stop("hib_join_site_contrasts unsuccessful. See above for details.", call. = F)
+  }
+
+  obj$last_update <- lubridate::now()
+  
+  # %%%
+  # Flag addition of data - source name/an id..
+  site_contr_info_chr <- deparse(substitute(site_contrast_info))
+  new_cols_chr <- info_cols[!info_cols %in% obj_site_contr_cols]
+
+  # Append join flag to database object
+  join_idx <- length(obj$processing_flags$joined_information) + 1
+  
+  obj$processing_flags$joined_information[[join_idx]] <- paste0(as.character(join_idx),
+                                                                  ": ",
+                                                                  "Added site-contrast data - '",
+                                                                  paste(new_cols_chr, collapse = "', '"),
+                                                                  "' - from '",
+                                                                  site_contr_info_chr, 
                                                                   "'.")
   # %%%
 
