@@ -6,16 +6,17 @@
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
-#' @param metrics A [`character`] vector of 'distance' metrics
+#' @param metrics A [`character`] vector of 'distance' metrics. Current options are;
+#' "lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint".
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
-#' which compositional dis/similarity is calculated per study - should match the 
-#' value used when calculating compositional dis/similarity (hib_calc_div_between)
+#' which dis/similarity is calculated per study - should match the value used 
+#' when calculating compositional dis/similarity (hib_calc_div_between)
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
 #'   obj <- hib_calc_site_contrasts(obj, 
-#'                               c("lui_contrast", "geo_distance", "env_distance"),
-#'                               T)
+#'                               c("lui_contrast", "geogr_dist_hav"),
+#'                               "Primary vegetation_Minimal use")
 #' } 
 #' @export
 hib_calc_site_contrasts <- function(obj,
@@ -30,7 +31,6 @@ hib_calc_site_contrasts <- function(obj,
   assertthat::assert_that(
     inherits(obj, "HibDatabase"),
     is.character(metrics),
-    # is.logical(primin_baseline) 
     is.character(baseline_lui) || is.null(baseline_lui)
   )
   
@@ -42,7 +42,7 @@ hib_calc_site_contrasts <- function(obj,
                        # , "env_distance"
                        several.ok = T)
   
-  message(crayon::green("Collating data for site contrasts...\n"))
+  message(crayon::green("\nCollating data for site contrasts...\n"))
   
   # get obj$sites columns of interest - SSBS, SS, LUI, lat/long etc
   cols_of_interest <- c("SSBS", "SSB", "SS")
@@ -52,7 +52,6 @@ hib_calc_site_contrasts <- function(obj,
   if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
     cols_of_interest <- c(cols_of_interest, "Latitude", "Longitude")
   }
-  
   
   # assert that cols of interest are in obj$sites
   # subset of c("SSBS", "SSB", "SS", "LUI", "Latitude", "Longitude")
@@ -119,7 +118,8 @@ hib_calc_site_contrasts <- function(obj,
     
     site_tmp <- obj$sites |>
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")])) |>
+      dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")]),
+                        by = "SSBS") |>
       droplevels()
     
   } else if (is.null(baseline_lui)){
@@ -186,12 +186,16 @@ hib_calc_site_contrasts <- function(obj,
     return(site_comparisons)
   })
   
-  message(crayon::green(paste0(nrow(site_comp_df), 
+  message(crayon::green(paste0("\t", nrow(site_comp_df), 
                                " site comparisons to make...\n"))
   )
   
   message(crayon::green("Calculating site contrasts...\n"))
   
+  message(crayon::white(paste0("\t(",
+                                 paste(metrics, 
+                                       collapse = ", "),
+                                 ") ...\n")))
   # %%%
   # calculate metrics of interest
   # - LUI - left join SSBS1, LUI1, SSBS2, LUI2, paste together
@@ -302,7 +306,7 @@ hib_calc_site_contrasts <- function(obj,
   
   # TODO:
   # add in version info... ?
-  
+
   # %%%
   # add site_contrasts to obj
   site_contr_empty <- is.null(obj$site_contrasts)

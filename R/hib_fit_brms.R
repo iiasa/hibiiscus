@@ -143,13 +143,17 @@ hib_fit_brms <- function(obj,
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
                            calc_N_spp(.x, .y, resp)
-                         }) |> unlist()
+                         }) #|> unlist()
+    # N sites
+    n_sites <- lapply(mod_df_ls, 
+                      function(x){calc_N_sites(x)})
   }
   if (inherits(obj, "HibDatabase")){
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
     n_spp <- calc_N_spp(obj, mod_df, mod_resp)
+    n_sites <- calc_N_sites(mod_df)
   }
   
   # %%%
@@ -197,6 +201,7 @@ hib_fit_brms <- function(obj,
     fixef_df = fixef_df,
     metr_ls = metr_ls,
     n_spp = n_spp,
+    n_sites = n_sites,
     extra_args = list(...)
   )
   

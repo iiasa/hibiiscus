@@ -114,6 +114,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #'   A description of the mesh source.
                             #' @param n_spp (`integer`)\cr
                             #'   Number of species contributing to the fitted model.
+                            #' @param n_sites (`integer`)\cr
+                            #'   Number of sites contributing to the fitted model.
                             initialize = function(db_obj, 
                                                   mod_df,
                                                   inla_obj,
@@ -128,7 +130,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                                   inla_mesh_settings,
                                                   inla_mesh_source,
                                                   # %%%
-                                                  n_spp
+                                                  n_spp,
+                                                  n_sites
                                                   # set_up_specs
                                                   # spp df?
                             ){
@@ -164,7 +167,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                 
                                 is.list(inla_mesh_settings),
                                 is.character(inla_mesh_source) || is.null(inla_mesh_source),
-                                is.numeric(n_spp)
+                                is.numeric(n_spp),
+                                is.numeric(n_sites)
                               )
                               
                               # ------ #
@@ -192,18 +196,15 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               
                               # Incl processing flags from hib_db
                               self$processing_flags <- db_obj$processing_flags
-                              
-                              # Calc n sites/species used in  model - need to calc spp with div metrics!!
                               self$processing_flags$N_spp <- n_spp
+                              self$processing_flags$N_sites <- n_sites
                               
-                              if ("SSBS" %in% colnames(mod_df)){
-                                self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                              } else if ("SSBS1" %in% colnames(mod_df)){
-                                self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
-                              }
-                              
-                              # TODO: allow for list dj_obj input for weighting.
-                              # dataset_name
+                              # if ("SSBS" %in% colnames(mod_df)){
+                              #   self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                              # } else if ("SSBS1" %in% colnames(mod_df)){
+                              #   self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                              # }
+                            
                               self$dataset_name <- db_obj$dataset_name
 
                               # TODO: store site locations
@@ -257,6 +258,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                 paste0("Hibiiscus fitted model (INLA)\n\n",
                                        "Last updated: ", crayon::green( self$last_update ), 
                                        "\n",
+                                       # TODO: Dataset name/s ?
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                        "\n",
@@ -592,7 +594,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                                       data = plt_df) +
                                   ggplot2::labs(colour = resp_lab,
                                                 x = ggplot2::element_blank(),
-                                                y = ggplot2::element_blank()) +
+                                                y = ggplot2::element_blank(),
+                                                title = "Geographic distribution of sites in model") +
                                   ggplot2::scale_color_gradient(low = "firebrick3",
                                                                 high = "dodgerblue3") +
                                   ggplot2::xlim(x_rng) +

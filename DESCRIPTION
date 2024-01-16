@@ -32,6 +32,7 @@ Imports:
     geometry,
     geosphere,
     ggplot2,
+    insight,
     lifecycle,
     lme4,
     lubridate,
@@ -42,9 +43,11 @@ Imports:
     readr,
     rlang,
     sf (>= 0.9),
+    stats,
     terra,
     tibble,
     tidyr,
+    utils,
     vegan,
     stringi
 Suggests:

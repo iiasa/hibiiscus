@@ -37,7 +37,7 @@
 #' @export
 hib_fit_lme4 <- function(obj, 
                          form,
-                         family = gaussian,
+                         family = stats::gaussian,
                          REML = TRUE,
                          calc_CIs = NULL, #,
                          optimise_ranefs = FALSE,
@@ -110,16 +110,21 @@ hib_fit_lme4 <- function(obj,
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
                            calc_N_spp(.x, .y, resp)
-                         }) |> unlist()
+                         }) #|> unlist()
+    # no need to unlist
+    # N sites
+    n_sites <- lapply(mod_df_ls, 
+                      function(x){calc_N_sites(x)})
   }
   if (inherits(obj, "HibDatabase")){
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
     n_spp <- calc_N_spp(obj, mod_df, mod_resp)
+    # N sites
+    n_sites <- calc_N_sites(mod_df)
   }
 
-  
   # %%%
   mod_df <- prep_model_data(mod_df,
                             mod_covars,
@@ -210,13 +215,14 @@ hib_fit_lme4 <- function(obj,
   
   # print(calc_CIs)
   if (!is.null(calc_CIs)){
-    message(crayon::green("Getting confidence intervals ..."))
+    message(crayon::green("\tGetting confidence intervals ..."))
     confint_df <- lme4::confint.merMod(m0, parm = "beta_", method = calc_CIs)
     confint_df <- as.data.frame(confint_df)
     colnames(confint_df) <- c("loCI", "hiCI")
     confint_df$Coefficient_name <- rownames(confint_df)
     fixef_df <- dplyr::left_join(fixef_df,
-                                 confint_df)
+                                 confint_df,
+                                 by = "Coefficient_name")
   }
   
   metr_vec <- c(MuMIn::r.squaredGLMM(m0)[1,], stats::AIC(m0), stats::BIC(m0), MuMIn::AICc(m0))
@@ -235,7 +241,8 @@ hib_fit_lme4 <- function(obj,
     fixef_df = fixef_df,
     ci_type = ci_type_,
     metr_vec = metr_vec,
-    n_spp = n_spp
+    n_spp = n_spp,
+    n_sites = n_sites
   )
   
   return(mod_obj)
@@ -491,6 +498,8 @@ prep_model_data <- function(df,
                              })))
     )
     
+    # TODO: could split the above assertions to give more meaningful error messages
+
     # drop unused factor levels
     df <- droplevels(df)
 
@@ -621,6 +630,15 @@ weight_model_data <- function(df_ls,
   
 }
 
+
+calc_N_sites <- function(df){
+  if ("SSBS" %in% colnames(df)){
+    n_sites <- length(unique(df$SSBS))
+  } else if ("SSBS1" %in% colnames(df)){
+    n_sites <- length(unique(c(df$SSBS1, df$SSBS2)))
+  }
+  return(n_sites)                
+}
 
 # # %%%%%%
 # df_ls_1 <- list(df1 = data.frame(x = runif(100)),

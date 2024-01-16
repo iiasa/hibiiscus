@@ -1,7 +1,7 @@
 ---
 title: "Basic usage"
 author: "Richard Cornford"
-date: "2023-08-30"
+date: "2024-01-09"
 output: 
   rmarkdown::html_vignette:
     toc: true
@@ -26,19 +26,19 @@ Below, you can find examples on how to use some of the core functions of the hib
 * First, we show how to create a hibiiscus database (based on simulated data).
 <!-- from the PREDICTS project, see <https://www.nhm.ac.uk/our-science/our-work/biodiversity/predicts.html>). -->
 
-
 * We then show various ways in which a hibiiscus database object can be manipulated,
 for example filtering to remove particular sites, or realigning land-use variables.
 We follow this by saving the hibiiscus database for future use.
 
-* Next, diversity metrics for each site will be calculated, before fitting a mixed-effects
-model using `lme4`.
+* Next, diversity metrics for each site (and between sites) will be calculated, 
+before fitting mixed-effects models using `lme4`.
 
 * We then demonstrate the use of cross-validation to interrogate model performance.
 
 * Before finishing with an example of model projection, including estimation of 
 the Area of Applicability (AOA, see Meyers and Pebesma, 2021).
 
+* TODO: add in integration - random simulation of new data...
 
 ### 1. Load package and PREDICTS-like data
 
@@ -49,38 +49,32 @@ devtools::load_all()
 ```
 
 ```{r Load data, cache=F, warning=FALSE}
-# PREDICTS data, 2016 release
-# TODO: replace this path with something else - simulated data? or just edit path to relative...
-# hib_db <- create_hib(path_species = "../../PREDICTS/2016/database.rds", 
-#                      path_sites   = "../../PREDICTS/2016/sites.rds", 
-#                      version = "2016")
-
-hib_db <- create_hib(#path_species = "../data/dummy_species_rc.rds",
-                     path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
-                       version = "custom",
-                       custom_version_name = "dummy_data")
+# Load our simulated data - and assign the dataset an identifying name.
+hib_db <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc.rds", 
+                                                   package = "hibiiscus", mustWork = TRUE),
+                       dataset_name = "Dummy data")
 
 # View a summary of the hib database object
 print(hib_db)
 
 ```
 
+```{r Simple plot of data, fig.width=7, fig.height=4}
+# The default plot function generates a map of sites within the dataset.
+hib_db$plot()
+```
 
 
 ### 2. Filter data to remove sites in Oceania
 
 ```{r Filter data, cache=F}
-### 2. Filter data to focus on European sites and remove locations where land-use is unclear
-# hib_db <- hib_filter_sites(hib_db, 
-#                            UN_region == "Europe" &
-#                              Predominant_land_use != "Cannot decide")
-
 hib_db <- hib_filter_sites(hib_db, 
                            UN_region != "Oceania")
 
 ```
 
-```{r Simple plot of data, fig.width=6, fig.height=5}
+```{r Simple plot of filtered data, fig.width=7, fig.height=4}
+# Plot the sites within the filtered dataset.
 hib_db$plot()
 ```
 
@@ -90,26 +84,7 @@ types into "Natural", "Semi-natural" and "Human".
 
 
 ```{r Group LU types, cache=F}
-# alt_lu_df <- data.frame("Predominant_land_use"= c("Primary vegetation",
-#                                                   "Mature secondary vegetation",
-#                                                   "Intermediate secondary vegetation",
-#                                                   "Young secondary vegetation",
-#                                                   "Secondary vegetation (indeterminate age)",
-#                                                   "Plantation forest",
-#                                                   "Pasture",
-#                                                   "Cropland",
-#                                                   "Urban"),
-#                         "Grouped_LU" = c("Natural", "Natural", 
-#                                          "Semi-natural",  "Semi-natural", "Semi-natural",
-#                                          "Human", "Human", "Human", "Human"))
-# 
-# alt_lu_df$Grouped_LU <- factor(alt_lu_df$Grouped_LU,
-#                                levels = c("Natural", "Semi-natural", "Human"))
-# hib_db <- hib_join_sites(hib_db,
-#                          alt_lu_df)
-
-# %%%
-# Make alt_lu_leg using SS, Predominant_land_use - re-align to c("Natural", "Semi-natural", "Human")
+# Make alt_lu_leg using SSBS, Predominant_land_use - re-align to c("Natural", "Semi-natural", "Human")
 alt_lu_df <- hib_db$sites[,c("SSBS", "Predominant_land_use")] |>
   dplyr::mutate(Predominant_land_use = dplyr::case_when(Predominant_land_use == "Primary" ~ "Natural",
                                                         Predominant_land_use == "Secondary" ~ "Semi-natural",
@@ -119,10 +94,9 @@ alt_lu_df <- hib_db$sites[,c("SSBS", "Predominant_land_use")] |>
                 Use_intensity = "",
                 LUI = Predominant_land_use)
 # Make an lu legend
-alt_lu_leg <- create_lu_legend(alt_lu_df)
+alt_lu_leg <- hib_create_lu_legend(alt_lu_df)
 # Set the lu legend on the database
-hib_db <- set_lu_legend(hib_db, alt_lu_leg)
-# %%%
+hib_db <- hib_set_lu_legend(hib_db, alt_lu_leg)
 
 # Save the database object for future use
 # save_hib(hib_db, 
@@ -131,24 +105,37 @@ hib_db <- set_lu_legend(hib_db, alt_lu_leg)
 ```
 
 
-### 4. Correct measurements for sampling effort and calculate total abundance per site
+### 4. Correct measurements for sampling effort, calculate total abundance per site and Bray-curtis dissimilarity between sites (within studies).
 
 ```{r Diversity metrics, cache=F}
 hib_db$hib_effort_correction()
 
-# hib_db <- hib_calc_ta(hib_db)
+# Biodiversity metric calculations
 hib_db <- hib_calc_div_within(hib_db,
                               c("Total_abundance"))
+hib_db <- hib_calc_div_between(hib_db,
+                              c("baselga_bray_balanced"),
+                              baseline_lui = "Natural")
+
+# And calculate site contrasts too (for between site models)
+hib_db <- hib_calc_site_contrasts(hib_db,
+                                  c("lui_contrast"),
+                                  "Natural")
 
 print(hib_db)
 
 ```
-Note: other metrics of within-site diversity include; "Species_richness", "Chao1_diversity", "Simpson_diversity", "Shannon_diversity", "Mean_abundance", "Geometric_mean_abundance", "HillShannon_diversity", "HillSimpson_diversity" and "PIE".
+Note: other metrics of within-site diversity include; 
+"Species_richness", "Chao1_diversity", "Rarefied_species_richness", "Simpson_diversity", "Shannon_diversity", "Mean_abundance", "Geometric_mean_abundance", "HillShannon_diversity", "HillSimpson_diversity", "Evenness" and "PIE".
+
+Other metrics of between-site diversity include;
+"manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord", "hellinger", "aitchison", "robust.aitchison", "hypervolume", "cosine", "theta", "baselga_bray_balanced", "baselga_bray_gradient", "baselga_ruzicka_balanced" and "baselga_ruzicka_gradient".
 
 
-### 5. Fit a simple model of (rescaled) total abundance in response to land-use
+### 5. Fit a simple model of (rescaled) total abundance in response to land-use, and a simple model of Bray-Curtis dissimilarity.
 
 ```{r Fit model, cache=F}
+# Within-site abundance model
 hib_ta_mod <- hib_fit_lme4(hib_db,
                            sqrt(Rescaled_total_abundance) ~ LUI + (1 | SS) + (1 | SSB),
                            REML = F,
@@ -156,14 +143,31 @@ hib_ta_mod <- hib_fit_lme4(hib_db,
 
 print(hib_ta_mod)
 
+# Between-site Bray-Curtis model
+hib_bc_mod <- hib_fit_lme4(hib_db,
+                           car::logit(Baselga_bray_balanced, adjust = 0.001, percents = FALSE) ~ LUI_contrast + (1 | SS),
+                           REML = F,
+                           calc_CIs = "Wald",
+                           # Ensure Natural_vs_Natural is the baseline/intercept
+                           relevel_specs = c("LUI_contrast" = "Natural_vs_Natural"))
+
+print(hib_bc_mod)
+
 ```
 
-```{r Simple plot of fixed-effect coefficients, fig.width=6, fig.height=5}
+
+```{r Simple plot of fixed-effects random effects for total-abundance model, fig.width=10, fig.height=5, fig.show="hold", out.width="50%"}
+# Check the abundance model 
 hib_ta_mod$plot()
+
+hib_ta_mod$plot("random-effects")
 ```
 
-```{r Simple plot of random-effect coefficients, fig.width=6, fig.height=5}
-hib_ta_mod$plot("random-effects")
+```{r Simple plot of fixed-effects random effects for bray-curtis model, fig.width=10, fig.height=5, fig.show="hold", out.width="50%"}
+# Check the bray-curtis model
+hib_bc_mod$plot()
+
+hib_bc_mod$plot("random-effects")
 ```
 
 
@@ -172,10 +176,14 @@ hib_ta_mod$plot("random-effects")
 ```{r Cross-validate model, cache=F}
 # Cross-validate model, include a back-transformation to obtain predictions/errors
 # on the scale of Rescaled_total_abundance
-hib_cv <- hib_mod_cv(hib_ta_mod,
-                     hib_db,
-                     fold_type = c("Random-5", "UN_region"),
-                     backtransform = function(x){x^2})
+# We also include evaluations when considering the exclusion of random effects,
+# and when incorporating the SS random effect into cross-validation predictions.
+hib_cv <- hib_cv_model(hib_ta_mod,
+                       hib_db,
+                       fold_type = c("Random-5", "UN_region"),
+                       re_form = list(NA, ~(1|SS)),
+                       backtransform = function(x){x^2})
+                     
 
 print(hib_cv)
 
@@ -184,15 +192,22 @@ Note: other cross-validation approaches include; "Random-2", "Random-3", "Random
 When using "Custom", any grouping variable can be specified, provided it is present in the site data.
 
 
-```{r Simple plot of cross-validation folds, fig.width=8, fig.height=5}
+
+```{r Simple plot of cross-validation folds, fig.width=8.5, fig.height=5}
+# Create a plot showing how the sites are allocated to different cross-validation folds.
 hib_cv$plot("map-sites")
 ```
 
-```{r Simple plot of variation in fixed-effects coefficients, fig.width=8, fig.height=5}
+
+```{r Simple plot of variation in fixed-effects coefficients, fig.width=8.5, fig.height=5}
+# A figure showing variation in fixed-effects coefficients over cross-validation folds,
+# as compared to the coefficients estimated using the complete dataset.
 hib_cv$plot("coefficients")
 ```
 
-```{r Simple plot of model performance, fig.width=6, fig.height=5, warning=F}
+
+```{r Simple plot of model performance, fig.width=8.5, fig.height=9, warning=F}
+# A simple plot of some key model performance metrics, as estimated via cross-validation.
 hib_cv$plot("metrics",
             c("corsq", "mae", "rmse", "rsq"))
 ```
@@ -204,7 +219,7 @@ Note: In the above figures displaying coefficients and predictive performance, t
 ```{r Generate an example 10x10 df for use in projection}
 # Generate a simple df of example land-uses for projection.
 proj_df <- expand.grid(x = 1:10,
-            y = 1:10) %>%
+                       y = 1:10) %>%
   as.data.frame() %>%
   dplyr::mutate(Forest_cover = runif(dplyr::n()),
                 LUI = dplyr::case_when(Forest_cover <= 0.3 ~ "Human",
@@ -214,13 +229,16 @@ proj_df <- expand.grid(x = 1:10,
 ```
 
 ```{r Project the model}
-hib_proj <- hib_mod_project(hib_ta_mod,
-                proj_df, 
-                backtransform = function(x){x^2},
-                rescale_pred = T,
-                lme4_specs = list(bootstrap = T, n_boot = 50),
-                calc_aoa = T, 
-                cv_obj = hib_cv)
+# Project the fitted model using the example land-use data, including bootstrap
+# estimates of uncertainty and an estimate for the area of applicability (AOA).
+hib_proj <- hib_project_model(hib_ta_mod,
+                              proj_df, 
+                              backtransform = function(x){x^2},
+                              rescale_pred = T,
+                              lme4_specs = list(bootstrap = T, n_boot = 50),
+                              calc_aoa = T, 
+                              cv_obj = hib_cv)
+                
  
 ```
 
@@ -228,15 +246,96 @@ Note: In the above, although we have included a calculation of the AOA (calc_aoa
 locations within the projection data have LUI values that are within the set of values
 used to fit the model. There are therefore no locations outside the AOA in this example.
 
-```{r Simple plot of projection, fig.width=6, fig.height=5}
+
+```{r Simple plot of projection, fig.width=7, fig.height=5}
+# Visualise our projection.
 hib_proj$plot(response_var = "rescaled_prediction_mean")
 ```
 
+
 ```{r Bivariate map of projected values and uncertainty, fig.width=7.5, fig.height=5}
+# A figure incorporating both projected values and their uncertainty.
 hib_proj$plot("bivariate-map")
 ```
 
+
 ```{r Simple plot of distribution of projected values, fig.width=6, fig.height=5}
+# Check the distribution of projected values.
 hib_proj$plot("response-distr", response_var = "rescaled_prediction_mean")
 ```
 
+
+### 8. Data-integration example
+Combine two datasets and fit a mixed-effects model with weights.
+```{r Load a second dataset and fit an \'integrated\' abundance model}
+# Load our simulated data - and assign the dataset an identifying name.
+hib_db2 <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc_2.rds", 
+                                                   package = "hibiiscus", mustWork = TRUE),
+                       dataset_name = "Dummy data 2")
+
+# View a summary of the hib database object
+print(hib_db2)
+
+# dummy_data_2 <- create_dummy_data("species", n_studies = 15)
+# hib_db2$plot()
+
+# Make alt_lu_leg using SSBS, Predominant_land_use - re-align to c("Natural", "Semi-natural", "Human")
+alt_lu_df2 <- hib_db2$sites[,c("SSBS", "Predominant_land_use")] |>
+  dplyr::mutate(Predominant_land_use = dplyr::case_when(Predominant_land_use == "Primary" ~ "Natural",
+                                                        Predominant_land_use == "Secondary" ~ "Semi-natural",
+                                                        T ~ "Human"),
+                Predominant_land_use = factor(Predominant_land_use,
+                                              levels = c("Natural", "Semi-natural", "Human")),
+                Use_intensity = "",
+                LUI = Predominant_land_use)
+# Make an lu legend
+alt_lu_leg2 <- hib_create_lu_legend(alt_lu_df2)
+# Set the lu legend on the database
+hib_db2 <- hib_set_lu_legend(hib_db2, alt_lu_leg2)
+
+# hib_db2$sites$LUI |> unique()
+
+# Effort correction
+hib_db2$hib_effort_correction()
+
+# Biodiversity metric calculations
+hib_db2 <- hib_calc_div_within(hib_db2,
+                              c("Total_abundance"))
+
+devtools::load_all()
+hib_ta_mod2 <- hib_fit_lme4(obj = hib_db2,
+                            form = sqrt(Rescaled_total_abundance) ~ LUI + (1|SS),
+                            REML = F,
+                            calc_CIs = "Wald")
+
+# Modelling
+hib_int_mod <- hib_fit_lme4(obj = list(hib_db,
+                                       hib_db2),
+                            form = sqrt(Rescaled_total_abundance) ~ LUI + (1|SS),
+                            REML = F,
+                            calc_CIs = "Wald",
+                            weight_specs = list(weights = c(0.6, 0.4),
+                                                weight_type = "dataset"))
+
+hib_ta_mod2$dataset_name
+hib_ta_mod2$processing_flags
+
+hib_int_mod$dataset_name
+hib_int_mod$processing_flags
+
+is.list(hib_ta_mod2$processing_flags)
+is.list(hib_int_mod$processing_flags)
+
+names(hib_ta_mod2$processing_flags)
+names(hib_int_mod$processing_flags)
+
+is.null(names(hib_ta_mod2$processing_flags))
+is.null(names(hib_int_mod$processing_flags))
+```
+
+```{r Check the model coefficients, fig.width=10, fig.height=5, fig.show="hold", out.width="50%"}
+# Check the abundance model 
+hib_int_mod$plot()
+
+hib_int_mod$plot("random-effects")
+```

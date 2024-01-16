@@ -558,7 +558,8 @@ HibCV <- R6Class("HibCV",
                             
                             
                             ggplot2::labs(x = "Coefficient name",
-                                          y = "Coefficient value") +
+                                          y = "Coefficient value",
+                                          title = "Variation in fixed-effect coefficients\nover cross-validation folds") +
                               ggplot2::scale_x_continuous(breaks = orig_coef$coef_nm_num, 
                                                           labels = orig_coef$Coefficient_name) +
                               ggplot2::coord_flip() +
@@ -681,7 +682,8 @@ HibCV <- R6Class("HibCV",
                                                         labels = orig_coef$Coefficient_name) +
                               ggplot2::labs(x = "Coefficient name",
                                             y = "Coefficient value",
-                                            colour = "Cross-\nvalidation\ntype") +
+                                            colour = "Cross-\nvalidation\ntype",
+                                            title = "Variation in fixed-effect coefficients over cross-validation") +
                               ggplot2::coord_flip() +
                               ggplot2::theme_bw() +
                               basic_thm 
@@ -758,7 +760,8 @@ HibCV <- R6Class("HibCV",
                                                                  colour = as.character(fold_id)),
                                                     alpha = 0.25) +
                                 ggplot2::labs(x = "Observed",
-                                              y = "Predicted") +
+                                              y = "Predicted",
+                                              title = "Predictions v Observations\nover cross-validation folds") +
                                 ggplot2::coord_equal(xlim = rng,
                                                      ylim = rng) 
                             } else {
@@ -775,7 +778,8 @@ HibCV <- R6Class("HibCV",
                                                                  colour = as.character(fold_id)),
                                                     alpha = 0.25) +
                                 ggplot2::labs(x = "Observed",
-                                              y = "Error")
+                                              y = "Error",
+                                              title = "Error v Observations\nover cross-validation folds")
                             }
                             if (type == "pred-v-error"){
                               plt <- plt +
@@ -784,7 +788,8 @@ HibCV <- R6Class("HibCV",
                                                                  colour = as.character(fold_id)),
                                                     alpha = 0.25) +
                                 ggplot2::labs(x = "Predicted",
-                                              y = "Error")
+                                              y = "Error",
+                                              title = "Error v Predictions\nover cross-validation folds")
                             }
                             plt <- plt +
                               ggplot2::theme_bw() +
@@ -863,7 +868,7 @@ HibCV <- R6Class("HibCV",
                                 dplyr::filter(Metric_shrt %in% metrics) |>
                                 # dplyr::mutate(Random_effect_form = dplyr::case_when(Random_effect_form %in% c("NA", "NULL") ~ paste("Random-effects:", tolower(Random_effect_form)),
                                 #                                                     T ~ paste("Random-effects:", Random_effect_form) ))
-                                dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
+                                dplyr::mutate(Random_effect_form = paste("Random-effects:\n", Random_effect_form))
                               
                             }
                               
@@ -894,7 +899,7 @@ HibCV <- R6Class("HibCV",
                                 dplyr::filter(Metric_shrt %in% metrics)|>
                                 # dplyr::mutate(Random_effect_form = dplyr::case_when(Random_effect_form %in% c("NA", "NULL") ~ paste("Random-effects:", tolower(Random_effect_form)),
                                 #                                                     T ~ paste("Random-effects:", Random_effect_form) ))
-                                dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
+                                dplyr::mutate(Random_effect_form = paste("Random-effects:\n", Random_effect_form))
                             }
                             
                             # %%%%
@@ -903,7 +908,7 @@ HibCV <- R6Class("HibCV",
                               dplyr::filter(Metric_shrt %in% metrics)|>
                               # dplyr::mutate(Random_effect_form = dplyr::case_when(Random_effect_form %in% c("NA", "NULL") ~ paste("Random-effects:", tolower(Random_effect_form)),
                               #                                                     T ~ paste("Random-effects:", Random_effect_form) ))
-                              dplyr::mutate(Random_effect_form = paste("Random-effects:", Random_effect_form))
+                              dplyr::mutate(Random_effect_form = paste("Random-effects:\n", Random_effect_form))
                             
                             
                             # print(insamp_df)
@@ -950,7 +955,8 @@ HibCV <- R6Class("HibCV",
                                 
                                 ggplot2::labs(x = ggplot2::element_blank(),
                                               y = "Metric value",
-                                              colour = "Cross-\nvalidation\ntype") +
+                                              colour = "Cross-\nvalidation\ntype",
+                                              title = "Model performance metrics") +
                                 ggplot2::theme_bw() +
                                 basic_thm +
                                 # ggplot2::facet_wrap(~Metric_fct*Random_effect_form, scales = "free_y",
@@ -1161,7 +1167,8 @@ HibCV <- R6Class("HibCV",
                               
                               ggplot2::labs(x = ggplot2::element_blank(),
                                             y = "Metric value",
-                                            colour = "Cross-\nvalidation\ntype") +
+                                            colour = "Cross-\nvalidation\ntype",
+                                            title = "Model performance metrics") +
                               ggplot2::theme_bw() +
                               basic_thm +
                               # ggplot2::facet_wrap(~Metric_fct*Random_effect_form, scales = "free_y",
@@ -1312,7 +1319,8 @@ HibCV <- R6Class("HibCV",
                                                   data = cv_df) +
                               ggplot2::labs(#colour = resp_lab,
                                             x = ggplot2::element_blank(),
-                                            y = ggplot2::element_blank()) +
+                                            y = ggplot2::element_blank(),
+                                            title = "Geographic distribution of sites\nand cross-valiation folds") +
                               # ggplot2::scale_color_gradient(low = "firebrick3",
                               #                               high = "dodgerblue3") +
                               ggplot2::xlim(x_rng) +

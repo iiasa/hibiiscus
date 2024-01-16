@@ -559,7 +559,7 @@ HibDatabase <- R6Class("HibDatabase",
                         }
                         if (type == "map-studies"){
                           plt_df <- self$sites |>
-                            dplyr::group_by(SS, dataset_name) |>
+                            dplyr::group_by(SS, Dataset_name) |>
                             dplyr::summarise(N_sites = dplyr::n(),
                                              Longitude = mean(Longitude, na.rm = T),
                                              Latitude = mean(Latitude, na.rm = T))
@@ -585,6 +585,7 @@ HibDatabase <- R6Class("HibDatabase",
                           ggplot2::geom_sf(data = tmp,
                                   fill = "lightgrey",
                                   alpha = 0.4,
+                                  size = 0.1,
                                   show.legend = F) +
                           ggplot2::xlim(x_rng) +
                           ggplot2::ylim(y_rng) +
@@ -600,20 +601,22 @@ HibDatabase <- R6Class("HibDatabase",
                         if (type == "map-sites"){
                           plt <- plt +
                             ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude, 
-                                           colour = dataset_name),
+                                           colour = Dataset_name),
                                        size = 0.15,
                                        alpha = 0.25,
-                                       data = plt_df)
+                                       data = plt_df) +
+                            ggplot2::labs(title = "Geographic distribution of sites")
                           
                         }
                         if (type == "map-studies"){
                           plt <- plt +
                             ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude,
                                            size = N_sites,
-                                           colour = dataset_name),
+                                           colour = Dataset_name),
                                        alpha = 0.25,
                                        data = plt_df) +
-                            ggplot2::labs(size = "No. studies")
+                            ggplot2::labs(size = "No. studies",
+                                          title = "Geographic distribution of studies")
                         }
                       }
                       # %%%%%
@@ -626,14 +629,14 @@ HibDatabase <- R6Class("HibDatabase",
                       # %%%%%
                       if (type %in% c("biome-N", "ecoregion-N", "realm-N")){
                         var_ <- tools::toTitleCase(type) |> gsub("-N", "", .)
-
-                        # Assert that Lat and long are in sites
+                        title_ <- paste0("Number of sites per ", var_)
+                        # Assert that variable of interest is in sites
                         assertthat::assert_that(
                           assertthat::has_name(self$sites, var_)
                           )
                         
                         count_df <- self$sites |>
-                          dplyr::group_by(!!sym(var_), dataset_name) |>
+                          dplyr::group_by(!!sym(var_), Dataset_name) |>
                           dplyr::summarise(Sites = dplyr::n_distinct(SS),
                                            Studies = dplyr::n_distinct(SSBS)) |>
                           tidyr::pivot_longer(c(Sites, Studies),
@@ -642,12 +645,13 @@ HibDatabase <- R6Class("HibDatabase",
                         
                         plt <- ggplot2::ggplot(count_df) +
                           ggplot2::geom_bar(ggplot2::aes(x = !!sym(var_), y = N,
-                                       fill = dataset_name),
+                                       fill = Dataset_name),
                                    # fill = "#009E73",
                                    stat = "identity") +
                           ggplot2::labs(x = var_,
                                y = "N",
-                               fill = "Dataset" #"PREDICTS\nversion"
+                               fill = "Dataset", #"PREDICTS\nversion"
+                               title = title_
                                ) +
                           ggplot2::facet_wrap(~dat_type,
                                      scales = "free_y") +
@@ -666,24 +670,25 @@ HibDatabase <- R6Class("HibDatabase",
                       
                       # - class N (class-N)
                       if (type == "class-N"){
-                        # Assert that Lat and long are in sites
+                        # Assert that Class is in sites
                         assertthat::assert_that(
                           assertthat::has_name(self$sites, "Class")
                           )
                         class_df <- self$species |>
-                          dplyr::group_by(Class, dataset_name) |>
+                          dplyr::group_by(Class, Dataset_name) |>
                           dplyr::summarise(N_ = dplyr::n()) |>
                           # dplyr::filter(N_ > 0) |>
                           dplyr::filter(Class != "")
                         
                         plt <- ggplot2::ggplot(class_df) +
                           ggplot2::geom_bar(ggplot2::aes(x = Class, y = N_,
-                                       fill = dataset_name),
+                                       fill = Dataset_name),
                                    # fill = "#E69F00",
                                    stat = "identity") +
                           ggplot2::labs(x = "Class",
                                y = "No. records",
-                               fill = "Dataset" #"PREDICTS\nversion"
+                               fill = "Dataset", #"PREDICTS\nversion"
+                               title = "Number of sites per Class"
                                ) +
                           ggplot2::theme_bw() +
                           basic_thm +

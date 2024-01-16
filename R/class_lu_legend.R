@@ -81,7 +81,7 @@ HibLULegend <- R6Class("HibLULegend",
                         # HibLULegend 
                         if (is.character(input)){
                           message(crayon::green(paste0("\nInitialising HibLULegend from file: ",
-                                                       input)) )
+                                                       input, "...\n")) )
                           lu_df <- readr::read_rds(input)
                           self$input_data <- paste0("file ('", 
                                                     input,
@@ -90,7 +90,7 @@ HibLULegend <- R6Class("HibLULegend",
                         }
                         if (is.data.frame(input)){
                           message(crayon::green(paste0("\nInitialising HibLULegend from data.frame: ",
-                                                       input_chr)) )
+                                                       input_chr, "...\n")) )
                           # : ",
                           # deparse(substitute(input))
                           

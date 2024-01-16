@@ -68,8 +68,10 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             #'   The fixed effects from the fitted model.
                             #' @param metr_ls (`list`)\cr
                             #'   The list of model performance metrics.
-                            #' @param n_spp (`integer`)\cr
+                            #' @param n_spp (`integer` or `list`)\cr
                             #'   Number of species contributing to the fitted model.
+                            #' @param n_sites (`integer` or `list`)\cr
+                            #'   Number of sites contributing to the fitted model.
                             #' @param extra_args (`list`)\cr
                             #'   Additional arguments specified during model fitting.
                             initialize = function(db_obj, # ??
@@ -78,6 +80,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                                   fixef_df,
                                                   metr_ls,
                                                   n_spp,
+                                                  n_sites,
                                                   extra_args
                                                   # set_up_specs
                                                   # spp df?
@@ -98,7 +101,8 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                 # Check coefficient df and metrics
                                 is.data.frame(fixef_df),
                                 is.list(metr_ls),
-                                is.numeric(n_spp),
+                                is.numeric(n_spp) || ( is.list(n_spp) & all(unlist(lapply(n_spp, function(x){is.numeric(x)}))) ),
+                                is.numeric(n_sites) || ( is.list(n_sites) & all(unlist(lapply(n_sites, function(x){is.numeric(x)}))) ),
                                 is.list(extra_args)
                               )
                               
@@ -121,20 +125,33 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               self$metrics <- metr_ls
                               
                               # Incl processing flags from hib_db
-                              self$processing_flags <- db_obj$processing_flags
+                              if (inherits(db_obj, "HibDatabase")){
+                                self$processing_flags <- db_obj$processing_flags
+                                self$processing_flags$N_spp <- n_spp
+                                self$processing_flags$N_sites <- n_sites
+                              }
+                              if (is.list(db_obj)){
+                                self$processing_flags <- lapply(db_obj, function(x){x$processing_flags})
+                                for (i in 1:length(db_obj)){
+                                  self$processing_flags[[i]]$N_spp <- n_spp[[i]]
+                                  self$processing_flags[[i]]$N_sites <- n_sites[[i]]
+                                }
+                              }
+                              
+                              # self$processing_flags <- db_obj$processing_flags
                               # TODO: what about additional data (data2), e.g. covariance structures
                               
                               # Calc n sites/species used in  model - need to calc spp with div metrics!!
                               # N_sites <- dplyr::n_distinct(mod_df$SSBS)
                               
-                              if ("SSBS" %in% colnames(mod_df)){
-                                self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                              } else if ("SSBS1" %in% colnames(mod_df)){
-                                # print("SSBS1 found")
-                                self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
-                              }
+                              # if ("SSBS" %in% colnames(mod_df)){
+                              #   self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
+                              # } else if ("SSBS1" %in% colnames(mod_df)){
+                              #   # print("SSBS1 found")
+                              #   self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
+                              # }
                               
-                              self$processing_flags$N_spp <- n_spp
+                              # self$processing_flags$N_spp <- n_spp
                               
                               if (inherits(db_obj, "HibDatabase")){
                                 self$dataset_name <- db_obj$dataset_name
@@ -195,10 +212,25 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               }
                               # N spp/sites...
                               # print(summary(self$model))
-                              stats <- list(number_sites = self$processing_flags$N_sites,
-                                            # number_lu = length( unique(self$data$Predominant_land_use) ),
-                                            # number_lui = length(unique(self$data$Use_intensity)),
-                                            number_species = paste(self$processing_flags$N_spp, collapse = ", ") ) #,
+                              if (is.null(names(self$processing_flags))){
+                                n_sites <- lapply(self$processing_flags, function(x){x$N_sites}) |>
+                                  unlist() |>
+                                  paste(collapse = ", ")
+                                n_spp <- lapply(self$processing_flags, function(x){x$N_spp}) |>
+                                  unlist() |>
+                                  paste(collapse = ", ")
+                                stats <- list(number_sites = n_sites,
+                                              number_species = n_spp)
+                              } else {
+                                stats <- list(number_sites = self$processing_flags$N_sites,
+                                              number_species = self$processing_flags$N_spp)
+                              }
+
+
+                              # stats <- list(number_sites = self$processing_flags$N_sites,
+                              #               # number_lu = length( unique(self$data$Predominant_land_use) ),
+                              #               # number_lui = length(unique(self$data$Use_intensity)),
+                              #               number_species = paste(self$processing_flags$N_spp, collapse = ", ") ) #,
                               # filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
                               # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
                               
@@ -206,6 +238,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                 paste0("Hibiiscus fitted model (brms)\n",
                                        "Last updated: ", crayon::green( self$last_update ),
                                        "\n",
+                                       # TODO: Dataset name/s ?
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                        # "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                        # crayon::green(stats$number_lui), "\n",
@@ -476,7 +509,8 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                                       data = plt_df) +
                                   ggplot2::labs(colour = resp_lab,
                                                 x = ggplot2::element_blank(),
-                                                y = ggplot2::element_blank()) +
+                                                y = ggplot2::element_blank(),
+                                                title = "Geographic distribution of sites in model") +
                                   ggplot2::scale_color_gradient(low = "firebrick3",
                                                                 high = "dodgerblue3") +
                                   ggplot2::xlim(x_rng) +

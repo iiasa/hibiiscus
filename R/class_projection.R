@@ -16,7 +16,7 @@ HibProjection <- R6Class("HibProjection",
                               # hib_mod_projection "HibProjection"
                               # Public data objects and functions
                               public = list(
-                                
+
                                 #' @field last_update (`character`)\cr
                                 #' Identifies the most recent update to the object (YYYY-MM-DD).
                                 last_update = NULL,
@@ -363,7 +363,7 @@ HibProjection <- R6Class("HibProjection",
                                     aoa_exists <- !is.null(self$aoa)
                                     if (!aoa_exists){
                                       message(crayon::yellow(paste0("\nWarning: AOA result does not exist, ",
-                                                                  "AOA cannot be plotted.")))
+                                                                    "AOA cannot be plotted.")))
                                       aoa_mask <- F
                                       aoa_var <- NULL
                                     }
@@ -682,6 +682,10 @@ HibProjection <- R6Class("HibProjection",
                                         ggplot2::theme(legend.position = "bottom")
                                     }
 
+                                    plt <- plt +
+                                      ggplot2::labs(title = "Model projection: Bivariate map")
+                                    
+
                                     plt <- cowplot::ggdraw() +
                                       cowplot::draw_plot(plt, 0, 0, 0.75, 1) +
                                       cowplot::draw_plot(legend, 0.75, .4, 0.25, 0.25)
@@ -904,6 +908,15 @@ HibProjection <- R6Class("HibProjection",
                                   }
 
                                   
+                                  # Convert type to a title
+                                  type_title <- gsub("-", "_", type)
+                                  type_title <- tools::toTitleCase(type_title)
+                                  type_title <- gsub("_", " ", type_title)
+                                  type_title <- gsub("distr", "distribution", type_title)
+                                  type_title <- paste0("Model projection: ", type_title)
+
+                                  plt <- plt +
+                                    ggplot2::labs(title = type_title)
                                   
                                   (plt)
                                   

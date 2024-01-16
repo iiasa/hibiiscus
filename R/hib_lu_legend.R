@@ -27,7 +27,7 @@ hib_create_lu_legend <- function(input){
   }
   
   # ------ #
-  message("Creating land-use legend...\n")
+  # message("Creating land-use legend...\n")
   
   leg <- HibLULegend$new(input = input,
                       input_chr = deparse(substitute(input)) )
@@ -114,7 +114,7 @@ hib_set_lu_legend <- function(obj, leg){
     inherits(obj, "HibDatabase") ,
     inherits(leg, "HibLULegend") 
   )
-  message(crayon::green("Setting land-use legend for HibDatabase...\n"))
+  message(crayon::green("\nSetting land-use legend for HibDatabase...\n"))
   
   # Make some sensitivity checks that the inputs are okay
   obj$checkself()

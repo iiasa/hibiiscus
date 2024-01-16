@@ -7,9 +7,14 @@
 #' Calculate total abundance
 #' 
 #' @description 
-#' This function calculates total abundance for each site measuring this metric
+#' This function calculates total abundance for each site measuring abundance.
 #' @details 
 #' Expects a [`HibDatabase`] object.
+#' Total_abundance = sum(x[i]), where x[i] is the abundance of species i within 
+#' a given site.
+#' Rescaled_total_abundance = Total_abundance[j,k]/max(Total_abundance[j,k]), where
+#' the total abundance in eack site j is divided by the maximum total abundance 
+#' in study k.
 #' @param obj A [`HibDatabase`] object.
 #' @keywords database, processing
 #' @examples 
@@ -88,7 +93,7 @@ hib_calc_ta <- function(obj){
 #' Calculate species richness
 #' 
 #' @description 
-#' This function calculates species richness for each site
+#' This function calculates species richness for each site.
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
@@ -252,7 +257,13 @@ hib_calc_simpson <- function(obj, msg = TRUE){
     dplyr::ungroup()
   # %%%%%
   
-  
+  # TODO: above is gini-simpson?/uncorrected PIE....
+  # Above is 'Simpson's Index of Diversity' - 0 = no div, 1 = max div
+
+  # Std Simpson index is...
+  # sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 )
+  # 1 = no div, 0 = max div
+
   # # Check if effort correction applied...
   # # TODOL: what if total abundance == 0 - Simpson will be undefined - should it be set to 0??
   # if (obj$processing_flags$measures_effort_corrected == T){
@@ -1093,12 +1104,12 @@ hib_calc_pie <- function(obj){
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
-#' @param metrics A [`character`] vector, any/all of "Total_abundance", "Species_richness", 
+#' @param metrics A [`character`] vector, any/all of `"Total_abundance"`, "Species_richness", 
 #' "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
 #' "Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
 #' "HillShannon_diversity", "HillSimpson_diversity", "PIE". 
 #' Metrics can be provided in upper or lower case - internal processing is done 
-#' using lower-case - and as as unambiguous abbreviations.
+#' using lower-case - and as unambiguous abbreviations.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1209,6 +1220,13 @@ hib_calc_div_within <- function(obj, metrics){
                              dplyr::select(SSBS, SS, Evenness, logN)
                            return(tmp)
                          }
+                         # TODO:
+                         # Alternative evenness? - (1/Simpson)/SR
+                         # Effective N spp (Shannon) - exp(Shannon) ?? - Hill-Shannon
+                         # Effective N spp (Simpson) - 1/Simpson
+                         # Coverage-based richness - N spp if 80% of comm sampled
+
+
                          # %%%
                          # Hill-Shannon: exp(shannon)
                          if (metric == "hillshannon_diversity"){
@@ -1223,6 +1241,7 @@ hib_calc_div_within <- function(obj, metrics){
                          }
                          
                          # Hill-Simpson: 1/simpson 
+                         # TODO: why is my Simpson, 1 - x... - i.e. PIE
                          if (metric == "hillsimpson_diversity"){
                            message(crayon::white("\tHill-Simpson diversity ...\n"))
                            tmp <- hib_calc_simpson(db_obj, msg = FALSE)
@@ -1446,7 +1465,7 @@ calc_cosine_sim <- function(x1, x2){
 #' Expects a dataframe/tibble with species abundance records at two sites 
 #' - sites as rows, species as columns
 #' @param spp_site_data A dataframe/tibble object.
-#' @param metric A [`character`] - "hypervolume", "cosine", "theta",
+#' @param metric A [`character`] - one of "hypervolume", "cosine", "theta",
 #' "baselga_bray_balanced", "baselga_bray_gradient", "baselga_ruzicka_balanced", 
 #' "baselga_ruzicka_gradient".
 #' @param binary A [`logical`] - should distance be based on presence/absence

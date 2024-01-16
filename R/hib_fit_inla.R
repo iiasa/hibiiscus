@@ -207,7 +207,7 @@ hib_fit_inla <- function(obj,
   # %%%%%
   
   n_spp <- calc_N_spp(obj, mod_df, mod_resp)
-
+  n_sites <- calc_N_sites(mod_df)
   
   # Add an intercept... 
   if ("Intercept" %in% all_covars){
@@ -481,7 +481,8 @@ hib_fit_inla <- function(obj,
     inla_mesh = input_mesh,
     inla_mesh_settings = mesh_settings,
     inla_mesh_source = mesh_source,
-    n_spp = n_spp
+    n_spp = n_spp,
+    n_sites = n_sites
   # TODO:
   # fit_settings,
   # prior_list
