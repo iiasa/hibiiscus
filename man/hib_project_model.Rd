@@ -37,7 +37,7 @@ effects to condition on when predicting an lme4 model (formula, NULL, or NA).}
 
 \item{inla_specs}{A \code{\link{list}} containing details relevant to projecting an inla-style
 model.
-'re_form', as 're.form' in \code{\link[=lpredict.merMod]{lpredict.merMod()}}, used to specify random
+'re_form', as 're.form' in \code{\link[=predict.merMod]{predict.merMod()}}, used to specify random
 effects to condition on when predicting an inla model (formula, NULL, or NA).
 'link_inverse' a function that is the invers of the link used to fit the model.
 Used to backtranform the global intercept for use in rescaling predictions.}

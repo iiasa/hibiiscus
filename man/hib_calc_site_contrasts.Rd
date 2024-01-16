@@ -13,11 +13,12 @@ hib_calc_site_contrasts(
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{metrics}{A \code{\link{character}} vector of 'distance' metrics}
+\item{metrics}{A \code{\link{character}} vector of 'distance' metrics. Current options are;
+"lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint".}
 
 \item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
-which compositional dis/similarity is calculated per study - should match the
-value used when calculating compositional dis/similarity (hib_calc_div_between)}
+which dis/similarity is calculated per study - should match the value used
+when calculating compositional dis/similarity (hib_calc_div_between)}
 }
 \description{
 This function calculates dissimilarity measures between sites within a study,
@@ -29,8 +30,8 @@ Expects a \code{\link{HibDatabase}} object.
 \examples{
 \dontrun{
   obj <- hib_calc_site_contrasts(obj, 
-                              c("lui_contrast", "geo_distance", "env_distance"),
-                              T)
+                              c("lui_contrast", "geogr_dist_hav"),
+                              "Primary vegetation_Minimal use")
 } 
 }
 \keyword{database,}

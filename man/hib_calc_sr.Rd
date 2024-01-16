@@ -10,7 +10,7 @@ hib_calc_sr(obj)
 \item{obj}{A \code{\link{HibDatabase}} object.}
 }
 \description{
-This function calculates species richness for each site
+This function calculates species richness for each site.
 }
 \details{
 Expects a \code{\link{HibDatabase}} object.

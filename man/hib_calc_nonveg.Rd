@@ -9,7 +9,7 @@ hib_calc_nonveg(spp_site_data, metric, binary, rel_abund, rescale)
 \arguments{
 \item{spp_site_data}{A dataframe/tibble object.}
 
-\item{metric}{A \code{\link{character}} - "hypervolume", "cosine", "theta",
+\item{metric}{A \code{\link{character}} - one of "hypervolume", "cosine", "theta",
 "baselga_bray_balanced", "baselga_bray_gradient", "baselga_ruzicka_balanced",
 "baselga_ruzicka_gradient".}
 

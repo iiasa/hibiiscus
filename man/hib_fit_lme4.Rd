@@ -7,7 +7,7 @@
 hib_fit_lme4(
   obj,
   form,
-  family = gaussian,
+  family = stats::gaussian,
   REML = TRUE,
   calc_CIs = NULL,
   optimise_ranefs = FALSE,

@@ -9,12 +9,12 @@ hib_calc_div_within(obj, metrics)
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{metrics}{A \code{\link{character}} vector, any/all of "Total_abundance", "Species_richness",
+\item{metrics}{A \code{\link{character}} vector, any/all of \code{"Total_abundance"}, "Species_richness",
 "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
 "Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
 "HillShannon_diversity", "HillSimpson_diversity", "PIE".
 Metrics can be provided in upper or lower case - internal processing is done
-using lower-case - and as as unambiguous abbreviations.}
+using lower-case - and as unambiguous abbreviations.}
 }
 \description{
 This function calculates diversity per site, wrapper for the above functions
