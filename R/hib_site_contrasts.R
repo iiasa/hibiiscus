@@ -27,6 +27,13 @@ hib_calc_site_contrasts <- function(obj,
   # convert primin_baseline to baseline_lui, and lui_colname
   # lui_colname may be unnecessary, - lui_legend assumes LUI...
   
+  # TODO:
+  # Custom metric - 
+  # use "custom_metric" in metrics vec
+  # add a custom_metric_spec arg - list/named vector...
+  # have custom_metric_func, custom_metric_max, custom_metric_name 
+  # How can this work...
+  
   # Assertion checks
   assertthat::assert_that(
     inherits(obj, "HibDatabase"),

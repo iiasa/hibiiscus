@@ -1127,7 +1127,14 @@ hib_calc_div_within <- function(obj, metrics){
     assertthat::has_name(obj$species, "Best_guess_binomial"),
     is.character(metrics)
   )
-  # TODO: lower-case metrics 
+
+  # TODO:
+  # Custom metric - 
+  # use "custom_metric" in metrics vec
+  # add a custom_metric_spec arg - list/named vector...
+  # have custom_metric_func, custom_metric_name 
+  
+  
   metrics <- tolower(metrics)
   
   metrics <- match.arg(metrics,
@@ -1457,6 +1464,62 @@ calc_cosine_sim <- function(x1, x2){
 }
 
 
+#' Calculate horn overlap metric - by default, a similarity
+#' 
+#' @description 
+#' This function calculates Horn's overlap (1966) between abundances of 
+#' species at two sites
+#' @details 
+#' Expects two vectors, one each for the abundance/occurence of species at two sites
+#' assuming that values at the same index (e.g., x1[i], x2[i]) correspond to the 
+#' same species/taxonomic entity
+#' @param x1 A [`numeric`] vector for abundance/occurence of species at site 1
+#' @param x2 A [`numeric`] vector for abundance/occurence of species at site 2
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   horn_overlap <- calc_horn_overlap(c(0,1,1), c(1,0,1))
+#' } 
+#' @noRd
+calc_horn_overlap <- function(x, y){
+  # xp <- x / sum(x, na.rm = T)
+  # yp <- y / sum(y, na.rm = T)
+  num1 <- sum( (x + y) * log(x + y), na.rm = T )
+  num2 <- sum(x * log(x), na.rm = T)
+  num3 <- sum(y * log(y), na.rm = T)
+  
+  # print(paste("Num1:", num1))
+  # print(paste("Num2:", num2))
+  # print(paste("Num3:", num3))
+  
+  num <- num1 - num2 - num3
+  
+  x_sum <- sum(x, na.rm = T)
+  y_sum <- sum(y, na.rm = T)
+  xy_sum <- x_sum + y_sum
+  
+  denom1 <- xy_sum * log(xy_sum)
+  denom2 <- x_sum * log(x_sum)
+  denom3 <- y_sum * log(y_sum)
+  
+  # print(paste("Denom1:", denom1))
+  # print(paste("Denom2:", denom2))
+  # print(paste("Denom3:", denom3))
+  
+  denom <- denom1 - denom2 - denom3
+  
+  horn_overlap <- round(num/denom, 5)
+  
+  if (out < 0){
+    out <- 0
+  }
+  if (out > 1){
+    out <- 1
+  }
+  return(out)
+}
+
+
 #' Calculate non-vegan-based dissimilarity metrics
 #' 
 #' @description 
@@ -1500,7 +1563,8 @@ hib_calc_nonveg <- function(spp_site_data,
   metric <- match.arg(metric, 
                       c("hypervolume", "cosine", "theta",
                         "baselga_bray_balanced", "baselga_bray_gradient", 
-                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient"),
+                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
+                        "horn_dissim"),
                       # "baselga_bray","baselga_ruzicka",
                       # "baselga_jaccard", "baselga_sorensen") 
                       several.ok = FALSE)
@@ -1510,7 +1574,8 @@ hib_calc_nonveg <- function(spp_site_data,
   if (rel_abund){
     if (metric %in% c("hypervolume", 
                         "baselga_bray_balanced", "baselga_bray_gradient", 
-                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")){
+                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
+                        "horn_dissim")){
       row_abund <- rowSums(spp_site_data)
       row_abund[row_abund == 0] <- 1
       spp_site_data <- spp_site_data/row_abund
@@ -1575,6 +1640,11 @@ hib_calc_nonveg <- function(spp_site_data,
       }
       out <- data.frame("Theta" = theta)
     }
+  }
+
+  else if (metric == "horn_dissim"){
+    horn_overlap <- calc_horn_overlap(x1, x2)
+    out <- data.frame("Horn_dissim" = 1 - horn_overlap)
   }
   
   else if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient",
@@ -1645,9 +1715,12 @@ hib_calc_nonveg <- function(spp_site_data,
 #' "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord", 
 #' "hellinger", "aitchison", "robust.aitchison".
 #' Other available metrics: "hypervolume", "cosine", "theta", "baselga_bray_balanced", 
-#' "baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient".
+#' "baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
+#' "horn_dissim".
 #' Metrics can be provided in upper or lower case - internal processing is done 
 #' using lower-case - and as as unambiguous abbreviations.
+#' Note: "horn" refers to the "Morisita-Horn" index in the vegan package. 
+#' "horn_dissim" refers to (1 - Horn overlap), calculated endogenously within this package.
 #' @param binary A [`logical`] vector, should metric be calculated using occurence
 #' values (if TRUE) or abundance (if FALSE, default).
 #' @param rel_abund A [`logical`] vector determining whether relative abundance 
@@ -1683,6 +1756,12 @@ hib_calc_div_between <- function(obj,
                                  rescale = TRUE,
                                  baseline_lui = "Primary vegetation_Minimal use"
                                  ){
+
+  # TODO:
+  # Custom metric - 
+  # use "custom_metric" in metrics vec
+  # add a custom_metric_spec arg - list/named vector...
+  # have custom_metric_func, custom_metric_max, custom_metric_name 
 
   # Assertions
   assertthat::assert_that(
@@ -1723,7 +1802,8 @@ hib_calc_div_between <- function(obj,
                    # Non-Vegan  
   non_veg_metrics <- c("hypervolume", "cosine", "theta",
                        "baselga_bray_balanced", "baselga_bray_gradient",
-                       "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")
+                       "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
+                       "horn_dissim")
   # "baselga_bray","baselga_ruzicka",
   # "baselga_jaccard", "baselga_sorensen")
   
@@ -2135,10 +2215,12 @@ hib_calc_div_between <- function(obj,
   # all others, 0-1 - check with baselga...
   non_veg_max_df <- data.frame(Metric = tools::toTitleCase(c("hypervolume", "cosine", "theta",
                                                              "baselga_bray_balanced", "baselga_bray_gradient", 
-                                                             "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")),
+                                                             "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
+                                                             "horn_dissim")),
                               Theoretical_max = c(NA, 1, pi/2,
                                                  1, 1,
-                                                 1, 1))
+                                                 1, 1,
+                                                 1))
   if (rel_abund == T){
     non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 0.5
   }
