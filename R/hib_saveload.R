@@ -67,8 +67,11 @@ hib_save <- function(obj, path, overwrite = FALSE){
     }
   }
   
-  
-  message(crayon::green(paste0("\nSaving ", class(obj), " to: '", path, "' ...")) )
+  # Note: Hib objects have two class items : the HibXXX, and R6, only want the first
+  obj_class <- class(obj)
+  obj_class <- obj_class[obj_class != "R6"]
+
+  message(crayon::green(paste0("\nSaving ", obj_class, " to: '", path, "' ...")) )
   saveRDS(obj, path)
   assertthat::assert_that(file.exists(path),
                           msg = "Writing a copy of the database failed...")
@@ -118,7 +121,10 @@ hib_load <- function(path){
       inherits(obj, "HibProjection"))
   )
 
-  message(crayon::green(paste0(class(obj), " loaded...\n")) )
+  obj_class <- class(obj)
+  obj_class <- obj_class[obj_class != "R6"]
+
+  message(crayon::green(paste0(obj_class, " loaded...\n")) )
   
   obj$checkself()
   
