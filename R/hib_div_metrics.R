@@ -2,6 +2,10 @@
 # TODO: noRd for helpers...
 # TODO: recalculate arg - recalculates metrics specified - over-rules dropping of
 # previously calculated metrics - e.g if re-filtering DB...
+# TODO: check whether or not to use N_spp calculations per site/total 
+# Best_guess_binomial isn't always useful in PREDICTS - e.g. if only a higher 
+# taxonomic level is recorded...
+  
 
 
 #' Calculate total abundance

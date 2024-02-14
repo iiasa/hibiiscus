@@ -43,7 +43,9 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
                        use_original_mesh = NULL){
   # hib_mod_cv
   # TODO: option to just use original mesh for inla cv - override mesh_source
-  
+  # TODO: custom_error_func = list(NA)
+  # should be a named list list("Metric_name" = function)
+
   # Assertion checks
   assertthat::assert_that(
     inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"),     
@@ -1203,9 +1205,60 @@ calc_cv_metrics <- function(pred, obs, error){
   
   mae <- mean(ae, na.rm = T)
   
-  # are <- ??
+  # %%%%%
+  # 20240214: Update included metrics, reduce redunctancy and add some new ones.
+  # medae
+  medae <- stats::median(ae, na.rm = T)
+
+  # nmae
+  # # nmae <- mae / obs_mean
+
+  # rae (equivalent to mase - as formulted here) - done
   rae <- sum(ae, na.rm = T) / sum(abs(obs_minus_obs_mean), na.rm = T)
+
+  # mrae (mean)
+  mrae <- mean( ae / abs(obs_minus_obs_mean) , na.rm = T )
+
+  # medrae (median)
+  medrae <- stats::median( ae / abs(obs_minus_obs_mean), na.rm = T)
+
+  # mape - done
+  # smape - done
+
+  # mse - done
+  mse <- mean(error^2, na.rm = T)
   
+  # nmse 
+  nmse <- mse / var(obs, na.rm = T)
+
+  # rmse - done
+  rmse <- sqrt(mse)
+  
+  # nrmse (mean) - done
+  nrmse <- rmse / obs_mean
+  # nrmse (sd)
+  nrmse_sd <- rmse / sd(obs, na.rm = T)
+
+  # rrmse (rmse/rmse_naive)
+  rrmse <- rmse / sqrt(mean(obs_minus_obs_mean^2 , na.rm = T))
+
+  # logrrmse 
+  logrrmse <- log(rrmse)
+  
+  # rmsle - done
+  # rse - done
+  # r2 - done
+
+  # gmrae - done
+  # %%%%%
+
+  # are <- ??
+  
+  # rmae <- rae/n - or same? - should be the same, both divided by N.
+  # mean of rae?: mrae
+  # but, mean relative absolute error is slightly different...
+  # mrae <- mean( ae / abs(obs_minus_obs_mean) , na.rm = T )
+
   # mape - issue of zeros in obs... - v small adjustment
   # issues of negative obs? - 
   # mape <- mean( (ae / obs), na.rm = T) * 100 OLD version
@@ -1216,22 +1269,26 @@ calc_cv_metrics <- function(pred, obs, error){
   # TODO: update smape to 0-100 scale
   smape <- mean( (ae / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100
   
-  mse <- mean(error^2, na.rm = T)
-  rmse <- sqrt(mse)
   
-  # nrmse <- rmse / sd(pred, na.rm = T) OLD version
+  # nrmse_sd <- rmse / sd(pred, na.rm = T) OLD version - but maybe better?!
   # Alternative
-  nrmse <- rmse / obs_mean
+  # nrmse <- rmse / obs_mean
+  # ?? mean(abs(obs), na.rm = T) ??
 
-  # rrmse <- sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) ) OLD version
+  # rmse relative to rmse of mean - use this
+  # rrmse <- rmse / sqrt(mean(obs_minus_obs_mean^2 , na.rm = T)) - same as sqrt(rse)??
+
+  # # rrmse <- sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) ) OLD version
   # Check this
   # Alternative
-  rrmse <- rmse / obs_mean * 100
+  # rrmse <- rmse / obs_mean * 100
 
   rmsle <- sqrt(mean( ( log(obs + 1) - log(pred + 1) )^2 , na.rm = T))
   
   rse <- sum(error^2, na.rm = T) / sum( obs_minus_obs_mean^2 , na.rm = T)
-  
+  # Can sqrt rse to get back on scale of obs
+  # - rrse 
+
   # rsq - [1 - (PRESS / sums of squares total)] * 100
   rsq <- ( 1 - rse )
   
@@ -1243,14 +1300,24 @@ calc_cv_metrics <- function(pred, obs, error){
   
   # TODO:
   # median relative absolute error
-  mrae <- stats::median( abs( error / obs_minus_obs_mean ), na.rm = T)
+  # mrae <- stats::median( abs( error / obs_minus_obs_mean ), na.rm = T)
+  # median and mean versions?
 
   # geometric mean relative absolute error
   gmrae <- exp(mean(log( abs( error / obs_minus_obs_mean ) ), na.rm = T))
   
   # mean absolute scaled error: 
-  # mase = mae / mean(abs(obs_minus_obs_mean), na.rm = T)
-  mase <- mean( ae / mean(abs(obs_minus_obs_mean), na.rm = T), na.rm = T) # - equivalent
+  # mase = mae / mean(abs(obs_minus_obs_mean), na.rm = T) # clearer.
+  # mase <- mean( ae / mean(abs(obs_minus_obs_mean), na.rm = T), na.rm = T) # - equivalent
+  # isn't this just rae - or at least v similar
+  # similar, mase is sometime refered to as relative mean absolute error (mae/mae_naive)
+  # I think this is just rae - but scaled by N, which cancels out...
+
+  # Notmalised metrics:
+  # Normalised MAE - denominator is obs_mean
+  # nmae <- mae / obs_mean [ or mean of abs values: mean(abs(obs), na.rm = T)]
+  # Normalised MedAE - ?? denominator as median of obs ??
+  # Normalised RMSLE
 
 
   # CIs for mse, rmse, me...- sheiner and beale 1981
@@ -1277,89 +1344,121 @@ calc_cv_metrics <- function(pred, obs, error){
   N_p_no_NA <- sum(!is.na(pred))
 
   # Make metr into a df
+  
+  # TO ADD
+  # "Median_absolute_error"
+  # "Mean_relative_absolute_error"
+  # "Normalised_mean_squared_error"
+  # "Normalised_root_mean_squared_error_sd"
+  # "Relative_root_mean_squared_error"
+  # "Log_relative_root_mean_squared_error"
+
+  # TO DROP
+  # "Mean_absolute_scaled_error"
+
   metr_df <- data.frame(Metric = c("Correlation",
                                    "Correlation_squared",
                                    "Mean_error", 
                                    "Median_error", 
                                    "Mean_absolute_error", 
+                                   "Median_absolute_error", # New
                                    "Relative_absolute_error", 
+                                   "Mean_relative_absolute_error", # New
+                                   "Median_relative_absolute_error", # Reposition
                                    "Mean_absolute_percentage_error", 
                                    "Symmetric_mean_absolute_percentage_error", 
                                    "Mean_squared_error", 
+                                   "Normalised_mean_squared_error", # New
                                    "Root_mean_squared_error", 
                                    "Normalised_root_mean_squared_error",
-                                   "Relative_root_mean_squared_error",
+                                   "Normalised_root_mean_squared_error_sd", # New
+                                   "Relative_root_mean_squared_error", # Recalc
+                                   "Log_relative_root_mean_squared_error", # New
                                    "Root_mean_squared_log_error",
                                    "Relative_squared_error", 
-                                   "Median_relative_absolute_error",
+                                   
                                    "Geometric_mean_relative_absolute_error",
-                                   "Mean_absolute_scaled_error",
+                                   # "Mean_absolute_scaled_error", # Drop
                                    "Predictive_R_squared"),
                         Metric_val = c(cor_out, cor_sq,
-                                       me, mede, mae, rae, mape, smape, 
-                                       mse, rmse, nrmse, 
-                                       rrmse, rmsle, rse, 
-                                       mrae,
+                                       me, mede, mae, medae, rae, mrae, medrae,
+                                       mape, smape, 
+                                       mse, nmse, rmse, nrmse, nrmse_sd, 
+                                       rrmse, logrrmse, rmsle, rse, 
                                        gmrae,
-                                       mase,
+                                       # mase,
                                        rsq),
                         Metric_lo = c(NA, NA, 
-                                      me_lo, NA, NA, NA, NA, NA,
-                                      mse_lo, rmse_lo, NA,
-                                      NA, NA, NA, 
-                                      NA, NA, NA, 
+                                      me_lo, NA, NA, NA, NA, NA, NA, NA, NA,
+                                      mse_lo, NA, rmse_lo, NA, NA,
+                                      NA, NA, NA, NA, 
+                                      NA, 
+                                      # NA, 
                                       NA),
                         Metric_hi = c(NA, NA, 
-                                      me_hi, NA, NA, NA, NA, NA,
-                                      mse_hi, rmse_hi, NA,
-                                      NA, NA, NA, 
-                                      NA, NA, NA, 
+                                      me_hi, NA, NA, NA, NA, NA, NA, NA, NA,
+                                      mse_hi, rmse_hi, NA, NA,
+                                      NA, NA, NA, NA, 
+                                      NA, 
+                                      # NA, 
                                       NA),
                         Metric_shrt = c("cor", "corsq",
-                                        "me", "mede", "mae", "rae", "mape", 
-                                        "smape", 
-                                        "mse", "rmse", "nrmse", 
-                                        "rrmse", "rmsle", "rse", 
-                                        "mrae",
+                                        "me", "mede", "mae", "medae", "rae", "mrae", "medrae",
+                                        "mape", "smape", 
+                                        "mse", "nmse", "rmse", "nrmse", "nrmse_sd",
+                                        "rrmse", "lrrmse" "rmsle", "rse", 
+                                        # "mrae",
                                         "gmrae",
-                                        "mase",
+                                        # "mase",
                                         "rsq")) |>
     dplyr::mutate(Metric_fct = factor(Metric,
                                       levels = c("Correlation",
-                                                 "Correlation_squared",
-                                                 "Mean_error", 
-                                                 "Median_error", 
-                                                 "Mean_absolute_error", 
-                                                 "Relative_absolute_error", 
-                                                 "Mean_absolute_percentage_error", 
-                                                 "Symmetric_mean_absolute_percentage_error", 
-                                                 "Mean_squared_error", 
-                                                 "Root_mean_squared_error", 
-                                                 "Normalised_root_mean_squared_error",
-                                                 "Relative_root_mean_squared_error",
-                                                 "Root_mean_squared_log_error",
-                                                 "Relative_squared_error", 
-                                                 "Median_relative_absolute_error",
-                                                 "Geometric_mean_relative_absolute_error",
-                                                 "Mean_absolute_scaled_error",
-                                                 "Predictive_R_squared"),
+                                   "Correlation_squared",
+                                   "Mean_error", 
+                                   "Median_error", 
+                                   "Mean_absolute_error", 
+                                   "Median_absolute_error", # New
+                                   "Relative_absolute_error", 
+                                   "Mean_relative_absolute_error", # New
+                                   "Median_relative_absolute_error", # Reposition
+                                   "Mean_absolute_percentage_error", 
+                                   "Symmetric_mean_absolute_percentage_error", 
+                                   "Mean_squared_error", 
+                                   "Normalised_mean_squared_error", # New
+                                   "Root_mean_squared_error", 
+                                   "Normalised_root_mean_squared_error",
+                                   "Normalised_root_mean_squared_error_sd", # New
+                                   "Relative_root_mean_squared_error", # Recalc
+                                   "Log_relative_root_mean_squared_error", # New
+                                   "Root_mean_squared_log_error",
+                                   "Relative_squared_error", 
+                                   
+                                   "Geometric_mean_relative_absolute_error",
+                                   # "Mean_absolute_scaled_error", # Drop
+                                   "Predictive_R_squared"),
                                       labels = c("Correlation",
                                                  "Correlation^2",
                                                  "ME~(Bias)",
                                                  "Median error", 
                                                  "MAE", 
+                                                 "MedAE",
                                                  "RAE", 
+                                                 "MRAE",
+                                                 "MedRAE",
                                                  "MAPE", 
                                                  "sMAPE", 
                                                  "MSE", 
+                                                 "NMSE",
                                                  "RMSE", 
                                                  "NRMSE",
+                                                 "NRMSE~(SD)",
                                                  "RRMSE",
+                                                 "LRRMSE",
                                                  "RMSLE",
                                                  "RSE", 
-                                                 "MRAE",
+                                                 # "MRAE",
                                                  "GMRAE",
-                                                 "MASE",
+                                                 # "MASE",
                                                  "Predictive~R^2")),
       N = N_p_no_NA)
   
@@ -1415,44 +1514,51 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      me = mean(error, na.rm = T),
 
                      mede = stats::median(error, na.rm = T),
-
                      mae = mean(abs(error), na.rm = T),
+                     medae = stats::median(ae, na.rm = T),
+                     
+                     # TOCHECK
+                     rae = sum(abs(error), na.rm = T) / sum(abs(obs - obs_mean), na.rm = T),
+                     mrae = mean( abs(error) / abs(obs - obs_mean), na.rm = T),
+                     medrae = stats::median( abs(error) / abs(obs - obs_mean), na.rm = T),
+
                      # mape - issue of zeros in obs... - v small adjustment
                      mape = mean( (abs(error) / obs), na.rm = T) * 100, 
                      # smape = mean( (abs(error) / ( (pred + obs) / 2) ), na.rm = T ) * 100,OLD version
                      smape = mean( (abs(error) / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100,
                      
                      mse = mean(error^2, na.rm = T),
+                     nmse = mean(error^2, na.rm = T) / var(obs, na.rm = T),
+                     
                      rmse = sqrt(mse),
                      # nrmse = rmse / sd(pred, na.rm = T),OLD version
                      nrmse = rmse / obs_mean,
+                     # Multiple nrmse options - scaled by sd, mean, range, quartile range
+                     nrmse_sd = rmse / sd(obs, na.rm = T),
 
+                     rrmse = rmse / sqrt(mean( (obs - obs_mean)^2 , na.rm = T)),
+                     logrrmse = log(rrmse),
                      # rrmse = sqrt( ( sum(error^2, na.rm = T) / sum(pred^2, na.rm = T) ) ), OLD version
-                     
-                     rrmse = rmse / obs_mean * 100, 
+                     # rrmse = rmse / obs_mean * 100, # OLD
                      rmsle = sqrt(mean( ( log(obs + 1) - log(pred + 1) )^2 , na.rm = T)),
                      # %%%
                      
-                     rae = sum(abs(error), na.rm = T) / sum((obs - obs_mean), na.rm = T),
                      rse = sum(error^2, na.rm = T) / sum( (obs - obs_mean)^2 , na.rm = T),
-
-                     # 
-                     mrae = stats::median( abs( error / (obs - obs_mean) ), na.rm = T),
 
                      # geometric mean relative absolute error
                      gmrae = exp(mean(log( abs( error / (obs - obs_mean) ) ), na.rm = T)),
                     
                      # mean absolute scaled error: 
-                     mase = mean( abs(error) / mean(abs((obs - obs_mean)), na.rm = T), na.rm = T), #- equivalent
+                     # mase = mean( abs(error) / mean(abs((obs - obs_mean)), na.rm = T), na.rm = T), #- equivalent
 
-                     rsq = 1- rse ,
+                     rsq = 1 - rse ,
 
-                     # TODO: 
                      N = sum(!is.na(pred))
                      ) |>
-    dplyr::select(fold_id, N, cor_out, cor_sq, me, mede, mae, mape, smape, mse, rmse, nrmse,
-                  rrmse, rmsle,
-                  rae, rse, rsq) |> # N
+    dplyr::select(-c(pred_mean, obs_mean)) |>
+    # dplyr::select(fold_id, N, cor_out, cor_sq, me, mede, mae, mape, smape, mse, rmse, nrmse,
+    #               rrmse, rmsle,
+    #               rae, rse, rsq) |> # N
     tidyr::pivot_longer(!c(fold_id, N), 
                         names_to = "Metric_shrt", 
                         values_to = "Metric_val") |>
@@ -1464,60 +1570,76 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                                             Metric_shrt == "me"    ~ "Mean_error", 
                                             Metric_shrt == "mede"  ~ "Median_error", 
                                             Metric_shrt == "mae"   ~ "Mean_absolute_error", 
+                                            Metric_shrt == "medae"  ~ "Median_absolute_error", # New
                                             Metric_shrt == "rae"   ~ "Relative_absolute_error", 
+                                            Metric_shrt == "mrae"  ~ "Mean_relative_absolute_error",  # New
+                                            Metric_shrt == "medrae"~ "Median_relative_absolute_error", # Reposition
                                             Metric_shrt == "mape"  ~ "Mean_absolute_percentage_error", 
                                             Metric_shrt == "smape" ~ "Symmetric_mean_absolute_percentage_error", 
                                             Metric_shrt == "mse"   ~ "Mean_squared_error", 
+                                            Metric_shrt == "nmse"  ~ "Normalised_mean_squared_error", # New
                                             Metric_shrt == "rmse"  ~ "Root_mean_squared_error", 
                                             Metric_shrt == "nrmse" ~ "Normalised_root_mean_squared_error",
+                                            Metric_shrt == "nrmse_sd"~ "Normalised_root_mean_squared_error_sd", # New
                                             Metric_shrt == "rrmse" ~ "Relative_root_mean_squared_error",
+                                            Metric_shrt == "lrrmse"~ "Log_relative_root_mean_squared_error", # New
                                             Metric_shrt == "rmsle" ~ "Root_mean_squared_log_error",
                                             Metric_shrt == "rse"   ~ "Relative_squared_error", 
 
-                                            Metric_shrt == "mrae"  ~ "Median_relative_absolute_error", 
+                                            # Metric_shrt == "mrae"  ~ "Median_relative_absolute_error", 
                                             Metric_shrt == "gmrae" ~ "Geometric_mean_relative_absolute_error", 
-                                            Metric_shrt == "mase"  ~ "Mean_absolute_scaled_error", 
+                                            # Metric_shrt == "mase"  ~ "Mean_absolute_scaled_error", Drop
                                             
                                             Metric_shrt == "rsq"   ~ "Predictive_R_squared",
                                             T ~ NA),
                   Metric_fct = factor(Metric,
                                       levels = c("Correlation",
-                                                 "Correlation_squared",
-                                                 "Mean_error", 
-                                                 "Median_error", 
-                                                 "Mean_absolute_error", 
-                                                 "Relative_absolute_error", 
-                                                 "Mean_absolute_percentage_error", 
-                                                 "Symmetric_mean_absolute_percentage_error", 
-                                                 "Mean_squared_error", 
-                                                 "Root_mean_squared_error", 
-                                                 "Normalised_root_mean_squared_error",
-                                                 "Relative_root_mean_squared_error",
-                                                 "Root_mean_squared_log_error",
-                                                 "Relative_squared_error", 
-                                                 "Median_relative_absolute_error",
-                                                 "Geometric_mean_relative_absolute_error",
-                                                 "Mean_absolute_scaled_error",
-                                                 "Predictive_R_squared"),
+                                   "Correlation_squared",
+                                   "Mean_error", 
+                                   "Median_error", 
+                                   "Mean_absolute_error", 
+                                   "Median_absolute_error", # New
+                                   "Relative_absolute_error", 
+                                   "Mean_relative_absolute_error", # New
+                                   "Median_relative_absolute_error", # Reposition
+                                   "Mean_absolute_percentage_error", 
+                                   "Symmetric_mean_absolute_percentage_error", 
+                                   "Mean_squared_error", 
+                                   "Normalised_mean_squared_error", # New
+                                   "Root_mean_squared_error", 
+                                   "Normalised_root_mean_squared_error",
+                                   "Normalised_root_mean_squared_error_sd", # New
+                                   "Relative_root_mean_squared_error", # Recalc
+                                   "Log_relative_root_mean_squared_error", # New
+                                   "Root_mean_squared_log_error",
+                                   "Relative_squared_error", 
+                                   
+                                   "Geometric_mean_relative_absolute_error",
+                                   # "Mean_absolute_scaled_error", # Drop
+                                   "Predictive_R_squared"),
                                       labels = c("Correlation",
                                                  "Correlation^2",
-                                                 "ME~(Bias)", 
-                                                 "Median error",
+                                                 "ME~(Bias)",
+                                                 "Median error", 
                                                  "MAE", 
+                                                 "MedAE",
                                                  "RAE", 
+                                                 "MRAE",
+                                                 "MedRAE",
                                                  "MAPE", 
                                                  "sMAPE", 
                                                  "MSE", 
+                                                 "NMSE",
                                                  "RMSE", 
                                                  "NRMSE",
+                                                 "NRMSE~(SD)",
                                                  "RRMSE",
+                                                 "LRRMSE",
                                                  "RMSLE",
                                                  "RSE", 
-
-                                                 "MRAE",
+                                                 # "MRAE",
                                                  "GMRAE",
-                                                 "MASE",
-
+                                                 # "MASE",
                                                  "Predictive~R^2")))
   
   return(metr_df)

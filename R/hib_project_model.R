@@ -7,7 +7,7 @@
 #' Expects a [`HibModelXXXX`] object.
 #' @param mod_obj A [`HibModelXXXX`] object - either lme4, inla, or brms.
 #' @param data Either a dataframe-like object or a raster stack that can be used
-#' to project onto
+#' to project onto - should contain x and y columns if a dataframe.
 #' @param backtransform A [`function`] that will backtransform the model response
 #' to the scale of the original variable, e.g., exp() as the inverse of log()
 #' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
@@ -49,7 +49,7 @@ hib_project_model <- function(mod_obj,
                             # TODO: collate model type arguments into: - fix argument documentation
                             lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, re_form = NA),
                             inla_specs = NULL, #list(re_form = x, link_inverse = function(y){exp(y)})
-                            brms_specs = NULL, #list(incl_obs_uncert = F, TODO, re_form = as lme4...)
+                            brms_specs = NULL, #list(incl_obs_uncert = F, re_form = as lme4...)
                             # more scope for adjustment, and neater
                             calc_aoa = FALSE,
                             cv_obj = NULL
@@ -229,7 +229,7 @@ hib_project_model <- function(mod_obj,
       # %%%
       # Use bootMer to get uncertainty
       if (lme4_specs$bootstrap == T){
-        message(crayon::green("Bootstrapping model predictions...\n"))
+        message(crayon::green("Bootstrapping model predictions..."))
         boot_obj <- lme4::bootMer(mod_obj$model, 
                                   function(mod, df = data){
                                     stats::predict(mod, df, 

@@ -105,7 +105,7 @@ hib_load <- function(path){
     assertthat::has_extension(path, "rds")
   )
   # Try and read in the database
-  message(crayon::green(paste0("Loading Hibiiscus object from: '", path, "'...")))
+  message(crayon::green(paste0("\nLoading Hibiiscus object from: '", path, "'...\n")))
   
   obj <- readr::read_rds(path)
   
