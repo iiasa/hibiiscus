@@ -7,7 +7,7 @@
 hib_fit_brms(
   obj,
   form,
-  family = gaussian,
+  family = stats::gaussian,
   weight_specs = list(weights = NULL, weight_type = NULL),
   scale_specs = list(covars_to_scale = NULL, scale_func = NULL),
   relevel_specs = c(NULL),

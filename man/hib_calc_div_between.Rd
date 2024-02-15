@@ -22,9 +22,12 @@ Metrics available via \code{vegan::vegdist}: "manhattan", "euclidean", "canberra
 "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord",
 "hellinger", "aitchison", "robust.aitchison".
 Other available metrics: "hypervolume", "cosine", "theta", "baselga_bray_balanced",
-"baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient".
+"baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
+"horn_dissim".
 Metrics can be provided in upper or lower case - internal processing is done
-using lower-case - and as as unambiguous abbreviations.}
+using lower-case - and as as unambiguous abbreviations.
+Note: "horn" refers to the "Morisita-Horn" index in the vegan package.
+"horn_dissim" refers to (1 - Horn overlap), calculated endogenously within this package.}
 
 \item{binary}{A \code{\link{logical}} vector, should metric be calculated using occurence
 values (if TRUE) or abundance (if FALSE, default).}

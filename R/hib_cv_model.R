@@ -1198,8 +1198,11 @@ calc_cv_metrics <- function(pred, obs, error){
   
   # me, mae, rae, mape, mse, rmse, nrmse, rmsle, rse, rrmse
   me <- mean(error, na.rm = T)
-  # TODO:
   mede <- stats::median(error, na.rm = T)
+
+  # TODO:
+  # A scaled bias measure - e.g. me[di]an( error / obs_minus_obs_mean, na.rm = T )
+  # or m[ed]e / me[di]an(obs_minus_obs_mean, na.rm = T)
 
   ae <- abs(error)
   
@@ -1229,7 +1232,7 @@ calc_cv_metrics <- function(pred, obs, error){
   mse <- mean(error^2, na.rm = T)
   
   # nmse 
-  nmse <- mse / var(obs, na.rm = T)
+  nmse <- mse / stats::var(obs, na.rm = T)
 
   # rmse - done
   rmse <- sqrt(mse)
@@ -1237,7 +1240,7 @@ calc_cv_metrics <- function(pred, obs, error){
   # nrmse (mean) - done
   nrmse <- rmse / obs_mean
   # nrmse (sd)
-  nrmse_sd <- rmse / sd(obs, na.rm = T)
+  nrmse_sd <- rmse / stats::sd(obs, na.rm = T)
 
   # rrmse (rmse/rmse_naive)
   rrmse <- rmse / sqrt(mean(obs_minus_obs_mean^2 , na.rm = T))
@@ -1286,6 +1289,8 @@ calc_cv_metrics <- function(pred, obs, error){
   rmsle <- sqrt(mean( ( log(obs + 1) - log(pred + 1) )^2 , na.rm = T))
   
   rse <- sum(error^2, na.rm = T) / sum( obs_minus_obs_mean^2 , na.rm = T)
+  # This is a bit different to sum(error^2 / obs_minus_obs_mean^2) - but still okay??
+
   # Can sqrt rse to get back on scale of obs
   # - rrse 
 
@@ -1397,7 +1402,7 @@ calc_cv_metrics <- function(pred, obs, error){
                                       NA),
                         Metric_hi = c(NA, NA, 
                                       me_hi, NA, NA, NA, NA, NA, NA, NA, NA,
-                                      mse_hi, rmse_hi, NA, NA,
+                                      mse_hi, NA, rmse_hi, NA, NA,
                                       NA, NA, NA, NA, 
                                       NA, 
                                       # NA, 
@@ -1406,7 +1411,7 @@ calc_cv_metrics <- function(pred, obs, error){
                                         "me", "mede", "mae", "medae", "rae", "mrae", "medrae",
                                         "mape", "smape", 
                                         "mse", "nmse", "rmse", "nrmse", "nrmse_sd",
-                                        "rrmse", "lrrmse" "rmsle", "rse", 
+                                        "rrmse", "lrrmse", "rmsle", "rse", 
                                         # "mrae",
                                         "gmrae",
                                         # "mase",
@@ -1515,7 +1520,7 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
 
                      mede = stats::median(error, na.rm = T),
                      mae = mean(abs(error), na.rm = T),
-                     medae = stats::median(ae, na.rm = T),
+                     medae = stats::median(abs(error), na.rm = T),
                      
                      # TOCHECK
                      rae = sum(abs(error), na.rm = T) / sum(abs(obs - obs_mean), na.rm = T),
@@ -1528,13 +1533,13 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      smape = mean( (abs(error) / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100,
                      
                      mse = mean(error^2, na.rm = T),
-                     nmse = mean(error^2, na.rm = T) / var(obs, na.rm = T),
+                     nmse = mean(error^2, na.rm = T) / stats::var(obs, na.rm = T),
                      
                      rmse = sqrt(mse),
                      # nrmse = rmse / sd(pred, na.rm = T),OLD version
                      nrmse = rmse / obs_mean,
                      # Multiple nrmse options - scaled by sd, mean, range, quartile range
-                     nrmse_sd = rmse / sd(obs, na.rm = T),
+                     nrmse_sd = rmse / stats::sd(obs, na.rm = T),
 
                      rrmse = rmse / sqrt(mean( (obs - obs_mean)^2 , na.rm = T)),
                      logrrmse = log(rrmse),

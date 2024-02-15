@@ -20,7 +20,7 @@ hib_project_model(
 \item{mod_obj}{A \code{\link{HibModelXXXX}} object - either lme4, inla, or brms.}
 
 \item{data}{Either a dataframe-like object or a raster stack that can be used
-to project onto}
+to project onto - should contain x and y columns if a dataframe.}
 
 \item{backtransform}{A \code{\link{function}} that will backtransform the model response
 to the scale of the original variable, e.g., exp() as the inverse of log()}
