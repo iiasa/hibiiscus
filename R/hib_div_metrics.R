@@ -1185,6 +1185,10 @@ hib_calc_div_within <- function(obj, metrics){
                                   paste(dropped_metrics, collapse = ", ")
                                   # "\n"
                                   )))
+    # if 
+    if (length(metrics) == 0){
+        stop("No new biodiversity metrics to calculate.", call. = F)
+    }
   }
   # %%%
 
@@ -1795,8 +1799,6 @@ hib_calc_div_between <- function(obj,
     assertthat::has_name(obj$sites, "SS")
   )
   
-  message(crayon::green("\nPreparing site-contrasts to calculate compositional dissimilarity ...\n"))
-  
   veg_metrics <- c("manhattan", "euclidean", "canberra", "clark", "bray", 
                    "kulczynski", "jaccard", "gower", "altGower", 
                    "morisita", "horn", "mountford", "raup", "binomial", 
@@ -1816,33 +1818,43 @@ hib_calc_div_between <- function(obj,
   # allow upper/lower-case metrics
   metrics <- tolower(metrics)
   metrics <- unique(metrics)
+  # Needs to be altGower
+  metrics[metrics == "altgower"] <- "altGower"
+  
 
   # first, combine metrics, binary, rel_abund and rescale into a df
   metrics_spec_df <- data.frame(metric    = metrics,
                                 binary    = binary,
                                 rel_abund = rel_abund,
                                 rescale   = rescale)
-  
+  # print(metrics_spec_df)
+  # print(metrics_)
   matchable_metrics_idx <- !is.na(pmatch(metrics_spec_df$metric,
                                          metrics_))
-  
+  # print(matchable_metrics_idx)
   # subset to matchable metrics
   metrics_spec_df <- metrics_spec_df[matchable_metrics_idx,]
-  
+  # print(metrics_spec_df)
   # run match.arg on matchable metrics
   metrics_spec_df$metric <- match.arg(metrics_spec_df$metric, 
                                        metrics_,
                                        several.ok = T)
   
   metrics_spec_df <- unique(metrics_spec_df)
-
+  # print(metrics_spec_df)
   # message(paste(metrics_spec_df$metric, collapse = ","))
 
   # %%%
   # if metric is already in hib$diversity_between, ignore
   # TODO: check recalculate...
   if (!is.null(obj$diversity_between)){
-    metrics_tc <- tools::toTitleCase(metrics_spec_df$metric)
+
+    # Need to regen altGower
+    metrics_tc <- metrics_spec_df$metric
+    # print(metrics_tc)
+    # metrics_tc[metrics_tc == "altgower"] <- "altGower"
+    metrics_tc <- tools::toTitleCase(metrics_tc)
+    # print(metrics_tc)
     new_metrics_idx <- which(!(metrics_tc %in% obj$diversity_between$Metric))
     # drop from metrics and print the dropped metrics...
     metrics_spec_df <- metrics_spec_df[new_metrics_idx, ]
@@ -1853,9 +1865,20 @@ hib_calc_div_between <- function(obj,
                                   paste(dropped_metrics, collapse = ", ")
                                   # "\n"
                                   )))
+    # if nrow(metrics_spec_df) == 0
+    # print(nrow(metrics_spec_df))
+    if (nrow(metrics_spec_df) == 0){
+        # message(crayon::red(paste0("\nError: no uncalculated biodiversity metrics.\n\n",
+        #                        "Check that the specified biodiversity responses ('", baseline_lui,
+        #                        "') is present ...\n"))
+        #   )
+        stop("No new biodiversity metrics to calculate.", call. = F)
+    }
   }
   # %%%
-
+  
+  message(crayon::green("\nPreparing site-contrasts to calculate compositional dissimilarity ...\n"))
+  
   # split to veg and non_veg spec dfs
   veg_metrics_df <- subset(metrics_spec_df,
                            metric %in% veg_metrics)
