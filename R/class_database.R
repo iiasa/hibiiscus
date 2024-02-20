@@ -489,12 +489,12 @@ HibDatabase <- R6Class("HibDatabase",
                                                                          T ~ Sampling_effort)) |>
                         dplyr::group_by(SS) |>
                         # TODO: above assumes SS are not shared across versions...
-                        dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort)) |>
+                        dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort, na.rm = TRUE)) |>
                         dplyr::ungroup() |>
                         dplyr::mutate(Effort_corrected_measurement = dplyr::case_when(Diversity_metric_is_effort_sensitive == T ~ Measurement / Rescaled_sampling_effort,
                                                                                       T ~ Measurement))
                       # Add a flag to some background info - Measures are effort corrected = T
-                      self$processing_flags$measures_effort_corrected <- T
+                      self$processing_flags$measures_effort_corrected <- TRUE
                       self$last_update <- lubridate::now()
                       invisible(self)
                     } ,

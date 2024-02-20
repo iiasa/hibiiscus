@@ -268,8 +268,10 @@ hib_calc_simpson <- function(obj, msg = TRUE){
   # sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 )
   # 1 = no div, 0 = max div
 
-  # # Check if effort correction applied...
-  # # TODOL: what if total abundance == 0 - Simpson will be undefined - should it be set to 0??
+  # KEY Q
+  # TODO: what if total abundance == 0 - Simpson will be undefined - should it be set to 0??
+  # But, if only 1 species, index value is 0 - i.e no diversity if all one species...
+
   # if (obj$processing_flags$measures_effort_corrected == T){
   #   #.... 
   #   simp_df <- obj$species |>
@@ -1378,8 +1380,11 @@ hib_calc_veg <- function(spp_site_data,
   #   row_abund[row_abund==0] <- 1
   #   spp_site_data <- spp_site_data/row_abund
   # }
+  # TODO: NA checks...
+
+
   if (rel_abund){
-    row_abund <- rowSums(spp_site_data)
+    row_abund <- rowSums(spp_site_data, na.rm = TRUE)
     row_abund[row_abund==0] <- 1
     spp_site_data <- spp_site_data/row_abund
   }
@@ -1450,7 +1455,8 @@ calc_cosine_sim <- function(x1, x2){
   assertthat::assert_that(
     length(x1) == length(x2)
   )
-  cosine <- sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum(x2^2) ) )
+
+  cosine <- sum( x1 * x2 , na.rm = TRUE) / ( sqrt( sum( x1^2 , na.rm = TRUE)) * sqrt( sum( x2^2 , na.rm = TRUE) ) )
   # TODO: to address div by zero if one vector is all 0, could use a small value 
   # "epsilon" (1e-8) to denomintor if zero
 
@@ -1584,7 +1590,7 @@ hib_calc_nonveg <- function(spp_site_data,
                         "baselga_bray_balanced", "baselga_bray_gradient", 
                         "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
                         "horn_dissim")){
-      row_abund <- rowSums(spp_site_data)
+      row_abund <- rowSums(spp_site_data, na.rm = TRUE)
       row_abund[row_abund == 0] <- 1
       spp_site_data <- spp_site_data/row_abund
     }
@@ -1886,10 +1892,7 @@ hib_calc_div_between <- function(obj,
                                metric %in% non_veg_metrics)
   
   # Get site comparisons
-  spp_tmp <- obj$species
-  
-
-  spp_tmp <- spp_tmp |>
+  spp_tmp <- obj$species |>
     dplyr::filter(!is.na(Predominant_land_use) & # ??
                     Diversity_metric_type == "Abundance") |>
     dplyr::group_by(SS) |>
@@ -1924,6 +1927,9 @@ hib_calc_div_between <- function(obj,
   n_spp <- spp_tmp |>
     dplyr::select(Best_guess_binomial) |>
     dplyr::n_distinct()
+  
+  # TODO: set any NA measures to 0 for safety
+  spp_tmp$Measurement[is.na(spp_tmp$Measurement)] <- 0
   
   # Need to get combinations of data... - s1, s2, ...
   # %%%
@@ -2151,7 +2157,9 @@ hib_calc_div_between <- function(obj,
     # tibble::rownames_to_column("SSBS1") |>
     # dplyr::select(SSBS1, SSBS1_is_empty)
     # %%%%%
-  empty_sites1$SSBS1_is_empty <- rowSums(empty_sites1) == 0
+
+  # TODO: ignore NAs 
+  empty_sites1$SSBS1_is_empty <- rowSums(empty_sites1, na.rm = T) == 0
 
   empty_sites1 <- empty_sites1 |>
     tibble::rownames_to_column("SSBS1") |>
