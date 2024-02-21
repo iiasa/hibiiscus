@@ -1,4 +1,3 @@
-# TODO: check for na rm in div calcs - need to be robust to NAs in data...
 # TODO: noRd for helpers...
 # TODO: recalculate arg - recalculates metrics specified - over-rules dropping of
 # previously calculated metrics - e.g if re-filtering DB...
@@ -10,6 +9,7 @@
 
 #' Calculate total abundance
 #' 
+
 #' @description 
 #' This function calculates total abundance for each site measuring abundance.
 #' @details 
@@ -28,6 +28,11 @@
 #' @export
 # @noRd
 hib_calc_ta <- function(obj){
+  # TODO: function(spp_df, measure_var)
+  # TODO: obj$species -> spp_df 
+  # TODO: rm is.na checks/filters
+  # TODO: add N_unique_taxa - using Taxon_name_entered
+
   message(crayon::white("\tTotal abundance ...\n"))
   
   # Assertion checks
@@ -39,6 +44,7 @@ hib_calc_ta <- function(obj){
     assertthat::has_name(obj$species, "Best_guess_binomial")
   )
   
+
   # %%%%%
   if (obj$processing_flags$measures_effort_corrected == T){
     measure_var <- "Effort_corrected_measurement"
@@ -46,12 +52,23 @@ hib_calc_ta <- function(obj){
   if (obj$processing_flags$measures_effort_corrected == F){
     measure_var <- "Measurement"
   }
+
+  # Do filtering once
+  # Use filtered df for abund
+  # And to get N_spp/N_taxa
+
   abund_df <- obj$species |>
     dplyr::filter(Diversity_metric_type == "Abundance") |>
     dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(Total_abundance = sum(!!dplyr::sym(measure_var))) |>
     dplyr::ungroup()
+  # TODO: add rescaling here
+  # |> 
+  #  dplyr::group_by(SS) |>
+  #  dplyr::mutate(Rescaled_total_abundance = Total_abundance / max(Total_abundance)) |>
+  #  dplyr::ungroup()
+
   # %%%%%
   # 
   # # Check if effort correction applied...
@@ -76,19 +93,28 @@ hib_calc_ta <- function(obj){
     dplyr::mutate(Rescaled_total_abundance = Total_abundance / max(Total_abundance)) |>
     dplyr::ungroup()
 
-  # Get N species used
+  # Get N species used 
+  # TODO - drop this? - it isn't ever used... - models can depend on a subset of this 
+  # data depending on SSBS filtering/covars etc...
+
   n_spp <- obj$species |>
     dplyr::filter(Diversity_metric_type == "Abundance") |>
     dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
     dplyr::select(Best_guess_binomial) |>
     dplyr::n_distinct()
   
+
   # Store in obj$diversity
+
+  # TODO: set flag based on measure_var - 
+  # eff_flag <- if_else(grepl("Effort_corrected", measure_var), "TRUE", "FALSE")
+  # paste0("Effort corrected: ", eff_flag)
+
   out_tib <- dplyr::tibble(Metric = "Total_abundance",
                            Data = list(abund_df),
                            N_species_total = n_spp,
                            Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
-  
+
   return(out_tib)
 }
 
@@ -1195,7 +1221,34 @@ hib_calc_div_within <- function(obj, metrics){
   # %%%
 
   message(crayon::green("\nCalculating within-site biodiversity metrics ...\n"))
-  # TODO: convert metric == to lower-case version
+  
+
+  # TODO: Better to get measure_var once here
+  # Condense 
+  # # %%%%%
+
+  if (obj$processing_flags$measures_effort_corrected == T){
+    measure_var <- "Effort_corrected_measurement"
+  } 
+  if (obj$processing_flags$measures_effort_corrected == F){
+    measure_var <- "Measurement"
+  }
+  # Check for NAs in Measurement/Effor_corrected_measurement...
+  # Set to 0 if any have crept in...
+  if (sum(is.na(obj$species[,measure_var])) > 0){
+    message(crayon::yellow(paste0("\nWarning: NAs detected in '", measure_var, "'.  Setting NAs to zeros.")))
+    obj$species[is.na(obj$species[,measure_var]), measure_var] <- 0
+  }
+
+  assertthat::assert_that(
+    sum(is.na(obj$species[,measure_var])) == 0,
+    is.numeric(obj$species[[measure_var]])
+  )
+
+  # TODO: fix below - functions should use obj$species and measure var as args
+  # e.g., 
+  # function(metric = .x, spp_df = obj$species, mv = measure_var){}
+  # hib_calc_ta(spp_df, mv)
   out_tib <- purrr::map(.x = metrics, 
                        .f = function(metric = .x, db_obj = obj){
                          if (metric == "total_abundance"){
@@ -1927,10 +1980,21 @@ hib_calc_div_between <- function(obj,
   n_spp <- spp_tmp |>
     dplyr::select(Best_guess_binomial) |>
     dplyr::n_distinct()
-  
+  # TODO: n taxa ?
+  # TODO: drop this info (spp/taxa) here ? - not really useful??  
+
   # TODO: set any NA measures to 0 for safety
-  spp_tmp$Measurement[is.na(spp_tmp$Measurement)] <- 0
-  
+  if (sum(is.na(spp_tmp$Measurement)) > 0){
+    message(crayon::yellow(paste0("\nWarning: NAs detected in 'Measurement'.  Setting NAs to zeros.")))
+    spp_tmp$Measurement[is.na(spp_tmp$Measurement)] <- 0
+  }
+
+  assertthat::assert_that(
+    sum(is.na(spp_tmp$Measurement)) == 0,
+    is.numeric(spp_tmp$Measurement)
+  )
+  # spp_tmp$Measurement[is.na(spp_tmp$Measurement)] <- 0
+
   # Need to get combinations of data... - s1, s2, ...
   # %%%
   # From https://adrianadepalma.github.io/BII_tutorial/bii_example.html

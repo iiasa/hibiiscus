@@ -224,6 +224,12 @@ HibDatabase <- R6Class("HibDatabase",
                       
                       # %%%%%
                       
+                      # TODO:
+                      # safely set NAs in Measurement to 0s
+                      if (sum(is.na(species$Measurement)) > 0){
+                        message(crayon::yellow("\nWarning: NAs detected in 'Measurement'. Setting NAs to zeros."))
+                        species$Measurement[is.na(species$Measurement)] <- 0
+                      }
                       
                       # And check 
                       # Outsourced security checks
@@ -301,6 +307,11 @@ HibDatabase <- R6Class("HibDatabase",
                       assertthat::assert_that(
                         nrow(sites) > 0, nrow(species) > 0,
                         all( unique(sites$Source_ID) %in% unique(species$Source_ID) )
+                      )
+                      # Ensure no NAs in species$Measurement
+                      assertthat::assert_that(
+                        sum(is.na(species$Measurement)) == 0,
+                        is.numeric(species$Measurement)
                       )
                       invisible()
                     },
@@ -481,6 +492,11 @@ HibDatabase <- R6Class("HibDatabase",
                         assertthat::has_name(self$species, "Diversity_metric_is_effort_sensitive")
                       )
 
+                      # assert that sampling effort is numeric
+                      assertthat::assert_that(
+                        is.numeric(self$species$Sampling_effort)
+                      )
+
                       # add a message...
                       message(crayon::green("\nCorrecting biodiversity measurements for sampling effort ...\n"))
                       
@@ -496,6 +512,15 @@ HibDatabase <- R6Class("HibDatabase",
                       # Add a flag to some background info - Measures are effort corrected = T
                       self$processing_flags$measures_effort_corrected <- TRUE
                       self$last_update <- lubridate::now()
+
+                      # Check that Effort_corrected_measurement has no NAs
+                      assertthat::assert_that(
+                        sum(is.na(self$species$Effort_corrected_measurement)) == 0,
+                        is.numeric(self$species$Effort_corrected_measurement)
+                      )
+
+                      self$checkself()
+
                       invisible(self)
                     } ,
                     

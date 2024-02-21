@@ -20,6 +20,7 @@ calc_N_spp <- function(obj,
                        mod_resp){
   
   # TODO: assertions??
+  # TODO: also get N_taxa - based on Taxon_name_entered
   assertthat::assert_that(
     inherits(obj, "HibDatabase"),
     is.data.frame(mod_df),
@@ -42,7 +43,7 @@ calc_N_spp <- function(obj,
     
     # TODO: assertions
     # obj$species contains:
-    #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement
+    #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement Taxon_name_entered
 
     n_spp <- obj$species |>
       dplyr::filter(Diversity_metric_type == "Abundance") |>
