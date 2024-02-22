@@ -114,6 +114,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #'   A description of the mesh source.
                             #' @param n_spp (`integer`)\cr
                             #'   Number of species contributing to the fitted model.
+                            #' @param n_taxa (`integer`)\cr
+                            #'   Number of orignal taxa names contributing to the fitted model.
                             #' @param n_sites (`integer`)\cr
                             #'   Number of sites contributing to the fitted model.
                             initialize = function(db_obj, 
@@ -131,6 +133,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                                   inla_mesh_source,
                                                   # %%%
                                                   n_spp,
+                                                  n_taxa,
                                                   n_sites
                                                   # set_up_specs
                                                   # spp df?
@@ -168,6 +171,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                 is.list(inla_mesh_settings),
                                 is.character(inla_mesh_source) || is.null(inla_mesh_source),
                                 is.numeric(n_spp),
+                                is.numeric(n_taxa),
                                 is.numeric(n_sites)
                               )
                               
@@ -197,6 +201,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               # Incl processing flags from hib_db
                               self$processing_flags <- db_obj$processing_flags
                               self$processing_flags$N_spp <- n_spp
+                              self$processing_flags$N_taxa <- n_taxa
                               self$processing_flags$N_sites <- n_sites
                               
                               # if ("SSBS" %in% colnames(mod_df)){
@@ -230,6 +235,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #' @return (`NULL`).
                             print = function(){
                               stats <- list(number_sites = self$processing_flags$N_sites,
+                                            number_taxa = self$processing_flags$N_taxa,
                                             number_species = self$processing_flags$N_spp ) 
                               # Metrics of fit?
                               m_summ <- summary(self$model)
@@ -261,6 +267,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                        # TODO: Dataset name/s ?
                                        "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+                                       "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
                                        "\n",
                                        "--------------------\n\n",
                                        "Summary of fitted model\n\n",

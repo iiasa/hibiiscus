@@ -6,114 +6,116 @@
 # taxonomic level is recorded...
   
 
+#' Calculate number of species (best guess) and original taxa names
+#' 
+#' @description 
+#' This function calculates number of species contributing to diversity metrics.
+#' @details 
+#' Expects a subset ofthe species data.frame from a [`HibDatabase`] object.
+#' @param df A subset of the species data.frame from a [`HibDatabase`] object.
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   out <- get_n_spp_taxa(df)
+#' } 
+# @export
+#' @noRd
+get_n_spp_taxa <- function(df, measure_var){
+  # Assertion checks
+  assertthat::assert_that(
+    assertthat::has_name(df, "Taxon_name_entered"),
+    assertthat::has_name(df, "Best_guess_binomial"),
+    assertthat::has_name(df, measure_var)
+  )
+
+  df <- df |>
+    dplyr::filter(!!dplyr::sym(measure_var) > 0)
+
+  n_spp <- df |>
+    dplyr::filter(Best_guess_binomial != '' &
+                  !is.na(Best_guess_binomial)) |>
+    dplyr::select(Best_guess_binomial) |>
+    dplyr::n_distinct()
+
+  n_orig_taxa <- df |>
+    dplyr::filter(Taxon_name_entered != '' &
+                  !is.na(Taxon_name_entered)) |>
+    dplyr::select(Taxon_name_entered) |>
+    dplyr::n_distinct()
+
+  return(list(N_spp = n_spp,
+              N_taxa = n_orig_taxa))
+}
 
 #' Calculate total abundance
 #' 
-
 #' @description 
 #' This function calculates total abundance for each site measuring abundance.
 #' @details 
-#' Expects a [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
 #' Total_abundance = sum(x[i]), where x[i] is the abundance of species i within 
 #' a given site.
 #' Rescaled_total_abundance = Total_abundance[j,k]/max(Total_abundance[j,k]), where
 #' the total abundance in eack site j is divided by the maximum total abundance 
 #' in study k.
-#' @param obj A [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_ta(obj)
+#'   obj <- hib_calc_ta(df, "Measurement")
 #' } 
-#' @export
-# @noRd
-hib_calc_ta <- function(obj){
-  # TODO: function(spp_df, measure_var)
-  # TODO: obj$species -> spp_df 
-  # TODO: rm is.na checks/filters
-  # TODO: add N_unique_taxa - using Taxon_name_entered
-
+# @export
+#' @noRd
+hib_calc_ta <- function(spp_df, measure_var){
+  
   message(crayon::white("\tTotal abundance ...\n"))
   
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
-  
 
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
+  # Filter to useable records
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance") 
 
-  # Do filtering once
-  # Use filtered df for abund
-  # And to get N_spp/N_taxa
-
-  abund_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+  abund_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(Total_abundance = sum(!!dplyr::sym(measure_var))) |>
-    dplyr::ungroup()
-  # TODO: add rescaling here
-  # |> 
-  #  dplyr::group_by(SS) |>
-  #  dplyr::mutate(Rescaled_total_abundance = Total_abundance / max(Total_abundance)) |>
-  #  dplyr::ungroup()
-
-  # %%%%%
-  # 
-  # # Check if effort correction applied...
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   abund_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Total_abundance = sum(Effort_corrected_measurement)) |>
-  #     dplyr::ungroup()
-  # }
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   abund_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Total_abundance = sum(Measurement) ) |>
-  #     dplyr::ungroup()
-  # }
-  
-  # Re-scale abundance to 0-1 per study (SS)
-  abund_df <- abund_df |> 
+    dplyr::ungroup() |> 
+    # Re-scale abundance to 0-1 per study (SS)
     dplyr::group_by(SS) |>
-    dplyr::mutate(Rescaled_total_abundance = Total_abundance / max(Total_abundance)) |>
-    dplyr::ungroup()
+    # if max Total_abundance is 0..., leave as is..
+    dplyr::mutate(max_ta = max(Total_abundance),
+                  Rescaled_total_abundance = dplyr::case_when(max_ta == 0 ~ Total_abundance,
+                                                              T ~ Total_abundance / max_ta)) |>
+                  # Rescaled_total_abundance = Total_abundance / max(Total_abundance)) |>
+    dplyr::ungroup() |>
+    dplyr::select(-max_ta)
 
-  # Get N species used 
-  # TODO - drop this? - it isn't ever used... - models can depend on a subset of this 
-  # data depending on SSBS filtering/covars etc...
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
 
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
+  # n_guess_taxa <- sub_df |>
+  #   dplyr::select(Best_guess_binomial, Taxon_name_entered) |>
+  #   dplyr::mutate(Best_guess_taxon = Best_guess_binomial) |>
+  #   dplyr::mutate(Best_guess_taxon = dplyr::case_when(is.na(Best_guess_taxon) ~ Taxon_name_entered,
+  #                                                           Best_guess_taxon == ""   ~ Taxon_name_entered,
+  #                                                           T ~ Best_guess_taxon))|>
+  #   dplyr::select(Best_guess_taxon) |>
+  #   dplyr::n_distinct()
 
-  # Store in obj$diversity
-
-  # TODO: set flag based on measure_var - 
-  # eff_flag <- if_else(grepl("Effort_corrected", measure_var), "TRUE", "FALSE")
-  # paste0("Effort corrected: ", eff_flag)
-
+  # Return tibble for use in diversity_within
   out_tib <- dplyr::tibble(Metric = "Total_abundance",
                            Data = list(abund_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)
 
   return(out_tib)
 }
@@ -125,39 +127,36 @@ hib_calc_ta <- function(obj){
 #' @description 
 #' This function calculates species richness for each site.
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_sr(obj)
+#'   obj <- hib_calc_sr(spp_df, measure_var)
 #' } 
-#' @export
-hib_calc_sr <- function(obj){
+# @export
+#' @noRd
+hib_calc_sr <- function(spp_df, measure_var){
   message(crayon::white("\tSpecies richness ...\n"))
-  # TODO:
+  
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  
-  sr_df <- obj$species |>
+  spp_df <- spp_df |>
     dplyr::filter(Diversity_metric_type == "Abundance" |
                     Diversity_metric_type == "Occurence" |
-                    Diversity_metric_type == "Species richness" ) |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+                    Diversity_metric_type == "Species richness" ) 
+
+  sr_df <- spp_df |>
     dplyr::mutate(n_sp = dplyr::case_when(Diversity_metric_type %in% c("Abundance", "Occurence") ~ as.numeric(!!dplyr::sym(measure_var) > 0),
                                           Diversity_metric_type == "Species richness" ~ !!dplyr::sym(measure_var),
                                           T ~ 0)) |>
@@ -165,74 +164,13 @@ hib_calc_sr <- function(obj){
     dplyr::summarise(Species_richness = sum(n_sp)) |>
     dplyr::ungroup()
   
-  # sr_df1 <- obj$species |>
-  #   dplyr::filter(Diversity_metric_type == "Abundance" |
-  #                   Diversity_metric_type == "Occurence") |>
-  #   dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-  #   dplyr::group_by(SSBS, SS) |>
-  #   dplyr::summarise(Species_richness = sum(!!dplyr::sym(measure_var) > 0)) |>
-  #   dplyr::ungroup()
-  # # And direct measures of spp richness
-  # sr_df2 <- obj$species |>
-  #   dplyr::filter(Diversity_metric_type == "Species richness") |>
-  #   dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-  #   dplyr::group_by(SSBS, SS) |>
-  #   dplyr::summarise(Species_richness = sum(!!dplyr::sym(measure_var))) |>
-  #   dplyr::ungroup()
-  # 
-  # sr_df <- dplyr::bind_rows(sr_df1, sr_df2)
-  # # %%%%%
-  # 
-  # 
-  # # Check if effort correction applied...
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   sr_df1 <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance" |
-  #                     Diversity_metric_type == "Occurence") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Species_richness = sum(Effort_corrected_measurement > 0)) |>
-  #     dplyr::ungroup()
-  #   # And direct measures of spp richness
-  #   sr_df2 <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Species richness") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Species_richness = sum(Effort_corrected_measurement)) |>
-  #     dplyr::ungroup()
-  #   
-  #   sr_df <- dplyr::bind_rows(sr_df1, sr_df2)
-  # }
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   sr_df1 <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance" | 
-  #                     Diversity_metric_type == "Occurence") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Species_richness = sum(Measurement > 0)) |>
-  #     dplyr::ungroup()
-  #   # And direct measures of spp richness
-  #   sr_df2 <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Species richness") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Species_richness = sum(Measurement)) |>
-  #     dplyr::ungroup()
-  #   
-  #   sr_df <- dplyr::bind_rows(sr_df1, sr_df2)
-  # }
-  
   # Get N species used
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance"  | 
-                    Diversity_metric_type == "Occurence"  | 
-                    Diversity_metric_type == "Species richness") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
-  
-  # Store in obj$diversity
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "Species_richness",
                            Data = list(sr_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)                           
   
   return(out_tib)
 }
@@ -241,20 +179,22 @@ hib_calc_sr <- function(obj){
 #' Calculate simpson's diversity
 #' 
 #' @description 
-#' This function calculates simpson's diversity per site
+#' This function calculates simpson's diversity per site.
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @param msg A [`logical`], indicating if default progress message should be 
 #' displayed or not.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_simpson(obj)
+#'   obj <- hib_calc_simpson(df, "Measurement")
 #' } 
-#' @export
-hib_calc_simpson <- function(obj, msg = TRUE){
-  # TODO: optional message - drop if used for Hill-Simpson
+#' @noRd
+hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
+  # optional message - drop if used for Hill-Simpson
   assertthat::assert_that(
     is.logical(msg)
   )
@@ -262,26 +202,21 @@ hib_calc_simpson <- function(obj, msg = TRUE){
     message(crayon::white("\tSimpson diversity ...\n")) # Calculating within-site   
   }
   
-  # TODO:
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  simp_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+  # Filter to useable records
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance") 
+
+  simp_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(Simpson_diversity = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ) ) |>
     dplyr::ungroup()
@@ -298,35 +233,12 @@ hib_calc_simpson <- function(obj, msg = TRUE){
   # TODO: what if total abundance == 0 - Simpson will be undefined - should it be set to 0??
   # But, if only 1 species, index value is 0 - i.e no diversity if all one species...
 
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   #.... 
-  #   simp_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Simpson_diversity = 1 - sum( ( Effort_corrected_measurement / sum(Effort_corrected_measurement) )^2 )) |>
-  #     dplyr::ungroup()
-  # }
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   #....
-  #   simp_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Simpson_diversity = 1 - sum( ( Measurement / sum(Measurement) )^2 )) |>
-  #     dplyr::ungroup()
-  # }
-  
-  # Get N species used
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
-  # Store in obj$diversity
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "Simpson_diversity",
                            Data = list(simp_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa) 
 
   return(out_tib)
 }
@@ -372,117 +284,50 @@ hib_calc_simpson <- function(obj, msg = TRUE){
 #' @description 
 #' This function calculates Chao-1 species richness per site
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_chao1(obj)
+#'   tib <- hib_calc_chao1(spp_df, measure_var)
 #' } 
-#' @export
-hib_calc_chao1 <- function(obj){
+#' @noRd
+hib_calc_chao1 <- function(spp_df, measure_var){
   message(crayon::white("\tChao1 species richness ...\n"))
-  # TODO:
+  
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Diversity_metric_is_suitable_for_Chao"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Diversity_metric_is_suitable_for_Chao"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  chao1_df <- obj$species |>
+  spp_df <- spp_df |>
     dplyr::filter(Diversity_metric_type == "Abundance" &
                     Diversity_metric_is_suitable_for_Chao) |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
     dplyr::group_by(SS) |>
     dplyr::filter(all(floor(!!dplyr::sym(measure_var)) == !!dplyr::sym(measure_var))) |>
-    dplyr::ungroup() |>
+    dplyr::ungroup() 
+
+  chao1_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(Chao1_diversity = sum(!!dplyr::sym(measure_var) > 0) + (((sum(!!dplyr::sym(measure_var) == 1) * (sum(!!dplyr::sym(measure_var) == 1) - 1)) / (2 * (sum(!!dplyr::sym(measure_var) == 2) + 1)))) ) |>
     dplyr::ungroup()
-  # %%%%%
-  
-  
-  
-  # # Check if effort correction applied...
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   #.... 
-  #   # Filter to suitable sites...
-  #   # Abundance, Chao-suitable (all integers...)
-  #   chao1_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance" &
-  #                     Diversity_metric_is_suitable_for_Chao) |>
-  #     dplyr::group_by(SS) |>
-  #     dplyr::filter(all(floor(Effort_corrected_measurement) == Effort_corrected_measurement)) |>
-  #     dplyr::ungroup() |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Chao1_diversity = sum(Effort_corrected_measurement > 0) + (((sum(Effort_corrected_measurement == 1) * (sum(Effort_corrected_measurement == 1) - 1)) / (2 * (sum(Effort_corrected_measurement == 2) + 1)))) ) 
-  #   # More efficient to use eqn...
-  #   # unname(vegan::estimateR(Effort_corrected_measurement)["S.chao1"]) 
-  #   # 
-  # }
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   chao1_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance" &
-  #                     Diversity_metric_is_suitable_for_Chao) |>
-  #     dplyr::group_by(SS) |>
-  #     dplyr::filter(all(floor(Measurement) == Measurement)) |>
-  #     dplyr::ungroup() |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Chao1_diversity = sum(Measurement > 0) + (((sum(Measurement == 1) * (sum(Measurement == 1) - 1)) / (2 * (sum(Measurement == 2) + 1)))) ) 
-  #   # unname(vegan::estimateR(Measurement)["S.chao1"]) )
-  # }
-  
-  # bind to obj$sites
-  # obj$sites <- dplyr::left_join(obj$sites,
-  #                               simp_df,
-  #                               by = "SSBS")
-  n_spp <- obj$species |>
-    # dplyr::filter(Diversity_metric_type == "Abundance" &
-    #                 Diversity_metric_is_suitable_for_Chao) |>
-    # dplyr::group_by(SS) |>
-    # dplyr::filter(all(floor(Measurement) == Measurement)) |>
-    # 
-    # obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance" &
-                    Diversity_metric_is_suitable_for_Chao) |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::group_by(SS) |>
-    dplyr::filter(all(floor(!!dplyr::sym(measure_var)) == !!dplyr::sym(measure_var))) |>
-    
-    dplyr::ungroup() |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
-  # Store in obj$diversity
+
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "Chao1_diversity",
                            Data = list(chao1_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa) 
   
-  # TODO:
   return(out_tib)
-  
-  # div_empty <- is.null(obj$diversity)
-  # 
-  # if (!div_empty){
-  #   obj$diversity <- dplyr::bind_rows(obj$diversity, out_tib)
-  # }  
-  # if (div_empty){
-  #   obj$diversity <- out_tib
-  # }
-  # 
-  # return(obj)
 }
 
 # Rarefied richness
@@ -555,25 +400,27 @@ hib_calc_chao1 <- function(obj){
 #' @description 
 #' This function calculates rarefied species richness per site
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_rsr(obj)
+#'   out <- hib_calc_rsr(spp_df, measure_var)
 #' } 
-#' @export
-hib_calc_rsr <- function(obj){
+#' @noRd
+hib_calc_rsr <- function(spp_df, measure_var){
   message(crayon::white("\tRarefied species richness ...\n"))
-  # TODO:
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Diversity_metric_is_suitable_for_Chao"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Diversity_metric_is_suitable_for_Chao"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
   rarefy_comm <- function(abund_distr, N){
@@ -583,21 +430,14 @@ hib_calc_rsr <- function(obj){
     return(sr)
   }
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  
-  rsr_df <- obj$species |>
+  spp_df <- spp_df |>
     dplyr::filter(Diversity_metric_type == "Abundance" &
                     Diversity_metric_is_suitable_for_Chao) |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
     dplyr::group_by(SS) |>
     dplyr::filter(all(floor(!!dplyr::sym(measure_var)) == !!dplyr::sym(measure_var))) |>
-    dplyr::ungroup() |>
+    dplyr::ungroup()
+
+  rsr_df <- spp_df |>
     dplyr::group_by(SSBS) |>
     dplyr::mutate(TA = sum(!!dplyr::sym(measure_var))) |>
     dplyr::ungroup() |>
@@ -624,117 +464,13 @@ hib_calc_rsr <- function(obj){
     dplyr::summarise(Rarefied_species_richness = mean(sr),
                      min_abund = min_abund[1])
   close(pb)
-    
-    
-  # %%%%%
   
-  # # Check if effort correction applied...
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   #.... 
-  #   # Filter to suitable sites...
-  #   # Abundance, Chao-suitable (all integers...)
-  #   rsr_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance" &
-  #                     Diversity_metric_is_suitable_for_Chao) |>
-  #     dplyr::group_by(SSBS) |>
-  #     dplyr::mutate(TA = sum(Effort_corrected_measurement)) |>
-  #     dplyr::ungroup() |>
-  #     dplyr::group_by(SS) |>
-  #     dplyr::mutate(min_abund = min(TA)) |>
-  #     dplyr::filter(all(floor(Effort_corrected_measurement) == Effort_corrected_measurement)) |>
-  #     dplyr::ungroup() 
-  #   
-  #   # Need to repeatedly sample from each SSBS abundance distr - 1000x
-  #   # expand spp abund to long vect
-  #   # sample based on min_abund
-  #   # calc sr per SSBS/repeat
-  #   # TODO: progress bar 
-  #   pb <- txtProgressBar(min = 1, max = 1000, style = 3)
-  #   
-  #   rsr_df <- purrr::map_dfr(seq(1,1000),
-  #                            function(x, df){
-  #                              df |>
-  #                                dplyr::group_by(SSBS) |>
-  #                                dplyr::summarise(sr = rarefy_comm(Effort_corrected_measurement, 
-  #                                                                  min_abund[1]),
-  #                                                 min_abund = min_abund[1],
-  #                                                 iter = x)
-  #                              
-  #                              setTxtProgressBar(pb, x/10)
-  #                            },
-  #                            df = rsr_df) |>
-  #     dplyr::group_by(SSBS) |>
-  #     dplyr::summarise(Rarefied_species_richness = mean(sr),
-  #                      min_abund = min_abund[1])
-  #   close(pb)
-  # }
-  # 
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   # Filter to suitable sites...
-  #   # Abundance, Chao-suitable (all integers...)
-  #   rsr_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance" &
-  #                     Diversity_metric_is_suitable_for_Chao) |>
-  #     dplyr::group_by(SSBS) |>
-  #     dplyr::mutate(TA = sum(Measurement)) |>
-  #     dplyr::ungroup() |>
-  #     dplyr::group_by(SS) |>
-  #     dplyr::mutate(min_abund = min(TA)) |>
-  #     # TODO: shouldnt this come higher up - after first filter... otherwise TA 
-  #     # could be afffected by measures we arne't using...
-  #     dplyr::filter(all(floor(Measurement) == Measurement)) |>
-  #     dplyr::ungroup() 
-  #   
-  #   # Need to repeatedly sample from each SSBS abundance distr - 1000x
-  #   # expand spp abund to long vect
-  #   # sample based on min_abund
-  #   # calc sr per SSBS/repeat
-  #   pb <- txtProgressBar(min = 1, max = 1000, style = 3)
-  #   
-  #   rsr_df <- purrr::map_dfr(seq(1,1000),
-  #                            function(x, df){
-  #                              df |>
-  #                                dplyr::group_by(SSBS) |>
-  #                                dplyr::summarise(sr = rarefy_comm(Measurement, 
-  #                                                                  min_abund[1]),
-  #                                                 min_abund = min_abund[1],
-  #                                                 iter = x)
-  #                              setTxtProgressBar(pb, x/10)
-  #                            },
-  #                            df = rsr_df) |>
-  #     dplyr::group_by(SSBS) |>
-  #     dplyr::summarise(Rarefied_species_richness = mean(sr),
-  #                      min_abund = min_abund[1])
-  #   close(pb)
-  # }
-  
-  # bind to obj$sites
-  # obj$sites <- dplyr::left_join(obj$sites,
-  #                               simp_df,
-  #                               by = "SSBS")
-  
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance" &
-                    Diversity_metric_is_suitable_for_Chao) |>
-    # dplyr::group_by(SS) |>
-    # dplyr::filter(all(floor(Measurement) == Measurement)) |>
-    # dplyr::ungroup() |>
-    
-    # obj$species |>
-    # dplyr::filter(Diversity_metric_type == "Abundance" &
-    #                 Diversity_metric_is_suitable_for_Chao) |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::group_by(SS) |>
-    dplyr::filter(all(floor(!!dplyr::sym(measure_var)) == !!dplyr::sym(measure_var))) |>
-    dplyr::ungroup() |>
-  
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  # Store in obj$diversity
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "Rarefied_species_richness",
                            Data = list(rsr_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)
   
   return(out_tib)
 
@@ -748,87 +484,57 @@ hib_calc_rsr <- function(obj){
 #' @description 
 #' This function calculates arithmetic mean abundance for each site measuring abundance.
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_ma(obj)
+#'   out <- hib_calc_ma(spp_df, mv)
 #' } 
-#' @export
-hib_calc_ma <- function(obj){
+#' @noRd
+hib_calc_ma <- function(spp_df, measure_var){
   message(crayon::white("\tMean abundance ...\n"))
-  # TODO:
+  
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  abund_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance")
+
+  abund_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
-    # Below doesn't work...
-    # dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
-    # dplyr::summarise(Mean_abundance = dplyr::case_when(dplyr::n() == 0 ~ 0,
-    #                                                    T ~ mean(!!dplyr::sym(measure_var))) ) |>
-    # Try this instead
     dplyr::summarise(Mean_abundance = dplyr::case_when(all(!!dplyr::sym(measure_var) == 0) ~ 0,
                                                        T ~ sum(!!dplyr::sym(measure_var)) / sum(!!dplyr::sym(measure_var) > 0) ) ) |>
-                       
-    # dplyr::summarise(Mean_abundance = mean(!!dplyr::sym(measure_var))) |>
-    dplyr::ungroup()
-  # %%%%%
-  
-  
-  # # Check if effort correction applied...
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   abund_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     # TODO: na.rm = T for safety...
-  #     dplyr::summarise(Mean_abundance = mean(Effort_corrected_measurement)) |>
-  #     dplyr::ungroup()
-  # }
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   abund_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Mean_abundance = mean(Measurement) ) |>
-  #     dplyr::ungroup()
-  # }
-  
-  # Re-scale abundance to 0-1 per study (SS)
-  abund_df <- abund_df |> 
+    dplyr::ungroup() |>
+    # Re-scale abundance to 0-1 per study (SS) 
     dplyr::group_by(SS) |>
-    dplyr::mutate(Rescaled_mean_abundance = Mean_abundance / max(Mean_abundance)) |>
-    dplyr::ungroup()
+    # if max Mean_abundance is 0..., leave as is..
+    dplyr::mutate(max_ma = max(Mean_abundance),
+                  Rescaled_mean_abundance = dplyr::case_when(max_ma == 0 ~ Mean_abundance,
+                                                              T ~ Mean_abundance / max_ma)) |>
+    dplyr::ungroup() |>
+    dplyr::select(-max_ma)
+
+    # dplyr::mutate(Rescaled_mean_abundance = Mean_abundance / max(Mean_abundance)) |>
+    # dplyr::ungroup()
   
   # Get N species used
-  n_spp <- obj$species |>
-    # dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
-  # Store in obj$diversity
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "Mean_abundance",
                            Data = list(abund_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)
   
   return(out_tib)
 }
@@ -840,47 +546,41 @@ hib_calc_ma <- function(obj){
 #' @description 
 #' This function calculates geometric mean abundance for each site measuring abundance.
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_gma(obj)
+#'   out <- hib_calc_gma(spp_df, measure_var)
 #' } 
-#' @export
-hib_calc_gma <- function(obj){
+#' @noRd
+hib_calc_gma <- function(spp_df, measure_var){
   message(crayon::white("\tGeometric mean abundance ...\n"))
-  # TODO:
+  
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  abund_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance")
+
+  abund_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
-    # TODO: group, then filter 0, if dplyr::n() == 0 ~ 0, else exp(...)
     dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
     # dplyr::summarise(Geometric_mean_abundance = dplyr::case_when(dplyr::n() == 0 ~ 0,
     #                                                              T ~ exp(mean(log(!!dplyr::sym(measure_var)))) ) ) |>
     dplyr::summarise(Geometric_mean_abundance = exp(mean(log(!!dplyr::sym(measure_var)))) ) |>
     dplyr::ungroup()
   
-  zero_abund_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+  zero_abund_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(TA = sum(!!dplyr::sym(measure_var))) |>
     dplyr::ungroup() |>
@@ -888,49 +588,25 @@ hib_calc_gma <- function(obj){
     dplyr::rename(Geometric_mean_abundance = TA)
   
   abund_df <- abund_df |>
-    dplyr::bind_rows(zero_abund_df)
-  # %%%%%
-  
-  # # Check if effort correction applied...
-  # if (obj$processing_flags$measures_effort_corrected == T){
-  #   abund_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     # TODO: drop 0s - log(0) is -Inf
-  #     dplyr::filter(Effort_corrected_measurement > 0) |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     # TODO: na.rm = T for safety...
-  #     dplyr::summarise(Geometric_mean_abundance = exp(mean(log(Effort_corrected_measurement))) ) |>
-  #     dplyr::ungroup()
-  # }
-  # if (obj$processing_flags$measures_effort_corrected == F){
-  #   abund_df <- obj$species |>
-  #     dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #     # TODO: drop 0s - log(0) is -Inf
-  #     dplyr::filter(Measurement > 0) |>
-  #     dplyr::group_by(SSBS, SS) |>
-  #     dplyr::summarise(Geometric_mean_abundance = exp(mean(log(Measurement))) ) |>
-  #     dplyr::ungroup()
-  # }
-  
-  # Re-scale abundance to 0-1 per study (SS)
-  abund_df <- abund_df |> 
+    dplyr::bind_rows(zero_abund_df) |>
+    # Re-scale abundance to 0-1 per study (SS) 
     dplyr::group_by(SS) |>
-    dplyr::mutate(Rescaled_geometric_mean_abundance = Geometric_mean_abundance / max(Geometric_mean_abundance)) |>
-    dplyr::ungroup()
+    # if max Mean_abundance is 0..., leave as is..
+    dplyr::mutate(max_gma = max(Geometric_mean_abundance),
+                  Rescaled_geometric_mean_abundance = dplyr::case_when(max_gma == 0 ~ Geometric_mean_abundance,
+                                                                       T ~ Geometric_mean_abundance / max_gma)) |>
+    dplyr::ungroup() |>
+    dplyr::select(-max_gma)
+    # dplyr::mutate(Rescaled_geometric_mean_abundance = Geometric_mean_abundance / max(Geometric_mean_abundance)) |>
+    # dplyr::ungroup()
   
   # Get N species used
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
-  # Store in obj$diversity
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "Geometric_mean_abundance",
                            Data = list(abund_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)
   
   return(out_tib)
 }
@@ -942,17 +618,19 @@ hib_calc_gma <- function(obj){
 #' @description 
 #' This function calculates shannon diversity for each site measuring abundance
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @param msg A [`logical`], indicating if default progress message should be 
 #' displayed or not.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_shannon(obj)
+#'   out <- hib_calc_shannon(spp_df, mv)
 #' } 
-#' @export
-hib_calc_shannon <- function(obj, msg = TRUE){
+#' @noRd
+hib_calc_shannon <- function(spp_df, measure_var, msg = TRUE){
   assertthat::assert_that(
     is.logical(msg)
   )
@@ -960,98 +638,42 @@ hib_calc_shannon <- function(obj, msg = TRUE){
     message(crayon::white("\tShannon diversity ...\n"))  
   }
   
-  # TODO:
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  # div_df <- obj$species |>
-  #   dplyr::filter(Diversity_metric_type == "Abundance") |>
-  #   dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-  #   dplyr::group_by(SSBS, SS) |>
-  #   dplyr::mutate(p_i = !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) ) |>
-  #   dplyr::ungroup() |>
-  #   dplyr::group_by(SSBS, SS) |>
-  #   dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
-  #   dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ), #) |> 
-  #                   logN = log(sum(!!dplyr::sym(measure_var) > 0)) ) |>
-  #   dplyr::ungroup()
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance")
 
-  div_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
+  div_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::mutate(p_i = !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) ) |>
-    dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ), #) |> 
+    # If all p_i == 0, or NA, Shannon_diversity = NA
+    dplyr::summarise(Shannon_diversity =  dplyr::case_when(all(p_i == 0) ~ NA,
+                                                          all(is.na(p_i)) ~ NA,
+                                                           T ~ -1 * sum( p_i * log(p_i), na.rm = TRUE ) ),
+    # dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i), na.rm = TRUE ), #) |> 
                     logN = log(sum(!!dplyr::sym(measure_var) > 0)) ) |>
     dplyr::ungroup()
-  # %%%%%
-  
-  
-  # Check if effort correction applied...
-#   # TODO: issues of zero abundance - just drop... - what about sites without any spp - 0 total_abund..
-#   if (obj$processing_flags$measures_effort_corrected == T){
-#     div_df <- obj$species |>
-#       dplyr::filter(Diversity_metric_type == "Abundance") |>
-#       dplyr::group_by(SSBS, SS) |>
-#       # TODO: na.rm = T for safety...
-#       dplyr::mutate(p_i = Effort_corrected_measurement / sum(Effort_corrected_measurement) ) |>
-#       dplyr::ungroup() |>
-#       dplyr::group_by(SSBS, SS) |>
-#       # TODO
-#       dplyr::filter(Effort_corrected_measurement > 0) |>
-#       dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ) ) |>
-#       dplyr::ungroup()
-#   }
-#   if (obj$processing_flags$measures_effort_corrected == F){
-#     div_df <- obj$species |>
-#       dplyr::filter(Diversity_metric_type == "Abundance") |>
-#       dplyr::group_by(SSBS, SS) |>
-#       dplyr::mutate(p_i = Measurement / sum(Measurement) ) |>
-#       dplyr::ungroup() |>
-#       dplyr::group_by(SSBS, SS) |>
-#       # TODO
-#       dplyr::filter(Measurement > 0) |>
-#       dplyr::summarise(Shannon_diversity =  -1 * sum( p_i * log(p_i) ) ) |>
-#       dplyr::ungroup()
-# }
-  
-  # # Re-scale abundance to 0-1 per study (SS)
-  # div_df <- div_df |> 
-  #   dplyr::group_by(SS) |>
-  #   dplyr::mutate(Rescaled_shannon_diversity = Shannon_diversity / max(Shannon_diversity)) |>
-  #   dplyr::ungroup()
-  
+
   # Get N species used
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::filter(!!dplyr::sym(measure_var) > 0) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Shannon_diversity",
                            Data = list(div_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)
   
   return(out_tib)
-  }
-# %%%%%
+}
+
 
 
 # %%%%%
@@ -1070,36 +692,32 @@ hib_calc_shannon <- function(obj, msg = TRUE){
 #' @description 
 #' This function calculates PIE per site.
 #' @details 
-#' Expects a [`HibDatabase`] object.
-#' @param obj A [`HibDatabase`] object.
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
-#'   obj <- hib_calc_pie(obj)
+#'   out <- hib_calc_pie(df, mv)
 #' } 
-#' @export
-hib_calc_pie <- function(obj){
+#' @noRd
+hib_calc_pie <- function(spp_df, measure_var){
   message(crayon::white("\tProbability of Interspecific Encounter (PIE) ...\n"))
-  # Calculating within-site 
   # Assertion checks
   assertthat::assert_that(
-    assertthat::has_name(obj$species, "SSBS"),
-    assertthat::has_name(obj$species, "SS"),
-    assertthat::has_name(obj$species, "Measurement") || assertthat::has_name(obj$species, "Effort_corrected_measurement"),
-    assertthat::has_name(obj$species, "Diversity_metric_type"),
-    assertthat::has_name(obj$species, "Best_guess_binomial")
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
-  # %%%%%
-  if (obj$processing_flags$measures_effort_corrected == T){
-    measure_var <- "Effort_corrected_measurement"
-  } 
-  if (obj$processing_flags$measures_effort_corrected == F){
-    measure_var <- "Measurement"
-  }
-  pie_df <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance") 
+
+  pie_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(adj_val = sum( !!dplyr::sym(measure_var) ) / ( sum( !!dplyr::sym(measure_var) ) - 1 ),
                      PIE_ = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ),
@@ -1107,21 +725,14 @@ hib_calc_pie <- function(obj){
                      sPIE = (1 / (1 - PIE)) ) |>
     dplyr::ungroup() |>
     dplyr::select(SSBS, SS, PIE, sPIE)
-  # %%%%%
-  
-  
+
   # Get N species used
-  n_spp <- obj$species |>
-    dplyr::filter(Diversity_metric_type == "Abundance") |>
-    dplyr::filter(!is.na(!!dplyr::sym(measure_var))) |>
-    dplyr::select(Best_guess_binomial) |>
-    dplyr::n_distinct()
-  
-  # Store in obj$diversity
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+
   out_tib <- dplyr::tibble(Metric = "PIE",
                            Data = list(pie_df),
-                           N_species_total = n_spp,
-                           Flag = paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected))
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa)
   
   return(out_tib)
 }
@@ -1168,7 +779,7 @@ hib_calc_div_within <- function(obj, metrics){
   
   
   metrics <- tolower(metrics)
-  
+  # Match supplied metrics to options.  
   metrics <- match.arg(metrics,
                        c("total_abundance", "species_richness", "chao1_diversity",  
                          "simpson_diversity", "rarefied_species_richness", #),
@@ -1179,16 +790,8 @@ hib_calc_div_within <- function(obj, metrics){
                        several.ok = T)
   metrics <- unique(metrics)
   # message(paste(metrics, collapse = ", "))
-  # Match supplied metrics to options.
-  # metrics <- match.arg(metrics,
-  #                      c("Total_abundance", "Species_richness", "Chao1_diversity",  
-  #                        "Simpson_diversity", "Rarefied_species_richness", #),
-  #                        "Mean_abundance", "Geometric_mean_abundance",
-  #                        "Shannon_diversity", "Evenness",
-  #                        "HillShannon_diversity", "HillSimpson_diversity",
-  #                        "PIE"),
-  #                      several.ok = T)
-  
+
+
   # %%%
   # TODO: if metric is already in hib$diversity_within,
   if (!is.null(obj$diversity_within)){
@@ -1222,11 +825,6 @@ hib_calc_div_within <- function(obj, metrics){
 
   message(crayon::green("\nCalculating within-site biodiversity metrics ...\n"))
   
-
-  # TODO: Better to get measure_var once here
-  # Condense 
-  # # %%%%%
-
   if (obj$processing_flags$measures_effort_corrected == T){
     measure_var <- "Effort_corrected_measurement"
   } 
@@ -1250,40 +848,46 @@ hib_calc_div_within <- function(obj, metrics){
   # function(metric = .x, spp_df = obj$species, mv = measure_var){}
   # hib_calc_ta(spp_df, mv)
   out_tib <- purrr::map(.x = metrics, 
-                       .f = function(metric = .x, db_obj = obj){
+                       .f = function(metric = .x, db_obj = obj,
+                                    spp_df = obj$species, mv = measure_var){
                          if (metric == "total_abundance"){
-                           return(hib_calc_ta(db_obj))
+                           return(hib_calc_ta(spp_df, mv))
                          }
                          if (metric == "species_richness"){
-                           return(hib_calc_sr(db_obj))
+                           return(hib_calc_sr(spp_df, mv))
                          }
                          if (metric == "chao1_diversity"){
-                           return(hib_calc_chao1(db_obj))
+                           return(hib_calc_chao1(spp_df, mv))
                          }
                          if (metric == "simpson_diversity"){
-                           return(hib_calc_simpson(db_obj))
+                           return(hib_calc_simpson(spp_df, mv))
                          }
                          if (metric == "rarefied_species_richness"){
-                           return(hib_calc_rsr(db_obj))
+                           return(hib_calc_rsr(spp_df, mv))
                          }
-                         # %%%
                          if (metric == "mean_abundance"){
-                           return(hib_calc_ma(db_obj))
+                           return(hib_calc_ma(spp_df, mv))
                          }
                          if (metric == "geometric_mean_abundance"){
-                           return(hib_calc_gma(db_obj))
+                           return(hib_calc_gma(spp_df, mv))
                          }
+                         
                          if (metric == "shannon_diversity"){
-                          tmp <- hib_calc_shannon(db_obj)
-                          tmp$Data[[1]] <- tmp$Data[[1]] |>
+                           tmp <- hib_calc_shannon(spp_df, mv)
+                           tmp$Data[[1]] <- tmp$Data[[1]] |>
                              dplyr::select(SSBS, SS, Shannon_diversity)
                            return(tmp)
+                         }
+                         # %%%
+                         if (metric == "pie"){
+                           return(hib_calc_pie(spp_df, mv))
                          }
                          # %%%
                          # Evenness (Shannon/log(N_spp))
                          if (metric == "evenness"){
                            message(crayon::white("\tEvenness ...\n"))
-                           tmp <- hib_calc_shannon(db_obj, msg = FALSE)
+                           # tmp <- hib_calc_shannon(db_obj, msg = FALSE)
+                           tmp <- hib_calc_shannon(spp_df, mv, msg = FALSE)
                            tmp$Metric <- "Evenness"
                            tmp$Data[[1]]$Evenness <- tmp$Data[[1]]$Shannon_diversity / tmp$Data[[1]]$logN
                            tmp$Data[[1]] <- tmp$Data[[1]] |>
@@ -1295,13 +899,13 @@ hib_calc_div_within <- function(obj, metrics){
                          # Effective N spp (Shannon) - exp(Shannon) ?? - Hill-Shannon
                          # Effective N spp (Simpson) - 1/Simpson
                          # Coverage-based richness - N spp if 80% of comm sampled
-
-
+                         
                          # %%%
                          # Hill-Shannon: exp(shannon)
                          if (metric == "hillshannon_diversity"){
                            message(crayon::white("\tHill-Shannon diversity ...\n"))
-                           tmp <- hib_calc_shannon(db_obj, msg = FALSE)
+                           # tmp <- hib_calc_shannon(db_obj, msg = FALSE)
+                           tmp <- hib_calc_shannon(spp_df, mv, msg = FALSE)
                            tmp$Metric <- "HillShannon_diversity"
                            tmp$Data[[1]]$HillShannon_diversity <- exp(tmp$Data[[1]]$Shannon_diversity)
                            
@@ -1314,7 +918,8 @@ hib_calc_div_within <- function(obj, metrics){
                          # TODO: why is my Simpson, 1 - x... - i.e. PIE
                          if (metric == "hillsimpson_diversity"){
                            message(crayon::white("\tHill-Simpson diversity ...\n"))
-                           tmp <- hib_calc_simpson(db_obj, msg = FALSE)
+                           # tmp <- hib_calc_simpson(db_obj, msg = FALSE)
+                           tmp <- hib_calc_simpson(spp_df, mv, msg = FALSE)
                            tmp$Metric <- "HillSimpson_diversity"
                            tmp$Data[[1]]$HillSimpson_diversity <- 1 / ( 1 - tmp$Data[[1]]$Simpson_diversity )
                            
@@ -1322,15 +927,12 @@ hib_calc_div_within <- function(obj, metrics){
                              dplyr::select(SSBS, SS, HillSimpson_diversity)
                            return(tmp)
                          }
-                         
-                         if (metric == "pie"){
-                           return(hib_calc_pie(db_obj))
-                         }
-                         
                          # %%%
-                         }
-                       ) |> dplyr::bind_rows()
+                         }) |> dplyr::bind_rows()
   
+  # Effort correction flag
+  out_tib$Flag <- paste0("Effort corrected: ", obj$processing_flags$measures_effort_corrected)
+
   div_empty <- is.null(obj$diversity_within)
   
   if (!div_empty){
@@ -1342,6 +944,8 @@ hib_calc_div_within <- function(obj, metrics){
   
   # TODO:
   obj$last_update <- lubridate::now()
+
+  # checkself?
 
   return(obj)
 }

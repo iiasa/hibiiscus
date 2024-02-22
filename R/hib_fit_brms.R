@@ -139,11 +139,14 @@ hib_fit_brms <- function(obj,
     
     mod_df <- dplyr::bind_rows(mod_df_ls)
     
-    n_spp <- purrr::map2(.x = obj, 
+    n_spp_taxa <- purrr::map2(.x = obj, 
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
                            calc_N_spp(.x, .y, resp)
                          }) #|> unlist()
+    n_spp = lapply(n_spp_taxa, function(x){x$N_spp})
+    n_taxa = lapply(n_spp_taxa, function(x){x$N_taxa})
+
     # N sites
     n_sites <- lapply(mod_df_ls, 
                       function(x){calc_N_sites(x)})
@@ -152,7 +155,9 @@ hib_fit_brms <- function(obj,
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
-    n_spp <- calc_N_spp(obj, mod_df, mod_resp)
+    n_spp_taxa <- calc_N_spp(obj, mod_df, mod_resp)
+    n_spp = n_spp_taxa$N_spp
+    n_taxa = n_spp_taxa$N_taxa
     n_sites <- calc_N_sites(mod_df)
   }
   
@@ -201,6 +206,7 @@ hib_fit_brms <- function(obj,
     fixef_df = fixef_df,
     metr_ls = metr_ls,
     n_spp = n_spp,
+    n_taxa = n_taxa,
     n_sites = n_sites,
     extra_args = list(...)
   )

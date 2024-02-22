@@ -206,7 +206,9 @@ hib_fit_inla <- function(obj,
   }
   # %%%%%
   
-  n_spp <- calc_N_spp(obj, mod_df, mod_resp)
+  n_spp_taxa <- calc_N_spp(obj, mod_df, mod_resp)
+  n_spp = n_spp_taxa$N_spp
+  n_taxa = n_spp_taxa$N_taxa
   n_sites <- calc_N_sites(mod_df)
   
   # Add an intercept... 
@@ -482,6 +484,7 @@ hib_fit_inla <- function(obj,
     inla_mesh_settings = mesh_settings,
     inla_mesh_source = mesh_source,
     n_spp = n_spp,
+    n_taxa = n_taxa,
     n_sites = n_sites
   # TODO:
   # fit_settings,

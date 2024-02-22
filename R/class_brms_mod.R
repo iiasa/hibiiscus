@@ -70,6 +70,8 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             #'   The list of model performance metrics.
                             #' @param n_spp (`integer` or `list`)\cr
                             #'   Number of species contributing to the fitted model.
+                            #' @param n_taxa (`integer` or `list`)\cr
+                            #'   Number of orignal taxa names contributing to the fitted model.
                             #' @param n_sites (`integer` or `list`)\cr
                             #'   Number of sites contributing to the fitted model.
                             #' @param extra_args (`list`)\cr
@@ -80,6 +82,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                                   fixef_df,
                                                   metr_ls,
                                                   n_spp,
+                                                  n_taxa,
                                                   n_sites,
                                                   extra_args
                                                   # set_up_specs
@@ -102,6 +105,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                 is.data.frame(fixef_df),
                                 is.list(metr_ls),
                                 is.numeric(n_spp) || ( is.list(n_spp) & all(unlist(lapply(n_spp, function(x){is.numeric(x)}))) ),
+                                is.numeric(n_taxa) || ( is.list(n_taxa) & all(unlist(lapply(n_taxa, function(x){is.numeric(x)}))) ),
                                 is.numeric(n_sites) || ( is.list(n_sites) & all(unlist(lapply(n_sites, function(x){is.numeric(x)}))) ),
                                 is.list(extra_args)
                               )
@@ -128,12 +132,14 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               if (inherits(db_obj, "HibDatabase")){
                                 self$processing_flags <- db_obj$processing_flags
                                 self$processing_flags$N_spp <- n_spp
+                                self$processing_flags$N_taxa <- n_taxa
                                 self$processing_flags$N_sites <- n_sites
                               }
                               if (is.list(db_obj)){
                                 self$processing_flags <- lapply(db_obj, function(x){x$processing_flags})
                                 for (i in 1:length(db_obj)){
                                   self$processing_flags[[i]]$N_spp <- n_spp[[i]]
+                                  self$processing_flags[[i]]$N_taxa <- n_taxa[[i]]
                                   self$processing_flags[[i]]$N_sites <- n_sites[[i]]
                                 }
                               }
@@ -219,11 +225,16 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                 n_spp <- lapply(self$processing_flags, function(x){x$N_spp}) |>
                                   unlist() |>
                                   paste(collapse = ", ")
+                                n_taxa <- lapply(self$processing_flags, function(x){x$N_taxa}) |>
+                                  unlist() |>
+                                  paste(collapse = ", ")
                                 stats <- list(number_sites = n_sites,
+                                              number_taxa = n_taxa,
                                               number_species = n_spp)
                               } else {
                                 stats <- list(number_sites = self$processing_flags$N_sites,
-                                              number_species = self$processing_flags$N_spp)
+                                              number_species = self$processing_flags$N_spp,
+                                              number_taxa = self$processing_flags$N_taxa)
                               }
 
 
@@ -243,6 +254,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                        # "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                        # crayon::green(stats$number_lui), "\n",
                                        "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+                                       "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
                                        "\n",
                                        "--------------------\n\n",
                                        "Summary of fitted model\n"

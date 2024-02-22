@@ -335,6 +335,7 @@ HibDatabase <- R6Class("HibDatabase",
                                     number_lu = length( unique(self$sites$Predominant_land_use) ),
                                     number_lui = length(unique(self$sites$Use_intensity)),
                                     number_species = length( unique(self$species$Best_guess_binomial) ),
+                                    number_taxa = length( unique(self$species$Taxon_name_entered) ),
                                     filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
                                     # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
                                     
@@ -403,6 +404,7 @@ HibDatabase <- R6Class("HibDatabase",
                                "\n",
                                "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
                                "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+                               "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
 
                                "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                                                      crayon::green(stats$number_lui), "\n",

@@ -33,10 +33,25 @@ calc_N_spp <- function(obj,
   
   # TODO: isn't it more efficient to just filter obj$species to SSBS/SSBS1/SSBS2 in mod_df?
   
+  #  check if measurement or effort corrected
+  if (obj$processing_flags$measures_effort_corrected == T){
+    measure_var <- "Effort_corrected_measurement"
+  } 
+  if (obj$processing_flags$measures_effort_corrected == F){
+    measure_var <- "Measurement"
+  }
+
+  if (all(c("SSBS1", "SSBS2") %in% colnames(mod_df))){
+    ssbs <- unique(c(mod_df$SSBS1, mod_df$SSBS2))
+  } else {
+    ssbs <- unique(mod_df$SSBS)
+  }
+
   # First, for within site metrics
   if (mod_resp %in% c("Total_abundance", "Rescaled_total_abundance", 
                       "Simpson_diversity", 
                       "Mean_abundance", "Geometric_mean_abundance",
+                      # "Rescaled_mean_abundance", "Rescaled_geometric_mean_abundance",
                       "Shannon_diversity",
                       "HillShannon_diversity", "HillSimpson_diversity",
                       "PIE", "sPIE", "Evenness")){
@@ -44,36 +59,48 @@ calc_N_spp <- function(obj,
     # TODO: assertions
     # obj$species contains:
     #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement Taxon_name_entered
-
-    n_spp <- obj$species |>
-      dplyr::filter(Diversity_metric_type == "Abundance") |>
-      dplyr::filter(SSBS %in% mod_df$SSBS) |>
-      # dplyr::filter(Measurement > 0) |>
-      dplyr::select(Best_guess_binomial) |>
-      dplyr::n_distinct()
+    df <- obj$species |>
+      dplyr::filter(Diversity_metric_type == "Abundance")
+    
+    # n_spp <- obj$species |>
+    #   dplyr::filter(Diversity_metric_type == "Abundance") |>
+    #   dplyr::filter(SSBS %in% mod_df$SSBS) |>
+    #   # dplyr::filter(Measurement > 0) |>
+    #   dplyr::select(Best_guess_binomial) |>
+    #   dplyr::n_distinct()
   }
   
   if (mod_resp == "Species_richness"){
-    n_spp <- obj$species |>
+    df <- obj$species |>
       dplyr::filter(Diversity_metric_type == "Abundance"  | 
                       Diversity_metric_type == "Occurence"  | 
-                      Diversity_metric_type == "Species richness") |>
-      dplyr::filter(SSBS %in% mod_df$SSBS) |>
-      # dplyr::filter(Measurement > 0) |>
-      dplyr::select(Best_guess_binomial) |>
-      dplyr::n_distinct()
+                      Diversity_metric_type == "Species richness")
+    # n_spp <- obj$species |>
+    #   dplyr::filter(Diversity_metric_type == "Abundance"  | 
+    #                   Diversity_metric_type == "Occurence"  | 
+    #                   Diversity_metric_type == "Species richness") |>
+    #   dplyr::filter(SSBS %in% mod_df$SSBS) |>
+    #   # dplyr::filter(Measurement > 0) |>
+    #   dplyr::select(Best_guess_binomial) |>
+    #   dplyr::n_distinct()
   }
   if (mod_resp %in% c("Chao1_diversity", "Rarefied_species_richness")){
-    n_spp <- obj$species |>
+    df <- obj$species |>
       dplyr::filter(Diversity_metric_type == "Abundance" &
                       Diversity_metric_is_suitable_for_Chao) |>
       dplyr::group_by(SS) |>
       dplyr::filter(all(floor(Measurement) == Measurement)) |>
-      dplyr::ungroup() |>
-      dplyr::filter(SSBS %in% mod_df$SSBS) |>
-      # dplyr::filter(Measurement > 0) |>
-      dplyr::select(Best_guess_binomial) |>
-      dplyr::n_distinct()
+      dplyr::ungroup() 
+    # n_spp <- obj$species |>
+    #   dplyr::filter(Diversity_metric_type == "Abundance" &
+    #                   Diversity_metric_is_suitable_for_Chao) |>
+    #   dplyr::group_by(SS) |>
+    #   dplyr::filter(all(floor(Measurement) == Measurement)) |>
+    #   dplyr::ungroup() |>
+    #   dplyr::filter(SSBS %in% mod_df$SSBS) |>
+    #   # dplyr::filter(Measurement > 0) |>
+    #   dplyr::select(Best_guess_binomial) |>
+    #   dplyr::n_distinct()
   }
   
   
@@ -91,8 +118,7 @@ calc_N_spp <- function(obj,
     # obj$species contains:
     #   Diversity_metric_type, SSBS, Best_guess_binomial, Measurement
     #   Sampling_effort, Taxon_name_entered
-
-    n_spp <- obj$species |>
+    df <- obj$species |>
       dplyr::filter(!is.na(Predominant_land_use) &
                       Diversity_metric_type == "Abundance") |>
       dplyr::group_by(SS) |>
@@ -101,14 +127,48 @@ calc_N_spp <- function(obj,
                     n_species = dplyr::n_distinct(Taxon_name_entered)) |>
       dplyr::ungroup() |>
       dplyr::filter(n_sample_effort == 1 &
-                      n_species > 1) |>
-      dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2))) |>
-      # dplyr::filter(Measurement > 0) |>
-      dplyr::select(Best_guess_binomial) |>
-      dplyr::n_distinct()
+                      n_species > 1)
+    # n_spp <- obj$species |>
+    #   dplyr::filter(!is.na(Predominant_land_use) &
+    #                   Diversity_metric_type == "Abundance") |>
+    #   dplyr::group_by(SS) |>
+    #   dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
+    #                 # Taxon_name_entered v best_guess_binomial ??
+    #                 n_species = dplyr::n_distinct(Taxon_name_entered)) |>
+    #   dplyr::ungroup() |>
+    #   dplyr::filter(n_sample_effort == 1 &
+    #                   n_species > 1) |>
+    #   dplyr::filter(SSBS %in% unique(c(mod_df$SSBS1, mod_df$SSBS2))) |>
+    #   # dplyr::filter(Measurement > 0) |>
+    #   dplyr::select(Best_guess_binomial) |>
+    #   dplyr::n_distinct()
   }
+
+  # Make more general:
+  # filter df based on response...
+
+  # then calc N_spp/N_taxa as below
+  df <- df |>
+    dplyr::filter(SSBS %in% ssbs)
+     # &
+     #                !!dplyr::sym(measure_var) > 0)
+
+  out <- get_n_spp_taxa(df, measure_var)
+  return(out)
+  # n_spp <- df |>
+  #   dplyr::filter(Best_guess_binomial != '' &
+  #                 !is.na(Best_guess_binomial)) |>
+  #   dplyr::select(Best_guess_binomial) |>
+  #   dplyr::n_distinct()
+
+  # n_orig_taxa <- df |>
+  #   dplyr::filter(Taxon_name_entered != '' &
+  #                 !is.na(Taxon_name_entered)) |>
+  #   dplyr::select(Taxon_name_entered) |>
+  #   dplyr::n_distinct()
   
-  return(n_spp)
+
+  # return(n_spp)
   
 }
 

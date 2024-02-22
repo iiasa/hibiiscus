@@ -76,6 +76,8 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                       #'   The named vector of model performance metrics.
                       #' @param n_spp (`integer` or `list`)\cr
                       #'   Number of species contributing to the fitted model.
+                      #' @param n_taxa (`integer` or `list`)\cr
+                      #'   Number of orignal taxa names contributing to the fitted model.
                       #' @param n_sites (`integer` or `list`)\cr
                       #'   Number of sites contributing to the fitted model.
                       initialize = function(db_obj, # ??
@@ -85,6 +87,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                                             ci_type,
                                             metr_vec,
                                             n_spp,
+                                            n_taxa,
                                             n_sites
                                             # set_up_specs
                                             # spp df?
@@ -103,6 +106,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                           is.character(ci_type) || is.na(ci_type),
                           is.numeric(metr_vec),
                           is.numeric(n_spp) || ( is.list(n_spp) & all(unlist(lapply(n_spp, function(x){is.numeric(x)}))) ),
+                          is.numeric(n_taxa) || ( is.list(n_taxa) & all(unlist(lapply(n_taxa, function(x){is.numeric(x)}))) ),
                           is.numeric(n_sites) || ( is.list(n_sites) & all(unlist(lapply(n_sites, function(x){is.numeric(x)}))) )
                           )
                         
@@ -128,12 +132,14 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         if (inherits(db_obj, "HibDatabase")){
                           self$processing_flags <- db_obj$processing_flags
                           self$processing_flags$N_spp <- n_spp
+                          self$processing_flags$N_taxa <- n_taxa
                           self$processing_flags$N_sites <- n_sites
                         }
                         if (is.list(db_obj)){
                           self$processing_flags <- lapply(db_obj, function(x){x$processing_flags})
                           for (i in 1:length(db_obj)){
                             self$processing_flags[[i]]$N_spp <- n_spp[[i]]
+                            self$processing_flags[[i]]$N_taxa <- n_taxa[[i]]
                             self$processing_flags[[i]]$N_sites <- n_sites[[i]]
                           }
                         }
@@ -212,7 +218,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                           
                           filled_out
                         }
-                        # N spp/sites...
+                        # N spp/staxa/ites...
                         if (is.null(names(self$processing_flags))){
                           n_sites <- lapply(self$processing_flags, function(x){x$N_sites}) |>
                             unlist() |>
@@ -220,11 +226,16 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                           n_spp <- lapply(self$processing_flags, function(x){x$N_spp}) |>
                             unlist() |>
                             paste(collapse = ", ")
+                          n_taxa <- lapply(self$processing_flags, function(x){x$N_taxa}) |>
+                            unlist() |>
+                            paste(collapse = ", ")
                           stats <- list(number_sites = n_sites,
+                                        number_taxa = n_taxa,
                                         number_species = n_spp)
                         } else {
                           stats <- list(number_sites = self$processing_flags$N_sites,
-                                        number_species = self$processing_flags$N_spp)
+                                        number_species = self$processing_flags$N_spp,
+                                        number_taxa = self$processing_flags$N_taxa)
                         }
                         # stats <- list(number_sites = self$processing_flags$N_sites,
                         #               # number_lu = length( unique(self$data$Predominant_land_use) ),
@@ -243,6 +254,8 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                                  # "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
                                  # crayon::green(stats$number_lui), "\n",
                                  "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+                                 "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
+                                 # n_taxa
                                  "\n",
                                  "--------------------\n\n",
                                  "Summary of fitted model\n"

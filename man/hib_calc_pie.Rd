@@ -4,20 +4,23 @@
 \alias{hib_calc_pie}
 \title{Calculate PIE (Hulbert's (1971) Probability of Interspecific Encounter)}
 \usage{
-hib_calc_pie(obj)
+hib_calc_pie(spp_df, measure_var)
 }
 \arguments{
-\item{obj}{A \code{\link{HibDatabase}} object.}
+\item{spp_df}{The species data.frame from a \code{\link{HibDatabase}} object.}
+
+\item{measure_var}{Character, either 'Measurement' or 'Effort_corrected_measurement'
+generated within hib_calc_div_within().}
 }
 \description{
 This function calculates PIE per site.
 }
 \details{
-Expects a \code{\link{HibDatabase}} object.
+Expects the species data.frame from a \code{\link{HibDatabase}} object.
 }
 \examples{
 \dontrun{
-  obj <- hib_calc_pie(obj)
+  out <- hib_calc_pie(df, mv)
 } 
 }
 \keyword{database,}
