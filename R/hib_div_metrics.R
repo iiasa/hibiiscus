@@ -1,10 +1,9 @@
-# TODO: noRd for helpers...
 # TODO: recalculate arg - recalculates metrics specified - over-rules dropping of
 # previously calculated metrics - e.g if re-filtering DB...
 # TODO: check whether or not to use N_spp calculations per site/total 
 # Best_guess_binomial isn't always useful in PREDICTS - e.g. if only a higher 
 # taxonomic level is recorded...
-  
+# TODO: add unequalness 
 
 #' Calculate number of species (best guess) and original taxa names
 #' 
@@ -46,6 +45,7 @@ get_n_spp_taxa <- function(df, measure_var){
   return(list(N_spp = n_spp,
               N_taxa = n_orig_taxa))
 }
+
 
 #' Calculate total abundance
 #' 
@@ -737,6 +737,133 @@ hib_calc_pie <- function(spp_df, measure_var){
   return(out_tib)
 }
 
+
+
+# %%%%%
+#’ On the diversity-based measures of equalness and evenness
+#’
+#’ @param f numeric vector with absolute frequencies
+#’
+#’ @param q order of Hill numbers
+#’
+#’ @export
+#’ @references "H-R Gregorius, EM Gillet. ####.
+#’ On the diversity-based measures of equalness and evenness.
+#’ Methods in Ecology and Evolution,
+#’ https://doi.org/####.###"
+#’
+#’ @returns
+#’
+#’ @examples
+#’ f = c( 10, 20, 30, 40, 50, 60 )
+#’ q = 1
+#’ e( f, q )
+get_eq_ev = function(f, q = 1){
+  
+  # number of types with a positive frequency
+  n = length( f[f > 0] )
+  
+  # decreasing relative frequencies
+  f = f / sum( f )
+  f = sort(f, decreasing = TRUE)
+  
+  # relative step heights
+  h = ( f - c( f[-1], 0 ) ) / f[1]
+  h = h / sum( h )
+  
+  # diversity for frequencies (vf) and for step heights (vh)
+  # one single type
+  vf = 1.0 # diversity for frequency distribution
+  vh = 1.0 # diversity for step-height distribution
+  if ( n > 1 ){
+    if ( q == 1 ){
+      # effective number of Shannon entropy (Hill number of order 1)
+      vf = exp( -sum( f * log( f ) , na.rm = TRUE ) ) # Need to ignore 0 in f...
+      hp = h[h > 0] # only different heights contribute diversity
+      vh = exp( -sum( hp * log( hp ) ) )
+    } else{
+      # other Hill numbers
+      vf = (sum(f^q))^(1./(1.-q))
+      vh = (sum(h^q))^(1./(1.-q))
+    }
+  }
+  
+  # evenness
+  ef = 0.0 # measure of evenness
+  eh = 1.0 # measure of equalness
+  
+  if ( n > 1 ){
+    ef = (vf - 1.0) / (n - 1.0)
+    eh = (n - vh) / (n - 1.0)
+
+    if (ef < 0.0001){
+      ef = 0
+    }
+    if (eh < 0.0001){
+      eh = 0
+    }
+  }
+
+  # out <- data.frame(N = n,
+  #                   div_freq = vf,
+  #                   div_step = vh,
+  #                   ev = ef,
+  #                   eq = eh)
+  out <- eh
+  return(out)
+}
+
+
+#' Calculate equalness 
+#' 
+#' @description 
+#' This function calculates 'equalness' per site, following Gregorius and Gillet, 
+#' 2024.
+#' @details 
+#' Expects the species data.frame from a [`HibDatabase`] object.
+#' @param spp_df The species data.frame from a [`HibDatabase`] object.
+#' @param measure_var Character, either 'Measurement' or 'Effort_corrected_measurement'
+#' generated within hib_calc_div_within().
+#' @keywords database, processing
+#' @examples 
+#' \dontrun{
+#'   obj <- hib_calc_equalness(df, "Measurement")
+#' } 
+#' @noRd
+hib_calc_equalness <- function(spp_df, measure_var){
+  message(crayon::white("\tEqualness ...\n")) # Calculating within-site   
+  
+  # NOTE: could use evenness from Gregorious? - similar to mine, but - 1 in 
+  # numerator and denominator
+  
+  # Assertion checks
+  assertthat::assert_that(
+    assertthat::has_name(spp_df, "SS"), # obj$species
+    assertthat::has_name(spp_df, "SSBS"),
+    assertthat::has_name(spp_df, measure_var),
+    assertthat::has_name(spp_df, "Diversity_metric_type"),
+    assertthat::has_name(spp_df, "Taxon_name_entered"),
+    assertthat::has_name(spp_df, "Best_guess_binomial")
+  )
+  
+  # Filter to useable records
+  spp_df <- spp_df |>
+    dplyr::filter(Diversity_metric_type == "Abundance") 
+  
+  eq_df <- spp_df |>
+    dplyr::group_by(SSBS, SS) |>
+    dplyr::summarise(Equalness = get_eq_ev( !!dplyr::sym(measure_var)) ) |>
+    dplyr::ungroup()
+  
+  spp_info <- get_n_spp_taxa(spp_df, measure_var)
+  
+  out_tib <- dplyr::tibble(Metric = "Equalness",
+                           Data = list(eq_df),
+                           N_species_total = spp_info$N_spp,
+                           N_taxa_orig_total = spp_info$N_taxa) 
+  
+  return(out_tib)
+}
 # %%%%%
 
 
@@ -786,7 +913,7 @@ hib_calc_div_within <- function(obj, metrics){
                          "mean_abundance", "geometric_mean_abundance",
                          "shannon_diversity", "evenness",
                          "hillshannon_diversity", "hillsimpson_diversity",
-                         "pie"),
+                         "pie", "equalness"),
                        several.ok = T)
   metrics <- unique(metrics)
   # message(paste(metrics, collapse = ", "))
@@ -927,6 +1054,9 @@ hib_calc_div_within <- function(obj, metrics){
                              dplyr::select(SSBS, SS, HillSimpson_diversity)
                            return(tmp)
                          }
+                         if (metric == "equalness"){
+                           return(hib_calc_equalness(spp_df, mv))
+                         }
                          # %%%
                          }) |> dplyr::bind_rows()
   
@@ -952,13 +1082,8 @@ hib_calc_div_within <- function(obj, metrics){
 # %%%%%
 
 
-# TODO: similarity v within-site metrics should be stored separately..
-# diversity_within - focussed around SSBS
-# diversity_between - focussed around SSBS_1 v SSBS_2 - key cols - SSBS_contrast, SS, <Metric>
 
-
-
-# TODO: vegan R package can calc many "distance" metrics in an approach analagous
+# vegan R package can calc many "distance" metrics in an approach analagous
 # to the dist() function, may be much quicker, includes Horn-Morista...
 # Takes a site (rows) by spp (columns) matrix as input
 
@@ -982,7 +1107,6 @@ hib_calc_div_within <- function(obj, metrics){
 # all other metrics specifically include some sort of scaling
 
 
-# TODO:
 # %%%%%%%%%%%%%
 
 #' Calculate vegan-based dissimilarity metrics

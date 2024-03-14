@@ -934,7 +934,7 @@ hib_project_model <- function(mod_obj,
 #' } 
 #' @noRd
 terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars,
-                        rand_vars,
+                       rand_vars,
                        lme4_specs = NULL,
                        brms_specs = NULL){
                        # incl_obs_uncert = F,
@@ -1128,7 +1128,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                         })
       
       covars_not_in_rast <- covars_not_in_rast |>
-        dplyr::left_join(is_binary_layer) |>
+        dplyr::left_join(is_binary_layer, by = "covar_levs_rast") |>
         dplyr::group_by(covar_nm) |>
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
@@ -1172,8 +1172,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
                                    "data do not align with the model fitting data!\n\n",
                                    "Please fix this, see details below:\n")
                             )
-                )
-        
+                )      
   
         message(paste("Problematic layers: ",
                       paste(problem_layers, collapse = " ; "),
@@ -1182,6 +1181,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
         
         stop("Unknown covariate layer, see above.", call. = F)
         
+        # TODO: Could I just drop these layers? - e.g, area layer in globiom data
       }
       
       
@@ -1434,8 +1434,19 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     names(data_pred_rescaled) <- paste0("rescaled_", names(data_pred_rescaled))
   }
   
+
+  # TODO: if time in data (original), ensure it is in output
+  # Assume that the time for a data SPatRaster is the same for all layers - i.e a year
+  t_orig <- terra::time(data)[1]
+
   data <- c(data, data_pred, data_pred_rescaled)
+    
+  if (!is.na(t_orig)){
+    terra::time(data) <- rep(t_orig, terra::nlyr(data))  
+  }
+  
   # return SpatRaster or a list of SpatRasters
+
   return(data)
 }
 
@@ -2080,7 +2091,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
                                         })
       
       covars_not_in_rast <- covars_not_in_rast |>
-        dplyr::left_join(is_binary_layer) |>
+        dplyr::left_join(is_binary_layer, by = "covar_levs_rast") |>
         dplyr::group_by(covar_nm) |>
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       

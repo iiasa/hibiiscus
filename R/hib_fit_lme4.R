@@ -129,8 +129,8 @@ hib_fit_lme4 <- function(obj,
     n_sites <- calc_N_sites(mod_df)
   }
 
-  print(n_spp)
-  print(n_taxa)
+  # print(n_spp)
+  # print(n_taxa)
   # %%%
   mod_df <- prep_model_data(mod_df,
                             mod_covars,
