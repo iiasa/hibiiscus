@@ -1,17 +1,15 @@
-#' Template objects for brms model 
-#' 
-#' @title BRMS model object
+#' Template object for brms model 
+#' @title HibModelBRMS
 #' @description 
-#' This is the template object for a brms model class.
-#' It contains all the functions inherent to the model class. 
-#' Any functions in the package that operate on or interact with the model
-#' (summarising, plotting) need to be coded in here or provided separately.
-#' @keywords internal
+#' This is the template object for an [R6][R6::R6Class] brms model class.
+#' It contains functions for summarising and visualising the model results. 
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibModelBRMS-Class
+#' @export
 HibModelBRMS <- R6Class("HibModelBRMS",
                           # hib_brms_model 
-                          # TODO: @export
+                          
                           # Public data objects and functions
                           public = list(
                             #' @field dataset_name (`character`)\cr

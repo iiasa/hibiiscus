@@ -1,15 +1,14 @@
-#' Template objects for inla model 
-#' 
+#' Template object for INLA model 
+#' @title HibModelINLA
 #' @description 
-#' This is the template object for an inla model class.
-#' It contains all the functions inherent to the model class. 
-#' Any functions in the package that operate on or interact with the model
-#' (summarising, plotting) need to be coded in here or provided separately.
-#' @keywords internal
+#' This is the template object for an [R6][R6::R6Class] INLA model class.
+#' It contains functions for summarising and visualising the model results. 
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibModelINLA-Class
+#' @export
 HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
-                          # TODO: @export
+
                           # Public data objects and functions
                           public = list(
                             #' @field dataset_name (`character`)\cr
@@ -110,7 +109,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #'   If used, the mesh used in model fitting.
                             #' @param inla_mesh_settings (`list`)\cr
                             #'   A list of specifications for generating the mesh. 
-                            #' @field inla_mesh_source (`character` or `NULL`)\cr
+                            #' @param inla_mesh_source (`character` or `NULL`)\cr
                             #'   A description of the mesh source.
                             #' @param n_spp (`integer`)\cr
                             #'   Number of species contributing to the fitted model.

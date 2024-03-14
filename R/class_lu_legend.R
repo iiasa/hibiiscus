@@ -1,31 +1,15 @@
-# Yes, I am thinking of a class for example legend_lum that has internally a 
-# wrapper for recording the overall classes in terms of land-use (Primary_Forest, 
-# Secondary, ...) and management (low, medium, high). The key bit is to be able 
-# to link the sites (SSBS) with the entry of the legend.
-
-# So the package should have functions to
-# 
-# create a new legend and save it somewhere.
-# load an existing legend (PREDICTS) or a custom one.
-# The object could possibly also have functions to plot the distribution of LU 
-# per site / histograms.
-# 
-# The actual process of creating such a legend has to be done externally of course 
-# and the custom legends for example for LAMASUS do not need to be part of the 
-# package (in fact i would propose to store them externally).
-
-
 #' Template object for land-use legend 
-#' @title LU Legend object
+#' @title HibLULegend
 #' @description 
-#' This is the template object for a land-use legend that can be linked to a database
-#' object - contains info on unique land-use and management/intensity types
-#' @keywords internal
+#' This is the template object for an [R6][R6::R6Class] land-use legend that can 
+#' be linked to a [HibDatabase] object. The legend should contain information on 
+#' land-use and management/intensity types for sites with the database.
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibLULegend-Class
+#' @export
 HibLULegend <- R6Class("HibLULegend",
                     # "lu_legend"
-                    # TODO: @export
                     # Public data objects and functions
                     public = list(
                       #' @field last_update (`character()`)\cr

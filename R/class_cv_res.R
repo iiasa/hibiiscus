@@ -1,17 +1,14 @@
-#' Template object for cross-validation outputs
-#' 
+#' Template object for cross-validation results
+#' @title HibCV
 #' @description 
-#' This is the template object for a cross-validation class.
-#' It contains all the functions inherent to the cross-validation class. 
-#' Any functions in the package that operate on or interact with the class (summarising, plottting) 
-#' need to be coded in here or provided separately.
-#' @keywords internal
+#' This is the template object for a an [R6][R6::R6Class] class containing the 
+#' results of cross-validation.
+#' It contains functions for summarising and visualising the results.
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibCV-Class
+#' @export
 HibCV <- R6Class("HibCV",
-                      # "HibCV"
-                      # TODO: @export
-
                       # Public data objects and functions
                       public = list(
 
@@ -24,7 +21,7 @@ HibCV <- R6Class("HibCV",
                         #' "HibModelINLA", "HibModelBRMS".
                         model_type = NULL,
                         
-                        #' @field model_type (`list`)\cr
+                        #' @field original_model_obj (`list`)\cr
                         #' Contains a list of core model information
                         original_model_obj = NULL, # All model info, except data, and functions
                         

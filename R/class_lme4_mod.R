@@ -1,16 +1,13 @@
-#' Template objects for lme4 model 
-#' 
-#' @title LME4 model object
+#' Template object for lme4 model 
+#' @title HibModelLME4
 #' @description 
-#' This is the template object for an lme4 model class.
-#' It contains all the functions inherent to the model class. 
-#' Any functions in the package that operate on or interact with the model
-#' (summarising, plotting) need to be coded in here or provided separately.
-#' @keywords internal
+#' This is the template object for an [R6][R6::R6Class] lme4 model class.
+#' It contains functions for summarising and visualising the model results. 
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibModelLME4-Class
+#' @export
 HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
-                    # TODO: @export
                     
                     # Public data objects and functions
                     public = list(

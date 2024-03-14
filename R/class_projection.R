@@ -2,17 +2,18 @@
 # Sensible in terms of reproducibility...
 # but seems inefficient in terms of memory...
 
-#' Template object for a projection object
-#' 
+#' Template object for projection results
+#' @title HibProjection
 #' @description 
-#' This is the template object for a projection object - this is the result of 
-#' combining a fitted hib_model with data of interest to make a projection of 
-#' biodiversity responses
-#' @keywords internal
+#' This is the template object for a an [R6][R6::R6Class] class containing the 
+#' results of projecting a fitted HibModel based on data of interest.
+#' It contains functions for summarising and visualising the results.
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibProjection-Class
+#' @export
 HibProjection <- R6Class("HibProjection",
-  # TODO: @export
+
                               # hib_mod_projection "HibProjection"
                               # Public data objects and functions
                               public = list(
@@ -21,20 +22,20 @@ HibProjection <- R6Class("HibProjection",
                                 #' Identifies the most recent update to the object (YYYY-MM-DD).
                                 last_update = NULL,
                                 
-                                #' @field model_type (`character`)\cr
-                                #' Identifies the type of model; one of "HibModelLME4", 
-                                #' "HibModelINLA", "HibModelBRMS".
+                                #' @field model (`R6`)\cr
+                                #' The model used to project, one of [HibModelLME4], 
+                                #' [HibModelINLA], [HibModelBRMS].
                                 model = NULL, # should this be a whole model class??
                                 
-                                #' @param projection (`data.frame`, `SpatRaster`, or `list`)\cr
+                                #' @field projection (`data.frame`, `SpatRaster`, or `list`)\cr
                                 #' The results of model projection.
                                 projection = NULL,
                                 
-                                #' @param projection_specs (`list`)\cr
+                                #' @field projection_specs (`list`)\cr
                                 #' List of specifications used for modelling.
                                 projection_specs = NULL,
                                 
-                                #' @param aoa (`list`)\cr
+                                #' @field aoa (`list`)\cr
                                 #' Results of Area-of-Applicability calculations.
                                 aoa = NULL,
                                 
@@ -48,6 +49,9 @@ HibProjection <- R6Class("HibProjection",
                                 #'   The model object used in cross-validation.
                                 #' @param proj (`data.frame`, `SpatRaster`, or `list`)\cr
                                 #'   The results of model projection.
+                                #' @param backtransform (`function` or `NULL`)\cr
+                                #'   Describes the backtransformation specified when
+                                #'   making a model projection.
                                 #' @param rescale_pred (`logical`)\cr
                                 #'   Describes whether projected values are rescaled
                                 #'   relative to the baseline land-use class.
@@ -123,15 +127,15 @@ HibProjection <- R6Class("HibProjection",
                                   #                               filtering_steps = list())
                                 },
                                 # Self check function that everything is in order
-                                checkself = function(){
-                                  # ------ #
-                                  # Security checks - recheck
-                                  # assertthat::assert_that(
-                                  # )
-                                  # assertthat::assert_that(
-                                  # )
-                                  # invisible()
-                                },
+                                # checkself = function(){
+                                #   # ------ #
+                                #   # Security checks - recheck
+                                #   # assertthat::assert_that(
+                                #   # )
+                                #   # assertthat::assert_that(
+                                #   # )
+                                #   # invisible()
+                                # },
                                 
                                 #' @description
                                 #' Base printout function presents core information about the 

@@ -1,15 +1,14 @@
 #' Template objects for databases 
-#' @title HibDatabase Object
+#' @title HibDatabase
 #' @description 
-#' This is the template object for a database containing PREDICTS or PREDICTS-like data.
-#' It contains all the functions inherent to the database. Any functions in the package that is 
-#' operating or interacting with the data (preparation, linking, modelling) need to be coded in here 
-#' or provided separately.
-#' @keywords internal
+#' This is the template object for an [R6][R6::R6Class] database containing PREDICTS 
+#' or PREDICTS-like data.
+#' Functions are provided to prepare the data for modelling and visualise the data.
+#' @keywords classes
 #' @import R6
-#' @noRd
+#' @rdname HibDatabase-Class
+#' @export
 HibDatabase <- R6Class("HibDatabase",
-                  # TODO: @export
                   # Public data objects and functions
                   public = list(
                     #' @field dataset_name (`character()`)\cr
