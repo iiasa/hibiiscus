@@ -16,7 +16,7 @@ hib_cv_model(
 )
 }
 \arguments{
-\item{mod_obj}{A \code{\link{HibModelXXXX}} object.}
+\item{mod_obj}{One of; \code{\link{HibModelLME4}}, \code{\link{HibModelINLA}} or \code{\link{HibModelBRMS}}.}
 
 \item{db_obj}{A \code{\link{HibDatabase}} object, or, if modelling used multiple data-
 sources, a list of database objects}
@@ -52,7 +52,7 @@ This function re-fits models on different subsets of the data, so that subsequen
 evaluation of model performance can take place.
 }
 \details{
-Expects a hib model object...
+Expects a HibModel.
 }
 \examples{
 \dontrun{

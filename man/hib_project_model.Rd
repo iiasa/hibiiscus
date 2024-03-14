@@ -17,7 +17,7 @@ hib_project_model(
 )
 }
 \arguments{
-\item{mod_obj}{A \code{\link{HibModelXXXX}} object - either lme4, inla, or brms.}
+\item{mod_obj}{One of; \code{\link{HibModelLME4}}, \code{\link{HibModelINLA}} or \code{\link{HibModelBRMS}}.}
 
 \item{data}{Either a dataframe-like object or a raster stack that can be used
 to project onto - should contain x and y columns if a dataframe.}
@@ -59,7 +59,7 @@ This function projects a fitted hib model using the supplied model object and
 data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 }
 \details{
-Expects a \code{\link{HibModelXXXX}} object.
+Expects a HibModel object and data for use in a projection.
 }
 \examples{
 \dontrun{

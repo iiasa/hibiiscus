@@ -8,7 +8,7 @@ the data being used to make projections}
 hib_calc_aoa(mod_obj, cv_obj, proj_data)
 }
 \arguments{
-\item{mod_obj}{A \code{\link{HibModelXXXX}} object.}
+\item{mod_obj}{One of; \code{\link{HibModelLME4}}, \code{\link{HibModelINLA}} or \code{\link{HibModelBRMS}}.}
 
 \item{cv_obj}{A \code{\link{HibCV}} object, based on the above mod_obj.}
 
@@ -20,7 +20,7 @@ This function estimates an AOA, for each of the cross-validation approaches,
 following the methods of Meyer and Pebesma 2021
 }
 \details{
-Expects a \code{\link{HibModelXXXX}} object, a \code{\link{HibCV}} object, and data used to
+Expects a HibModel object, a \code{\link{HibCV}} object, and data used to
 make a projection.
 }
 \examples{

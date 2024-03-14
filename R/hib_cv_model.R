@@ -5,8 +5,8 @@
 #' This function re-fits models on different subsets of the data, so that subsequent 
 #' evaluation of model performance can take place.
 #' @details 
-#' Expects a hib model object...
-#' @param mod_obj A [`HibModelXXXX`] object.
+#' Expects a HibModel.
+#' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
 #' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
@@ -425,12 +425,13 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
 #' This function re-fits the model on different subsets of the data, so that subsequent 
 #' evaluation of model performance can take place.
 #' @details 
-#' Expects a HibModelXXXX object.
-#' @param mod_obj A [`HibModelXXXX`] object.
+#' Expects a HibModel object.
+#' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
 #' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
 #' @param fold_type A [`character`] indicating the type of cross-validation; one
-#' of: ..., <spatial_options>, ..., "Custom" - ?"Random-5", "Random-10"?
+#' of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", "SSBS",
+#' "Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom".
 #' @param fold_col A [`character`] indicating the column in the model data to 
 #' use to define cross-validation folds
 #' @param random_seed A [`numeric`] indicating the random seed used to define
@@ -1696,7 +1697,7 @@ get_rand_fold_id <- function(n_obs, n_folds){
 #' This function returns a list of model-specific information
 #' @details 
 #' Expects numeric inputs
-#' @param mod_obj A [`HibModelXXXX`] object.
+#' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
 #' @param re_form A [`list`] indicating the random effects variables to be
 #' included in the cross-validation/insample predicitons.
 #' @param use_original_mesh A logical value indicating whether cross-validation

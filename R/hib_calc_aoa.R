@@ -5,9 +5,9 @@
 #' This function estimates an AOA, for each of the cross-validation approaches, 
 #' following the methods of Meyer and Pebesma 2021
 #' @details
-#' Expects a [`HibModelXXXX`] object, a [`HibCV`] object, and data used to 
+#' Expects a HibModel object, a [`HibCV`] object, and data used to 
 #' make a projection.
-#' @param mod_obj A [`HibModelXXXX`] object.
+#' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
 #' @param cv_obj A [`HibCV`] object, based on the above mod_obj.
 #' @param proj_data A [`data.frame`], [`SpatRaster`] or list of [`SpatRaster`], 
 #' containing covariates for projecting the model.

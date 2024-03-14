@@ -4,8 +4,8 @@
 #' This function projects a fitted hib model using the supplied model object and
 #' data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
 #' @details 
-#' Expects a [`HibModelXXXX`] object.
-#' @param mod_obj A [`HibModelXXXX`] object - either lme4, inla, or brms.
+#' Expects a HibModel object and data for use in a projection.
+#' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
 #' @param data Either a dataframe-like object or a raster stack that can be used
 #' to project onto - should contain x and y columns if a dataframe.
 #' @param backtransform A [`function`] that will backtransform the model response
@@ -911,7 +911,7 @@ hib_project_model <- function(mod_obj,
 #' @details 
 #' Expects a [`SpatRaster`].
 #' @param data A [`SpatRaster`] that can be used to project a model.
-#' @param obj A [`HibModelXXXX`] object - either lme4 or brms
+#' @param obj One of; [`HibModelLME4`] or [`HibModelBRMS`].
 #' @param backtransform A [`function`] that will backtransform the model response
 #' to the scale of the original variable, e.g., exp() as the inverse of log()
 #' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
