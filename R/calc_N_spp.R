@@ -51,7 +51,7 @@ calc_N_spp <- function(obj,
   if (mod_resp %in% c("Total_abundance", "Rescaled_total_abundance", 
                       "Simpson_diversity", 
                       "Mean_abundance", "Geometric_mean_abundance",
-                      # "Rescaled_mean_abundance", "Rescaled_geometric_mean_abundance",
+                      "Rescaled_mean_abundance", "Rescaled_geometric_mean_abundance",
                       "Shannon_diversity",
                       "HillShannon_diversity", "HillSimpson_diversity",
                       "PIE", "sPIE", "Evenness")){

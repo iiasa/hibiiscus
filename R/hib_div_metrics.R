@@ -427,6 +427,7 @@ hib_calc_rsr <- function(spp_df, measure_var){
     comm <- rep(letters[1:length(abund_distr)], abund_distr)
     samp <- sample(comm, N)
     sr <- length(table(samp))
+    # <- length(unique(samp)) # more efficient?
     return(sr)
   }
   
@@ -2030,7 +2031,8 @@ hib_calc_div_between <- function(obj,
   if (rel_abund == T){
     veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
   }
-
+  # TO CHECK
+  # If rel_abund, and metric == "gower", is the Theoretical_max 1
 
   # non-veg
   # c("hypervolume", "cosine", "theta",

@@ -1520,6 +1520,16 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      me = mean(error, na.rm = T),
 
                      mede = stats::median(error, na.rm = T),
+                     
+                     # TODO:
+                     # relative error = sum(error, na.rm = T) / sum(obs - obs_mean, na.rm = T)
+                     # relative mean error = mean(error, na.rm = T) / mean(obs - obs_mean, na.rm = T)
+                     
+                     # relative median error = stats::median(error, na.rm = T) / stats::median(obs - obs_mean, na.rm = T)
+                     
+                     # mean relative error = mean(error / (obs - obs_mean), na.rm = T)
+                     # median relative error = stats::median(error / (obs - obs_mean), na.rm = T)
+
                      mae = mean(abs(error), na.rm = T),
                      medae = stats::median(abs(error), na.rm = T),
                      
