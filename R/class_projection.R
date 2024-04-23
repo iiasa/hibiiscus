@@ -52,9 +52,12 @@ HibProjection <- R6Class("HibProjection",
                                 #' @param backtransform (`function` or `NULL`)\cr
                                 #'   Describes the backtransformation specified when
                                 #'   making a model projection.
-                                #' @param rescale_pred (`logical`)\cr
-                                #'   Describes whether projected values are rescaled
+                                # @param rescale_pred (`logical`)\cr
+                                #   Describes whether projected values are rescaled
                                 #'   relative to the baseline land-use class.
+                                # TODO: update to rescale_specs - 
+                                #' @param rescale_specs (`list`)\cr
+                                #'   List of specifications used for rescaling predictions.
                                 #' @param lme4_specs (`list`)\cr
                                 #'   List of specifications used for lme4 models.
                                 #' @param inla_specs (`list`)\cr
@@ -67,7 +70,7 @@ HibProjection <- R6Class("HibProjection",
                                 initialize = function(obj,
                                                       proj,
                                                       backtransform,
-                                                      rescale_pred,
+                                                      rescale_specs,
                                                       lme4_specs,
                                                       inla_specs,
                                                       brms_specs,
@@ -78,8 +81,9 @@ HibProjection <- R6Class("HibProjection",
                                     inherits(obj, "HibModelLME4") || inherits(obj, "HibModelINLA") || inherits(obj, "HibModelBRMS"), # obj is a hib model
                                     is.data.frame(proj) || inherits(proj, "SpatRaster") || (is.list(proj) & !is.data.frame(proj)), # or a list of SpatRasters
                                     is.function(backtransform) || is.null(backtransform),
-                                    is.logical(rescale_pred),
-                                    is.list(lme4_specs) || is.null(lme4_specs),
+                                    # is.logical(rescale_pred),
+                                    is.list(rescale_specs) || is.null(rescale_specs),
+                                    is.list(lme4_specs) || is.null(lme4_specs), 
                                     is.list(inla_specs) || is.null(inla_specs),
                                     is.list(brms_specs) || is.null(brms_specs),
                                     is.list(aoa_res) || is.null(aoa_res)
@@ -94,7 +98,10 @@ HibProjection <- R6Class("HibProjection",
                                   self$model <- obj
                                   self$projection <- proj
                                   proj_specs <- list("Backransformation_function" = backtransform,
-                                                     "Rescaled_prediction" = rescale_pred)
+                                                     "Rescaled_prediction" = rescale_specs$rescale,
+                                                     "Rescaled_baseline_covars"= rescale_specs$baseline_covar,
+                                                     "Rescaled_baseline_df"= rescale_specs$baseline_df,
+                                                     "Rescaled_baseline_re_form"= rescale_specs$baseline_re_form)
                                   
                                   if (inherits(obj, "HibModelLME4")){
                                     self$projection_specs <- c(proj_specs, lme4_specs)
@@ -508,6 +515,63 @@ HibProjection <- R6Class("HibProjection",
                                            call. = F)
                                     }
                                     
+                                    # Check lat/lon cols
+                                    # Convert to x/y
+                                    # %%%%
+                                    coord_x_col <- c("longitude",
+                                                     "longitude_midpoint", 
+                                                     "x",
+                                                     "long", 
+                                                     "lon")
+                                    coord_y_col <- c("latiitude",
+                                                     "latitude_midpoint", 
+                                                     "y",
+                                                     "lat")
+                                    
+                                    coord_x_col <- colnames(proj)[tolower(colnames(proj)) %in% coord_x_col]
+                                    coord_y_col <- colnames(proj)[tolower(colnames(proj)) %in% coord_y_col]
+
+                                    if (length(coord_x_col) == 0 |
+                                        length(coord_y_col) == 0){
+
+                                      coord_vars <- c("x", "y")
+                                      missing_coords <- coord_vars[!coord_vars %in% colnames(proj)]
+
+                                      
+                                      # stop("Variable/s required for plotting are missing, see above for details.",
+                                      #      call. = F)
+
+                                      # if "map" in type - stop
+                                      # if aoa_mask, stop
+                                      if (type %in% c("response-map", "uncertainty-map", "bivariate-map") |
+                                          aoa_mask){
+                                        message(crayon::red(paste("\nCoordinate/s missing:",
+                                                                paste(missing_coords, collapse = " ; "),
+                                                                "\n")))
+                                        stop("Coordinate/s required for plotting are missing, see above for details.",
+                                           call. = F)
+                                      }
+
+                                      # message(crayon::yellow(paste("\nWarning: Coordinate/s missing:",
+                                      #                             paste(missing_vars, collapse = " ; "),
+                                      #                             "\n")))
+
+                                    }
+
+                                    if (length(coord_x_col) == 1){
+                                      if (coord_x_col != "x"){
+                                        proj$x <- proj[, coord_x_col]
+                                      }
+                                    } 
+                                    
+                                    if (length(coord_y_col) == 1){
+                                      if (coord_y_col != "y"){
+                                        proj$y <- proj[, coord_y_col]
+                                      }
+                                    } 
+
+                                    # %%%%
+
                                     vars__ <- c("x", "y", "Year", vars_)
                                     vars__ <- vars__[vars__ %in% colnames(proj)]
                                     proj <- proj[vars__]

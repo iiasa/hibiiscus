@@ -504,8 +504,10 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                 # %%%%%
                                 # If inla mesh is 2d...
                                 if (self$inla_mesh_settings$mesh_dim == "2d"){
+                                  # fmesher::fm_pixels() to replace inlabru::pixels
                                   pix <- inlabru::pixels(self$inla_mesh)
-                                  proj <- INLA::inla.mesh.projector(self$inla_mesh, coordinates(pix))
+                                  # TODO: conv sp:: to sf::st_coordinates... - need to convert pix first... st_as_sf() ?
+                                  proj <- INLA::inla.mesh.projector(self$inla_mesh, sp::coordinates(pix))
                                   pix$z <- INLA::inla.mesh.project(proj, self$model$summary.random$s$mean)
                                   
                                   plt <- ggplot2::ggplot() + 

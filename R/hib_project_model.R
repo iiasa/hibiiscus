@@ -10,8 +10,16 @@
 #' to project onto - should contain x and y columns if a dataframe.
 #' @param backtransform A [`function`] that will backtransform the model response
 #' to the scale of the original variable, e.g., exp() as the inverse of log()
-#' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
-#' to the model intercept (assumes intercept is for baseline environment/LU)
+#' @param rescale_specs A [`list`] containing details relevant to rescaling projections.
+#' Specifically, named items should consist of 'rescale' ([`logical`]), 
+#' 'baseline_covar' ([`data.frame`], or NULL), 'baseline_re_form' ([`formula`], [`NA`], or [`NULL`]).
+#' In combination, these arguments determine if predictions will be rescaled or not 
+#' (based on value of $rescale), the covariate values used to generate the baseline
+#' against which other predictions are rescaled ($baseline_covar), and whether/how
+#' random effects should be incorporated in the generation of this baseline ($baseline_re_form, 
+#' see lme4/inla/brms_specs).
+#' If $rescale == TRUE, but no baseline_covar is provided, the intercept of the 
+#' model will be used as the baseline value.
 #' @param lme4_specs A [`list`] containing details relevant to projecting an lme4-style
 #' model. Specifically, named items should consist of 'bootstrap' ([`logical`]) and 
 #' 'n_boot' ([`numeric`]), indicating whether bootstrapped prediction intervals should be 
@@ -42,11 +50,7 @@
 hib_project_model <- function(mod_obj, 
                             data,
                             backtransform = NULL,
-                            rescale_pred = FALSE,
-                            # incl_obs_uncert = F,
-                            # lme4_boot = T,
-                            # n_boot = 100
-                            # TODO: collate model type arguments into: - fix argument documentation
+                            rescale_specs = NULL, # list(rescale = T/F, baseline_covar = df, baseline_re_form = formula)
                             lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, re_form = NA),
                             inla_specs = NULL, #list(re_form = x, link_inverse = function(y){exp(y)})
                             brms_specs = NULL, #list(incl_obs_uncert = F, re_form = as lme4...)
@@ -55,16 +59,20 @@ hib_project_model <- function(mod_obj,
                             cv_obj = NULL
                             ){
   # hib_mod_project
+
+  # TODO: 
+  # improve rescaling approach - supply a df with baseline levels, if not, use intercept...
+
   # Assertions 
-  # is data a df/tibble/ raster/stack 
+
   assertthat::assert_that(
     inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
-    is.logical(rescale_pred),
-    # is.logical(incl_obs_uncert),
-    # is.logical(lme4_boot),
-    # is.numeric(n_boot) || is.null(n_boot)
+    # is.logical(rescale_pred),
+    
+    is.list(rescale_specs) || is.null(rescale_specs),
+
     is.list(lme4_specs) || is.null(lme4_specs),
     is.list(inla_specs) || is.null(inla_specs),
     is.list(brms_specs) || is.null(brms_specs),
@@ -85,6 +93,75 @@ hib_project_model <- function(mod_obj,
     aoa_res <- NULL
   }
   # %%%%%
+
+  # Globally, set base_val to NULL, if rescale_pred = F
+
+  # Check rescale_specs
+  if (is.list(rescale_specs)){
+    # Check rescale - logical
+    if ("rescale" %in% names(rescale_specs)){
+      # NA, NULL or Logical
+      assertthat::assert_that(
+        is.na(rescale_specs$rescale) || is.null(rescale_specs$rescale) ||
+        is.logical(rescale_specs$rescale)
+      )
+      if (is.na(rescale_specs$rescale) | is.null(rescale_specs$rescale)){
+        rescale_specs$rescale <- FALSE
+      }
+    }
+
+    if (!"rescale" %in% names(rescale_specs)){
+      rescale_specs$rescale <- FALSE
+    }
+
+    if (rescale_specs$rescale == FALSE){
+      rescale_specs$baseline_covar <- NULL
+      rescale_specs$baseline_re_form <- NA
+    }
+
+    # Check baseline covar - df or null
+    if ("baseline_covar" %in% names(rescale_specs)){
+      assertthat::assert_that(
+        is.null(rescale_specs$baseline_covar) || is.data.frame(rescale_specs$baseline_covar)
+      )
+      if (is.data.frame(rescale_specs$baseline_covar)){
+        assertthat::assert_that(
+          nrow(rescale_specs$baseline_covar) == 1
+        )
+      }
+    }
+    if (!"baseline_covar" %in% names(rescale_specs)){
+      message(crayon::yellow("Warning: baseline_covar missing from rescale_specs, using default value of NULL. Model intercept will be used as the baseline.\n"))
+      rescale_specs$baseline_covar <- NULL
+    }
+
+    # Check baseline_re_form - form, na or null
+    if ("baseline_re_form" %in% names(rescale_specs)){
+      assertthat::assert_that(
+        is.na(c(rescale_specs$baseline_re_form)) || 
+        is.null(rescale_specs$baseline_re_form) || 
+        inherits(rescale_specs$baseline_re_form, "formula")
+      )
+    }
+    if (!"baseline_re_form" %in% names(rescale_specs)){
+      message(crayon::yellow("Warning: baseline_re_form missing from rescale_specs, using default value of NA.\n"))
+      rescale_specs$baseline_re_form <- NA
+    }
+  }
+
+  if (is.null(rescale_specs)){
+    message(crayon::yellow(paste0("Warning: rescale_specs missing, using default values:\n",
+                                    "\trescale = FALSE,\n",
+                                    "\tbaseline_covar = NULL,\n",
+                                    "\tbaseline_re_form = NA",
+                                    " ...\n")))
+    rescale_specs <- list(rescale = FALSE, baseline_covar = NULL, baseline_re_form = NA) #
+  }
+
+  if (rescale_specs$rescale == FALSE){
+    # base_val <- NULL
+    baseline_val <- NULL
+  }
 
 
   # Check type of model
@@ -147,36 +224,6 @@ hib_project_model <- function(mod_obj,
     
     # print(lme4_specs)
     # %%%%%
-    
-    # Get baseline value for optional rescaling
-    
-    # %%%%
-    # get model intercept
-    if ("(Intercept)" %in% mod_obj$fixedef_coefficients$Coefficient_name){
-      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
-    } else {
-      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
-    }
-    # %%%%
-    # get model intercept
-    # base_val <- obj$fixedef_coefficients$Coefficient_value[obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
-    
-    # TODO: if using a non-gaussian model, this casues issues!! - e.g. species_richness
-    # intercept is on log scale, but species richness is on linear...
-    # rescaling doens't work... - need to get link func from model and backtrans intercept?
-    # DO this above backtransform...
-    # hib_lme4_sr$model@resp$family$linkinv()
-    if (inherits(mod_obj$model, "glmerMod")){
-      base_val <- mod_obj$model@resp$family$linkinv(base_val)
-    }
-
-    # if backtrans - backrans intercept to get baseline val
-    if (!is.null(backtransform)){
-      base_val <- backtransform(base_val)
-    }
-
-
-
 
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
@@ -185,12 +232,79 @@ hib_project_model <- function(mod_obj,
     rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     
+    # TOCHECK - what about random slopes... - how are these presented in model output?
+
     # TODO: lme4_spec checks
     # lme4_specs - if null, set to default (F, NA)
     # otherwise, assert that bootstrap is logical and n_boot is numeric
     # then just pass checked lme4_specs to functions - terra_proj...
     # terra_proj_lme4_mod...
     
+
+    # %%%%%
+    # Get baseline value for optional rescaling
+    # %%%%%
+
+    # Only needed if rescale_pred == T
+    if (rescale_specs$rescale){
+      if (is.null(rescale_specs$baseline_covar)){
+        # get model intercept
+        if ("(Intercept)" %in% mod_obj$fixedef_coefficients$Coefficient_name){
+          baseline_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "(Intercept)"]
+        } else {
+          baseline_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
+        }
+        # %%%%
+        if (inherits(mod_obj$model, "glmerMod")){
+          baseline_val <- mod_obj$model@resp$family$linkinv(baseline_val)
+        }
+
+        # if backtrans - backrans intercept to get baseline val
+        if (!is.null(backtransform)){
+          baseline_val <- backtransform(baseline_val)
+        }
+
+        baseline_df <- data.frame(Intercept = baseline_val)
+      }  
+
+      if (is.data.frame(rescale_specs$baseline_covar)){
+        # Check for all fixef and necessary ranefs...
+        assertthat::assert_that(all(fix_vars %in% colnames(rescale_specs$baseline_covar)),
+                                msg = "Fixed effect variables missing from baseline covariate data.")
+
+        # for categorical vars, ensure levels in projection input are within
+        # model fitting data
+
+        check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, fix_vars)
+
+        # need to check any random vars in baseline
+        if (inherits(rescale_specs$baseline_re_form, "formula")){
+          re_form_vars_baseline <- all.vars(rescale_specs$baseline_re_form)
+          # drop any fix effs
+          re_form_vars_baseline <- re_form_vars_baseline[!re_form_vars_baseline %in% fix_vars]
+
+          assertthat::assert_that(all(re_form_vars_baseline %in% rand_vars),
+                                msg = "Specified re_form structure for baseline prediction contains variables not in the original model.")
+          
+          check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, re_form_vars_baseline)
+        }
+
+        baseline_val <- stats::predict(mod_obj$model,
+                                         rescale_specs$baseline_covar,
+                                         type = "response", # lme4_specs$type,
+                                         re.form = rescale_specs$baseline_re_form)
+        if (!is.null(backtransform)){
+          baseline_val <- backtransform(baseline_val)
+        }
+
+        baseline_df <- rescale_specs$baseline_covar
+        baseline_df$prediction_mean <- baseline_val
+      }
+    }
+
+    # %%%%%
+
+
     # Project for possible data types
     # Dataframe 
     if (is.data.frame(data)){
@@ -208,6 +322,9 @@ hib_project_model <- function(mod_obj,
       if (inherits(lme4_specs$re_form, "formula")){
         # print("Checking random variables")
         re_form_vars <- all.vars(lme4_specs$re_form)
+        # Drop fixed effects - e.g. from a random slope
+        re_form_vars <- re_form_vars[!re_form_vars %in% fix_vars]
+
         assertthat::assert_that(all(re_form_vars %in% rand_vars), 
                                 msg = "Specified re_form structure contains variables not in the original model.")
         # all.vars(lme4_specs$re_form[[2]])
@@ -254,9 +371,9 @@ hib_project_model <- function(mod_obj,
         pred_df <- backtransform(pred_df)
       }
       pred_rescaled_df <- NULL
-      if (rescale_pred){
+      if (rescale_specs$rescale){
         # divide predictions by baseline val
-        pred_rescaled_df <- pred_df / base_val
+        pred_rescaled_df <- pred_df / baseline_val #base_val
         colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
       }
       
@@ -267,8 +384,9 @@ hib_project_model <- function(mod_obj,
     # Single raster object
     if (inherits(data, "SpatRaster")){
       # print("running terra proj")
-      data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
-                          rand_vars,
+      data <- terra_proj(data, mod_obj, backtransform, 
+                         rescale_specs$rescale, baseline_val, # rescale_pred, base_val
+                         fix_vars, rand_vars,
                          lme4_specs = lme4_specs)
     }
     # List of raster objects
@@ -279,8 +397,8 @@ hib_project_model <- function(mod_obj,
                          terra_proj,
                          obj = mod_obj, 
                          backtransform = backtransform, 
-                         rescale_pred = rescale_pred, 
-                         base_val = base_val, 
+                         rescale_pred = rescale_specs$rescale, #rescale_pred, 
+                         base_val = baseline_val, #base_val, 
                          fix_vars = fix_vars,
                          rand_vars = rand_vars,
                          lme4_specs = lme4_specs)
@@ -345,31 +463,6 @@ hib_project_model <- function(mod_obj,
     # %%%
 
 
-
-    # Get baseline value for optional rescaling
-    # get model intercept
-    int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
-    # TODO: What if another covar also contains intercept...
-    if (length(int_id) > 1){
-      message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
-      int_id <- int_id[1]
-    }
-    # If no explicit intercept, set as 1st value...
-    if (length(int_id) == 0){
-      int_id <- 1
-    }
-    base_val <- mod_obj$model$summary.fixed$mean[int_id]
-
-    if (is.function(inla_specs$link_inverse)){
-      base_val <- inla_specs$link_inverse(base_val)
-    }
-
-    # if backtrans - backrans intercept to get baseline val
-    if (!is.null(backtransform)){
-      base_val <- backtransform(base_val)
-    }
-    
-    
     # Get some basic info on model covars
     # all_covars <- all.vars(formula(delete.response(terms(obj$inla_fitted_formula))))
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$full))))
@@ -392,19 +485,118 @@ hib_project_model <- function(mod_obj,
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
     # Get random vars
+    # names(mod_obj$model$summary.radom) 
     rand_vars <- all.vars(mod_obj$user_formula$random)
-    
+    # TODO: drop any vars that are in fix vars... (i.e random slopes..)
+    rand_vars <- rand_vars[!rand_vars %in% fix_vars]
     # And re_form_vars
     re_form_vars <- NA
     if (inherits(inla_specs$re_form, "formula")){
       # print("Checking random variables")
       re_form_vars <- all.vars(inla_specs$re_form)
+      # TODO: drop any vars that are in fix vars... (i.e random slopes..)
+      re_form_vars <- re_form_vars[!re_form_vars %in% fix_vars]
+      
       assertthat::assert_that(all(re_form_vars %in% rand_vars),
                               msg = "Specified re_form structure contains variables not in the original model.")
     }
     if (is.null(inla_specs$re_form)){
       re_form_vars <- rand_vars
     }
+
+
+    # Get baseline value for optional rescaling
+    # %%%%%
+    # If rescale_specs$rescale
+    # if rescale_specs$baseline_covar is not a df,
+    #  Use intercept
+    # Otherwise, check data, as in lme4...
+
+    if (rescale_specs$rescale){
+      if (is.null(rescale_specs$baseline_covar)){
+        # get model intercept
+        int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
+        # TODO: What if another covar also contains intercept...
+        if (length(int_id) > 1){
+          message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
+          int_id <- int_id[1]
+        }
+        # If no explicit intercept, set as 1st value...
+        if (length(int_id) == 0){
+          int_id <- 1
+        }
+        baseline_val <- mod_obj$model$summary.fixed$mean[int_id]
+
+        # if backtrans - backrans intercept to get baseline val
+        if (!is.null(backtransform)){
+          baseline_val <- backtransform(baseline_val)
+        }
+
+        baseline_df <- data.frame(Intercept = baseline_val)
+      }  
+
+      if (is.data.frame(rescale_specs$baseline_covar)){
+        # Check for all fixef and necessary ranefs...
+        assertthat::assert_that(all(fix_vars %in% colnames(rescale_specs$baseline_covar)),
+                                msg = "Fixed effect variables missing from baseline covariate data.")
+
+        # for categorical vars, ensure levels in projection input are within
+        # model fitting data
+
+        check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, fix_vars)
+
+        # need to check any random vars in baseline
+        if (inherits(rescale_specs$baseline_re_form, "formula")){
+          re_form_vars_baseline <- all.vars(rescale_specs$baseline_re_form)
+          # drop any fix effs
+          re_form_vars_baseline <- re_form_vars_baseline[!re_form_vars_baseline %in% fix_vars]
+
+          assertthat::assert_that(all(re_form_vars_baseline %in% rand_vars),
+                                  msg = "Specified re_form structure for baseline prediction contains variables not in the original model.")
+          
+          check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, re_form_vars_baseline)
+        }
+
+        # Can't do this yet
+        # baseline_val <- stats::predict(mod_obj$model,
+        #                                  rescale_specs$baseline_covar,
+        #                                  type = "response", # lme4_specs$type,
+        #                                  re.form = rescale_specs$baseline_re_form)
+        # if (!is.null(backtransform)){
+        #   baseline_val <- backtransform(baseline_val)
+        # }
+
+        baseline_df <- rescale_specs$baseline_covar
+        # baseline_df$prediction_mean <- baseline_val
+      }
+    }
+    # %%%%%
+
+
+    # # get model intercept
+    # int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
+    # # TODO: What if another covar also contains intercept...
+    # if (length(int_id) > 1){
+    #   message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
+    #   int_id <- int_id[1]
+    # }
+    # # If no explicit intercept, set as 1st value...
+    # if (length(int_id) == 0){
+    #   int_id <- 1
+    # }
+    # base_val <- mod_obj$model$summary.fixed$mean[int_id]
+
+    # if (is.function(inla_specs$link_inverse)){
+    #   base_val <- inla_specs$link_inverse(base_val)
+    # }
+
+    # # if backtrans - backrans intercept to get baseline val
+    # if (!is.null(backtransform)){
+    #   base_val <- backtransform(base_val)
+    # }
+    
+    
+    
 
     # If terra, convert rasters to dfs
     if (inherits(data, "SpatRaster")){
@@ -442,26 +634,60 @@ hib_project_model <- function(mod_obj,
       # or just recreate!
       site.spde <- INLA::inla.spde2.matern(mod_obj$inla_mesh, alpha = 2)
       
-      # A <- inla.spde.make.A(input_mesh, 
-      #                       loc = coords)
+      # TODO:
+      # Need to verify that coords are present in data_df...
+      # What if they are missing? - can I use NA
+      coord_x_col <- c("longitude",
+                       "longitude_midpoint", 
+                       "x",
+                       "long", 
+                       "lon")
+      coord_y_col <- c("latitude",
+                       "latitude_midpoint", 
+                       "y",
+                       "lat")
+      
+      coord_x_col <- colnames(data_df)[tolower(colnames(data_df)) %in% coord_x_col]
+      coord_y_col <- colnames(data_df)[tolower(colnames(data_df)) %in% coord_y_col]
+
+      if (length(coord_x_col) == 0){
+        message(crayon::yellow("\nWarning: Longitude coordinate column missing! Setting to NA...\n"))
+        coord_x_col <- 'longitude'
+        data_df$longitude <- NA
+      }
+      if (length(coord_y_col) == 0){
+        message(crayon::yellow("\nWarning: Latitude coordinate column missing! Setting to NA...\n"))
+        coord_y_col <- 'latitude'
+        data_df$latitude <- NA
+      }
+
+      assertthat::assert_that(
+        length(coord_x_col) == 1,
+        length(coord_y_col) == 1
+      )
+
+      coords <- as.matrix(data_df[, c(coord_x_col, coord_y_col)])
+
+      # # A <- inla.spde.make.A(input_mesh, 
+      # #                       loc = coords)
       s.site <- INLA::inla.spde.make.index('s', n.spde = site.spde$n.spde)
-      # Create A, X, stk for prediction of dropped pop - using same mesh and spde?
-      if (("Longitude" %in% colnames(data_df)) &
-          ("Latitude" %in% colnames(data_df)) ){
-        coords <- as.matrix(data_df[,c("Longitude", "Latitude")])
-      }
-      if (("Longitude_midpoint" %in% colnames(data_df)) &
-          ("Latitude_midpoint" %in% colnames(data_df)) ){
-        coords <- as.matrix(data_df[,c("Longitude_midpoint", "Latitude_midpoint")])
-      }
-      if (("x" %in% colnames(data_df)) &
-          ("y" %in% colnames(data_df)) ){
-        coords <- as.matrix(data_df[,c("x", "y")])
-      }
-      if (("X" %in% colnames(data_df)) &
-          ("Y" %in% colnames(data_df)) ){
-        coords <- as.matrix(data_df[,c("X", "Y")])
-      }
+      # # Create A, X, stk for prediction of dropped pop - using same mesh and spde?
+      # if (("Longitude" %in% colnames(data_df)) &
+      #     ("Latitude" %in% colnames(data_df)) ){
+      #   coords <- as.matrix(data_df[,c("Longitude", "Latitude")])
+      # }
+      # if (("Longitude_midpoint" %in% colnames(data_df)) &
+      #     ("Latitude_midpoint" %in% colnames(data_df)) ){
+      #   coords <- as.matrix(data_df[,c("Longitude_midpoint", "Latitude_midpoint")])
+      # }
+      # if (("x" %in% colnames(data_df)) &
+      #     ("y" %in% colnames(data_df)) ){
+      #   coords <- as.matrix(data_df[,c("x", "y")])
+      # }
+      # if (("X" %in% colnames(data_df)) &
+      #     ("Y" %in% colnames(data_df)) ){
+      #   coords <- as.matrix(data_df[,c("X", "Y")])
+      # }
       
       if (mod_obj$inla_mesh_settings$mesh_dim == "3d"){
         coords <- INLA::inla.mesh.map(coords,  
@@ -473,9 +699,122 @@ hib_project_model <- function(mod_obj,
       
       pred_A <- INLA::inla.spde.make.A(mod_obj$inla_mesh,
                                        loc = coords)
-      
     } 
     
+    # TODO: consider spatial effects in baseline...
+    # If coords provided (x, X, Longitude, Longitude_midpoint), 
+    #   make an A
+    # If not ... predcit without space? - how? set pred_A to 0?, have NA coords?
+
+    # TODO: do below data prep for baseline_covars
+    if (is.data.frame(rescale_specs$baseline_covar)){
+      covars_base <- all_covars[all_covars %in% colnames(rescale_specs$baseline_covar)]
+
+      baseline_X <- rescale_specs$baseline_covar |>
+        dplyr::select(covars_base)
+      if ( ("Intercept" %in% all_covars) &
+           (!"Intercept" %in% covars_base)){
+        baseline_X$Intercept <- 1
+      }
+      
+      missing_covars <- all_covars[!all_covars %in% colnames(baseline_X)]
+      for (covar in missing_covars){
+        baseline_X[, covar] <- NA
+      }
+      missing_covars <- NULL
+      
+      # TODO: for categorical vars, ensure levels in projection input are within 
+      # model fitting data (or NA)
+      # for each fix_vars, check if chr or fct
+      # if it is, check all data[,var] are in obj$data[,var
+      check_covar_levels(mod_obj$model, baseline_X, fix_vars)
+      
+      # TODO: also need to check any random vars - difference between fix_vars and all_vars
+      if (inherits(rescale_specs$baselin_re_form, "formula")){
+          # print("Checking random variables")
+          baseline_re_form_vars <- all.vars(rescale_specs$baselin_re_form)
+          # TODO: drop any vars that are in fix vars... (i.e random slopes..)
+          baseline_re_form_vars <- baseline_re_form_vars[!baseline_re_form_vars %in% fix_vars]
+      
+          # Need to set rand_vars that are non-re_form_vars to NA
+          non_reform_rand <- rand_vars[!rand_vars %in% baseline_re_form_vars]
+          baseline_X[, non_reform_rand] <- NA
+          # check_covar_levels(mod_obj$model, baseline_X, baseline_re_form_vars)
+      }
+      # if (is.null(inla_specs$re_form)){
+      #     # print("Checking random variables")
+      #     check_covar_levels(mod_obj$model, pred_X, re_form_vars)
+      # }
+      if (is.na(re_form_vars)){
+         # Need to set rand_vars to NA
+         baseline_X[, rand_vars] <- NA
+      }
+      # print(head(baseline_X))
+
+      if (mod_obj$inla_incl_spatial_term){
+        # sort out baseline_A
+        # if no coords...
+
+        # stop("Not currently implmented!")
+
+        # %%%%%%
+        coord_x_col <- c("longitude",
+                         "longitude_midpoint", 
+                         "x",
+                         "long", 
+                         "lon")
+        coord_y_col <- c("latitude",
+                         "latitude_midpoint", 
+                         "y",
+                         "lat")
+        
+        coord_x_col <- colnames(baseline_X)[tolower(colnames(baseline_X)) %in% coord_x_col]
+        coord_y_col <- colnames(baseline_X)[tolower(colnames(baseline_X)) %in% coord_y_col]
+
+        if (length(coord_x_col) == 0){
+          message(crayon::yellow("\nWarning: Longitude coordinate column missing! Setting to NA...\n"))
+          coord_x_col <- 'longitude'
+          baseline_X$longitude <- NA
+        }
+        if (length(coord_y_col) == 0){
+          message(crayon::yellow("\nWarning: Latitude coordinate column missing! Setting to NA...\n"))
+          coord_y_col <- 'latitude'
+          baseline_X$latitude <- NA
+        }
+
+        assertthat::assert_that(
+          length(coord_x_col) == 1,
+          length(coord_y_col) == 1
+        )
+
+        coords <- as.matrix(baseline_X[, c(coord_x_col, coord_y_col)])
+
+        if (mod_obj$inla_mesh_settings$mesh_dim == "3d"){
+          coords <- INLA::inla.mesh.map(coords,  
+                                        projection = "longlat")
+        }
+        # if (obj$inla_mesh_settings$mesh_dim == "2d"){
+        #   
+        # }
+        
+        baseline_A <- INLA::inla.spde.make.A(mod_obj$inla_mesh,
+                                       loc = coords)
+        # %%%%%%
+
+        baseline_stk <- INLA::inla.stack(tag = "baseline",
+                                         data = list(y = rep(NA, nrow(baseline_X))),
+                                         A = list(baseline_A, 1),
+                                         effects = list(s = s.site,
+                                                        X = baseline_X))
+      } else {
+        baseline_stk <- INLA::inla.stack(tag = "baseline",
+                                     data = list(y = rep(NA, nrow(baseline_X))),
+                                     A = list(1),
+                                     effects = list(X = baseline_X))
+      }
+
+    } 
+
     # # Set up X data for modelling
     # pred_X <- All cols in data-df, apart form lat/long
     # if Intercept missing, add
@@ -522,13 +861,20 @@ hib_project_model <- function(mod_obj,
        # Need to set rand_vars to NA
        pred_X[, rand_vars] <- NA
     }
+
+
+
     # print(re_form_vars)
     # print(head(pred_X))
 
+    
     # print(missing_covars)
     # print(head(pred_X))
     # Combine data etc into stack
+    # print(head(pred_X))
     if (mod_obj$inla_incl_spatial_term){
+      # print(head(pred_A |> matrix() |> unique()))
+      
       pred_stk <- INLA::inla.stack(tag = "pred",
                                    data = list(y = rep(NA, nrow(pred_X))),
                                    A = list(pred_A, 1),
@@ -542,8 +888,18 @@ hib_project_model <- function(mod_obj,
     }
     # Get original model fitting stack..
     # And combine with pred for refitting
-    comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
-                                 pred_stk)
+
+    # TODO: if baseline_covar, add in too
+    if (is.data.frame(rescale_specs$baseline_covar)){
+      comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
+                                   pred_stk,
+                                   baseline_stk)
+      } else {
+      comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
+                                   pred_stk)
+    }
+
+    
     message(crayon::green("Re-fitting INLA model to make projection (this may take a while)...\n"))
     # re-fit/ Project
     # TODO: incl while to ensure fixef are fitted properly!
@@ -634,10 +990,42 @@ hib_project_model <- function(mod_obj,
     
     # Optional rescaling
     pred_rescaled_df <- NULL
-    if (rescale_pred){
+    
+    if (rescale_specs$rescale){
+      if (is.data.frame(rescale_specs$baseline_covar)){
+        # Get baseline
+        baseline_idx <- INLA::inla.stack.index(comb_stk, tag = "baseline")$data
+
+        baseline_val <- m0$summary.fitted.values[baseline_idx, ]
+        rownames(baseline_val) <- NULL
+    
+        colnames(baseline_val) <- paste("prediction", colnames(baseline_val), sep = "_")
+    
+        # Harmonise prediction colnames
+        
+        # prediction_mean prediction_sd prediction_q2.5
+        # prediction_0.5quant prediction_0.975quant prediction_mode
+        
+        # prediction_mean prediction_sd prediction_0.025quant
+        # prediction_median prediction_q97.5 prediction_mode
+        baseline_val <- baseline_val |>
+          dplyr::rename(prediction_q2.5   = prediction_0.025quant,
+                        prediction_median = prediction_0.5quant,
+                        prediction_q97.5  = prediction_0.975quant)
+        # Backtrans
+        if (!is.null(backtransform)){
+          baseline_val <- backtransform(baseline_val)
+        }
+        # Add to df
+        baseline_df <- cbind(baseline_df, baseline_val)
+        baseline_val <- baseline_df$prediction_mean
+      }
+
+      # Otherwise, already have baseline_val (intercept)
+
       # divide predictions by baseline val
       pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
-      pred_rescaled_df <- pred_df[,pred_cols] / base_val
+      pred_rescaled_df <- pred_df[,pred_cols] / baseline_val
       colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
       # pred_rescaled_df <- pred_rescaled_df |>
       #   dplyr::select(-rescaled_prediction_sd)
@@ -729,19 +1117,19 @@ hib_project_model <- function(mod_obj,
     # %%%%
     
     # Get baseline value for optional rescaling
-    if ("Intercept" %in% mod_obj$fixedef_coefficients$Coefficient_name){
-      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "Intercept"]
-    } else {
-      base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
-    }
+    # if ("Intercept" %in% mod_obj$fixedef_coefficients$Coefficient_name){
+    #   base_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "Intercept"]
+    # } else {
+    #   base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
+    # }
     
-    # Convert intercept to response scale
-    base_val <- mod_obj$model$family$linkinv(base_val)
+    # # Convert intercept to response scale
+    # base_val <- mod_obj$model$family$linkinv(base_val)
 
-    # if backtrans - backrans intercept to get baseline val
-    if (!is.null(backtransform)){
-      base_val <- backtransform(base_val)
-    }
+    # # if backtrans - backrans intercept to get baseline val
+    # if (!is.null(backtransform)){
+    #   base_val <- backtransform(base_val)
+    # }
     
     message(crayon::green("Preparing input data for projection...\n"))
     # Get some basic info on model covars
@@ -750,8 +1138,77 @@ hib_project_model <- function(mod_obj,
     # print(all_covars)
     # But what about random effects... - 
     rand_vars <- names(brms::ranef(mod_obj$model))
+
     fix_vars <- all_covars[!all_covars %in% rand_vars]
     # print(fix_vars)
+
+    # %%%%%
+    # Only needed if rescale_pred == T
+    if (rescale_specs$rescale){
+      if (is.null(rescale_specs$baseline_covar)){
+        # get model intercept
+        if ("Intercept" %in% mod_obj$fixedef_coefficients$Coefficient_name){
+          baseline_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "Intercept"]
+        } else {
+          baseline_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
+        }
+        # %%%%
+        
+        baseline_val <- mod_obj$model$family$linkinv(base_val)
+        
+
+        # if backtrans - backrans intercept to get baseline val
+        if (!is.null(backtransform)){
+          baseline_val <- backtransform(baseline_val)
+        }
+
+        baseline_df <- data.frame(Intercept = baseline_val)
+      }  
+
+      if (is.data.frame(rescale_specs$baseline_covar)){
+        # Check for all fixef and necessary ranefs...
+        assertthat::assert_that(all(fix_vars %in% colnames(rescale_specs$baseline_covar)),
+                                msg = "Fixed effect variables missing from baseline covariate data.")
+
+        # for categorical vars, ensure levels in projection input are within
+        # model fitting data
+
+        check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, fix_vars)
+
+        # need to check any random vars in baseline
+        if (inherits(rescale_specs$baseline_re_form, "formula")){
+          re_form_vars_baseline <- all.vars(rescale_specs$baseline_re_form)
+          # drop any fix effs
+          re_form_vars_baseline <- re_form_vars_baseline[!re_form_vars_baseline %in% fix_vars]
+
+          assertthat::assert_that(all(re_form_vars_baseline %in% rand_vars),
+                                msg = "Specified re_form structure for baseline prediction contains variables not in the original model.")
+          
+          check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, re_form_vars_baseline)
+        }
+
+        baseline_val <- stats::fitted(mod_obj$model,
+                                         rescale_specs$baseline_covar,
+                                         scale = "response",
+                                         re_form = rescale_specs$baseline_re_form) |>
+          as.data.frame()|>
+          dplyr::rename(prediction_mean  = Estimate,
+                        prediction_sd    = Est.Error,
+                        prediction_q2.5  = Q2.5,
+                        prediction_q97.5 = Q97.5)
+
+        if (!is.null(backtransform)){
+          baseline_val <- backtransform(baseline_val)
+        }
+
+        baseline_df <- rescale_specs$baseline_covar
+        baseline_df <- cbind(baseline_df, baseline_val)
+
+        baseline_val <- baseline_val$prediction_mean
+      }
+    }
+
+    # %%%%%
     
     # Project for possible data types
     # Dataframe 
@@ -850,10 +1307,12 @@ hib_project_model <- function(mod_obj,
       # %%%
       # Optional rescaling
       pred_rescaled_df <- NULL
-      if (rescale_pred){
+
+      if (rescale_specs$rescale){
+      # if (rescale_pred){
         # divide predictions by baseline val
         pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
-        pred_rescaled_df <- pred_df[,pred_cols] / base_val
+        pred_rescaled_df <- pred_df[,pred_cols] / baseline_val
         colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
       }
       # pred_rescaled_df <- pred_rescaled_df |>
@@ -878,8 +1337,8 @@ hib_project_model <- function(mod_obj,
                          terra_proj,
                          obj = mod_obj,
                          backtransform = backtransform,
-                         rescale_pred = rescale_pred,
-                         base_val = base_val,
+                         rescale_pred = rescale_specs$rescale, # rescale_pred,
+                         base_val = baseline_val, # base_val,
                          fix_vars = fix_vars,
                          rand_vars = rand_vars,
                          brms_specs = brms_specs)
@@ -890,10 +1349,22 @@ hib_project_model <- function(mod_obj,
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
   # message(crayon::green"Creating projection object...\n"))
+
+  # if rescale_specs$rescale & is.data.frame(rescale_specs$baseline_covar)
+  if (rescale_specs$rescale & 
+    is.data.frame(rescale_specs$baseline_covar)){
+    # update baseline_covar to baseline_df
+    rescale_specs$baseline_df <- baseline_df
+    # don't need baseline_covar??
+  } else {
+    rescale_specs$baseline_df <- NA
+  }
+
   proj <- HibProjection$new(obj = mod_obj,
                                  proj = data,
                                  backtransform = backtransform,
-                                 rescale_pred = rescale_pred,
+                                 # rescale_pred = rescale_specs$rescale, # rescale_pred,
+                                 rescale_specs = rescale_specs,
                                  lme4_specs = lme4_specs,
                                  inla_specs = inla_specs,
                                  brms_specs = brms_specs,
@@ -933,7 +1404,9 @@ hib_project_model <- function(mod_obj,
 #'   tmp_proj <- terra_proj(obj, data, backtransform, rescale_pred, base_val, fix_vars)
 #' } 
 #' @noRd
-terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_vars,
+terra_proj <- function(data, obj, backtransform, 
+                       rescale_pred, base_val, 
+                       fix_vars,
                        rand_vars,
                        lme4_specs = NULL,
                        brms_specs = NULL){
@@ -947,7 +1420,7 @@ terra_proj <- function(data, obj, backtransform, rescale_pred, base_val, fix_var
     inherits(data, "SpatRaster"), 
     is.function(backtransform) || is.null(backtransform),
     is.logical(rescale_pred),
-    is.numeric(base_val),
+    is.numeric(base_val) || is.null(base_val),
     is.character(fix_vars),
     is.character(rand_vars) || is.na(c(rand_vars)) || is.null(rand_vars),
     # is.logical(incl_obs_uncert),
