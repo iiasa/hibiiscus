@@ -29,6 +29,8 @@
 #' the specified covariates - if NULL, base::scale() will be used.
 #' @param relevel_specs A named [`vector`] where each item is:
 #' "<covar_to_relevel_name>" = "<base_level>".
+# TODO: add ... for other params in lmer/glmer
+#' @param ... Any other named arguments that can be passed to lme4::lmer()/lme4::glmer(), e.g., na.action
 #' @keywords model, fitting
 #' @examples 
 #' \dontrun{
@@ -47,7 +49,8 @@ hib_fit_lme4 <- function(obj,
                                              weight_type = NULL), # list(weights = c(a, b), weight_type = "dataset") # or "site"
                          scale_specs = list(covars_to_scale = NULL,
                                             scale_func = NULL),
-                         relevel_specs = c(NULL)
+                         relevel_specs = c(NULL),
+                         ...
                          ){
   
   # TODO:
@@ -154,27 +157,31 @@ hib_fit_lme4 <- function(obj,
       if (inherits(obj, "HibDatabase")){
         m0 <- lme4::lmer(form, 
                          data = mod_df,
-                         REML = REML)
+                         REML = REML,
+                         ...)
       }
       if (is.list(obj)){
         m0 <- lme4::lmer(form, 
                          data = mod_df,
                          REML = REML,
-                         weights = data_weight)
+                         weights = data_weight,
+                         ...)
       }
     }
     if (family != "gaussian"){
       if (inherits(obj, "HibDatabase")){
         m0 <- lme4::glmer(form, 
                           family = family,
-                          data = mod_df)
+                          data = mod_df,
+                         ...)
       }
       
       if (is.list(obj)){
         m0 <- lme4::glmer(form, 
                          family = family,
                          data = mod_df,
-                         weights = data_weight)
+                         weights = data_weight,
+                         ...)
       }
     }
   }
@@ -183,27 +190,31 @@ hib_fit_lme4 <- function(obj,
       if (inherits(obj, "HibDatabase")){
         m0 <- lme4::lmer(form, 
                          data = mod_df,
-                         REML = REML)
+                         REML = REML,
+                         ...)
       }
       if (is.list(obj)){
         m0 <- lme4::lmer(form, 
                          data = mod_df,
                          REML = REML,
-                         weights = data_weight)
+                         weights = data_weight,
+                         ...)
       }
     }
     if (family()$family != "gaussian"){
       if (inherits(obj, "HibDatabase")){
         m0 <- lme4::glmer(form, 
                           family = family,
-                          data = mod_df)  
+                          data = mod_df,
+                         ...)  
       }
       
       if (is.list(obj)){
         m0 <- lme4::glmer(form, 
                           family = family,
                           data = mod_df,
-                         weights = data_weight)
+                         weights = data_weight,
+                         ...)
       }
     }
   }

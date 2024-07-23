@@ -177,6 +177,7 @@ hib_fit_brms <- function(obj,
                   family = family,
                   ...)
   
+  # backend = "cmdstanr" 
   # Do some checks - model convergence/model fitted
   # Rhat...
   

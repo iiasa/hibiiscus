@@ -4,6 +4,7 @@
 # Best_guess_binomial isn't always useful in PREDICTS - e.g. if only a higher 
 # taxonomic level is recorded...
 # TODO: add unequalness 
+# TODO: Hill numbers of various powers? -  
 
 #' Calculate number of species (best guess) and original taxa names
 #' 
@@ -971,10 +972,6 @@ hib_calc_div_within <- function(obj, metrics){
     is.numeric(obj$species[[measure_var]])
   )
 
-  # TODO: fix below - functions should use obj$species and measure var as args
-  # e.g., 
-  # function(metric = .x, spp_df = obj$species, mv = measure_var){}
-  # hib_calc_ta(spp_df, mv)
   out_tib <- purrr::map(.x = metrics, 
                        .f = function(metric = .x, db_obj = obj,
                                     spp_df = obj$species, mv = measure_var){
@@ -1019,7 +1016,10 @@ hib_calc_div_within <- function(obj, metrics){
                            tmp$Metric <- "Evenness"
                            tmp$Data[[1]]$Evenness <- tmp$Data[[1]]$Shannon_diversity / tmp$Data[[1]]$logN
                            tmp$Data[[1]] <- tmp$Data[[1]] |>
-                             dplyr::select(SSBS, SS, Evenness, logN)
+                             dplyr::select(SSBS, SS, Evenness, logN) |>
+                             # If only 1 species, set evenness to 0 to avoid division by 0 error 
+                             dplyr::mutate(Evenness = dplyr::case_when(logN == 0 ~ 0, 
+                                                                       T ~ Evenness))
                            return(tmp)
                          }
                          # TODO:

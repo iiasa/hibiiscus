@@ -1204,13 +1204,25 @@ calc_cv_metrics <- function(pred, obs, error){
   # TODO:
   # A scaled bias measure - e.g. me[di]an( error / obs_minus_obs_mean, na.rm = T )
   # or m[ed]e / me[di]an(obs_minus_obs_mean, na.rm = T)
+  # mre <- mean( error / obs_minus_obs_mean, na.rm = T )
+  # medre <- stats::median( error / obs_minus_obs_mean, na.rm = T )
+  # Or, maybe better is bias / null_bias
+  # mean(error , na.rm) / abs? (mean(obs_minus_obs_mean, na.rm = T ))
+  # stats::median(error , na.rm) / abs? (stats::median(obs_minus_obs_mean, na.rm = T ))
+  # Above is a measure of bias relative to a null model, 
+  
+  # Below is a measure of bias relative to the magnitude of observed data...
+  # or me[di]an(error / obs)
+  # prope <- error / abs(obs) 
+  # mpcnte <- mean(prope, na.rm = T) * 100
+  # medpcnte <- stats::median(prope, na.rm = T) * 100
 
   ae <- abs(error)
   
   mae <- mean(ae, na.rm = T)
   
   # %%%%%
-  # 20240214: Update included metrics, reduce redunctancy and add some new ones.
+  # 20240214: Update included metrics, reduce reduncancy and add some new ones.
   # medae
   medae <- stats::median(ae, na.rm = T)
 
