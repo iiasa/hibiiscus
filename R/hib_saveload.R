@@ -55,15 +55,15 @@ hib_save <- function(obj, path, overwrite = FALSE){
   
   if (file.exists(path)){
     if (overwrite == FALSE){
-      message(crayon::red(paste0("\nError: '", path, "' already exists.\n
-                                    Data will NOT be saved.\n
-                                    Use 'overwrite = TRUE' if you want to overwrite this file.\n")))
+      message(crayon::red(paste0("\nError: '", path, "' already exists.\n",
+                                    "\tData will NOT be saved.\n",
+                                    "Use 'overwrite = TRUE' if you want to overwrite this file.\n")))
       stop("Hibiiscus data could not be saved. See above for details.", call. = F)
     }
     
     if (overwrite == TRUE){
-      message(crayon::yellow(paste0("\nWarning: '", path, "' already exists.\n
-                                    This file will be updated.\n")))
+      message(crayon::yellow(paste0("\nWarning: '", path, "' already exists.\n",
+                                    "\tThis file will be updated.\n")))
     }
   }
   
