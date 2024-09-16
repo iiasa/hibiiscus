@@ -1285,7 +1285,14 @@ calc_cv_metrics <- function(pred, obs, error){
   # TODO: update smape to 0-100 scale
   smape <- mean( (ae / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100
   
-  
+  # TODO: if pred_i == obs_i == 0, need to set term i to 0...
+  # Currently such an error is ignored (NA rm), but incl it would lead to smaller
+  # error!
+  # idx_00 <- which(pred == 0 & obs == 0 )
+  # appo <- abs(pred) + abs(obs)
+  # if (length(idx_00) > 0){ appo[idx_00] <- 1}
+  # smape <- mean( (ae /  appo )  ) * 100
+
   # nrmse_sd <- rmse / sd(pred, na.rm = T) OLD version - but maybe better?!
   # Alternative
   # nrmse <- rmse / obs_mean

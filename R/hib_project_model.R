@@ -62,9 +62,16 @@ hib_project_model <- function(mod_obj,
 
   # TODO: 
   # improve rescaling approach - supply a df with baseline levels, if not, use intercept...
+  # allow for marginaleffects::predcition se delta intervals for LME4 - specify conf_level
+  # calc_se, conf_level - add as arge to lme4_specs...
+  
+
+  # TODO: include conf levels - possibly multiple - for lme4/brms
+  # not sure about inla...
+  # use vector of conf levels i.e., central Xprop - such as 0.5, 0.9, 0.95
+  # convert to quantiles for use with lme4 bootstrap / brms
 
   # Assertions 
-
   assertthat::assert_that(
     inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
@@ -363,8 +370,17 @@ hib_project_model <- function(mod_obj,
         # CI.upper1 <- pred + std.err*1.96
         # %%%
         # Should back trans and rescale here...
+        # TODO: use conf level to get prediction_q...
+        # capable of doing multiple CIs... - what about for brms style models...
       }
-      
+
+      # TODO: se-based CIs... and conf level...
+      # if (lme4_specs$calc_se == T){
+        # get conf level if specified
+        # lme4_specs$se_conf_level 
+        # marginaleffects::predictions(mod_obj$model)
+      # }
+
       # What if we want to include a random effect?? - lme4_specs$re_form
       
       if (!is.null(backtransform)){
@@ -2207,6 +2223,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     # TODO:
     # Above apply approach is v slow for large data sets...
     # 
+    # TODO: alternative uncertainty intervals...
     
     uncert_df <- data.frame(prediction_median= prediction_median,
                             prediction_sd    = prediction_sd,

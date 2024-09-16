@@ -328,7 +328,8 @@ HibDatabase <- R6Class("HibDatabase",
                       
                       site_contrasts_poss <- c("LUI_contrast", 
                                                "Geogr_dist_hav", "Geogr_dist_geod",
-                                               "Latitude_midpoint", "Longitude_midpoint")
+                                               "Latitude_midpoint", "Longitude_midpoint",
+                                               "Env_dist")
                       
                       stats <- list(number_sites = nrow(self$sites),
                                     number_lu = length( unique(self$sites$Predominant_land_use) ),
@@ -374,14 +375,18 @@ HibDatabase <- R6Class("HibDatabase",
                         stats$site_contrast_metrics <- "NA"
                       }
                       if (!is.null(self$site_contrasts)){
+                        
                         # stats$site_contrast_metrics <- gsub("lui_contrast", "LUI contrast",
                         #                                  stats$site_contrast_metrics)
                         stats$site_contrast_metrics <- gsub("Geogr_dist_hav", "Geographic dist. (haversine)",
                                                             stats$site_contrast_metrics)
                         stats$site_contrast_metrics <- gsub("Geogr_dist_geod", "Geographic dist. (geodesic)",
                                                             stats$site_contrast_metrics)
+                        stats$site_contrast_metrics <- gsub("Env_dist", "Environmental distance (Gower)",
+                                                            stats$site_contrast_metrics)
                         stats$site_contrast_metrics <- gsub("_", " ",
                                                             stats$site_contrast_metrics)
+                        message(stats$site_contrast_metrics)
                       }
                       
                       # Neaten filtering formatting
