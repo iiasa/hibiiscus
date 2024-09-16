@@ -245,11 +245,12 @@ hib_project_model <- function(mod_obj,
                                     "\tbootstrap = FALSE,\n",
                                     "\tn_boot = NA,\n",
                                     # "\tcalc_se = TRUE,\n",
-                                    # "\tconf_level = c(0.95)",
+                                    "\tconf_level = c(0.95)",
                                     "\tre_form = NA",
                                     " ...\n")))
 
-      lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA) #
+      lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
+                          conf_level = 0.95) #
       # calc_se = T, conf_level = 0.95
     }
     
@@ -2178,6 +2179,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
   # }
   
   # %%%
+  # These checks are done in main function... - not needed here I think
   if (!is.null(lme4_specs)){
     # Check for bootstrap - logical
     if ("bootstrap" %in% names(lme4_specs)){
@@ -2216,14 +2218,26 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
       lme4_specs$re_form <- NA
     }
 
+    # Check for conf_level
+    # Get info on conf_level
+    if ("conf_level" %in% names(lme4_specs)){
+      assertthat::assert_that(is.numeric(lme4_specs$conf_level))
+    }
+    # if absent, set to 0.95
+    if (!"conf_level" %in% names(lme4_specs)){
+      lme4_specs$conf_level <- c(0.95)
+    }
+
   }
   if (is.null(lme4_specs)){
     message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
                                   "\tbootstrap = FALSE,\n",
                                   "\tn_boot = NA,\n",
                                   "\tre_form = NA",
+                                  "\tconf_level = c(0.95)",
                                   " ...\n")))
-    lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA) #
+    lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
+                       conf_level = 0.95) #
   }
 
   data_pred <- terra::predict(data,
@@ -2258,20 +2272,41 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                           nsim = lme4_specs$n_boot,
                           .progress = "txt")
     
-    prediction_sd <- apply(boot_obj$t, 2, stats::sd)
-    prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
-    prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
-    prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs= 0.975, na.rm = TRUE)))
-    # TODO:
-    # Above apply approach is v slow for large data sets...
-    # 
-    # TODO: alternative uncertainty intervals...
+    # TODO: updated boot apptoach based on conf_level and single quantile call
+    # %%%
+    # Use conf_level/conf_quants to get prediction_q...
+    conf_quants <- conf_level_to_quantiles(lme4_specs$conf_level)
     
-    uncert_df <- data.frame(prediction_median= prediction_median,
-                            prediction_sd    = prediction_sd,
-                            prediction_q2.5  = prediction_q2.5,  
-                            prediction_q97.5 = prediction_q97.5)
+    # add 0.5 to conf_quants, unique values
+    conf_quants_ <- unique(c(0.5, conf_quants))
+    
+    # apply, rename - prediction_boot_q..., prediction_boot_median
+    uncert_df <- t(apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = conf_quants_, na.rm = TRUE)))) |> 
+      data.frame()
+    
+    colnames(uncert_df) <- paste0("prediction_boot_q", conf_quants_*100)
+    uncert_df <- uncert_df |>
+      dplyr::rename(prediction_boot_median = prediction_boot_q50)
+    
+    uncert_df$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
+    
+    # %%%
+    
+    # prediction_sd <- apply(boot_obj$t, 2, stats::sd)
+    # prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
+    # prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
+    # prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs= 0.975, na.rm = TRUE)))
+    # # TODO:
+    # # Above apply approach is v slow for large data sets...
+    # # 
+    # # TODO: alternative uncertainty intervals...
+    # 
+    # uncert_df <- data.frame(prediction_median= prediction_median,
+    #                         prediction_sd    = prediction_sd,
+    #                         prediction_q2.5  = prediction_q2.5,  
+    #                         prediction_q97.5 = prediction_q97.5)
     uncert_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], uncert_df)
+    
     # TODO: crs of input...
     # data_pred_uncert <- terra::rast(uncert_df)
     data_pred_uncert <- terra::rast(uncert_df,
@@ -2313,8 +2348,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 #'   pred <- terra_proj_brms_pred(mod, data, backtransform)
 #' } 
 #' @noRd
-terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){#incl_obs_uncert){
-  # TODO: maybe change to @NoRd
+terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   
   # Assertions
   assertthat::assert_that(
