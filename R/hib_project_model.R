@@ -180,7 +180,7 @@ hib_project_model <- function(mod_obj,
     # TODO: wrap in hib_mod_proj_lme4??
     
     # %%%%%
-    # Get info re bootstrapping
+    # Get info re bootstrapping, re_form, se_calc and conf_level
     if (!is.null(lme4_specs)){
       # Check for bootstrap - logical
       if ("bootstrap" %in% names(lme4_specs)){
@@ -209,6 +209,7 @@ hib_project_model <- function(mod_obj,
         lme4_specs$n_boot <- NA
       }
 
+      # Get info on reform (random effects to include in predictions)
       if ("re_form" %in% names(lme4_specs)){
         assertthat::assert_that(
           is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
@@ -219,14 +220,37 @@ hib_project_model <- function(mod_obj,
         lme4_specs$re_form <- NA
       }
 
+      # TODO:
+      # Get info on se_calc
+      # if ("calc_se" %in% names(lme4_specs)){
+      #   assertthat::assert_that(is.logical(lme4_specs$calc_se))
+      # }
+      # # if absent, set to T
+      # if (!"calc_se" %in% names(lme4_specs)){
+      #   lme4_specs$calc_se <- TRUE
+      # }
+
+      # Get info on conf_level
+      if ("conf_level" %in% names(lme4_specs)){
+        assertthat::assert_that(is.numeric(lme4_specs$conf_level))
+      }
+      # if absent, set to 0.95
+      if (!"conf_level" %in% names(lme4_specs)){
+        lme4_specs$conf_level <- c(0.95)
+      }
+
     }
     if (is.null(lme4_specs)){
       message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
                                     "\tbootstrap = FALSE,\n",
                                     "\tn_boot = NA,\n",
+                                    # "\tcalc_se = TRUE,\n",
+                                    # "\tconf_level = c(0.95)",
                                     "\tre_form = NA",
                                     " ...\n")))
+
       lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA) #
+      # calc_se = T, conf_level = 0.95
     }
     
     # print(lme4_specs)
@@ -361,30 +385,48 @@ hib_project_model <- function(mod_obj,
                                     re.form = lme4_specs$re_form)}, 
                                   nsim = lme4_specs$n_boot)
         
-        pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
-        pred_df$prediction_sd <- apply(boot_obj$t, 2, stats::sd)
-        pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
-        pred_df$prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.975, na.rm = TRUE)))
+        # Use conf_level/conf_quants to get prediction_q...
+        conf_quants <- conf_level_to_quantiles(lme4_specs$conf_level)
+
+        # add 0.5 to conf_quants, unique values
+        conf_quants_ <- unique(c(0.5, conf_quants))
+        
+        # apply, rename - prediction_boot_q..., prediction_boot_median
+        boot_quants <- t(apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = conf_quants_, na.rm = TRUE)))) |> 
+              data.frame()
+
+        colnames(boot_quants) <- paste0("prediction_boot_q", conf_quants_*100)
+        
+        boot_quants <- boot_quants |>
+          dplyr::rename(prediction_boot_median = prediction_boot_q50)
+
+        # pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
+        pred_df$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
+
+        pred_df <- cbind(pred_df, boot_quants)
+        # pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
+        # pred_df$prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.975, na.rm = TRUE)))
         # std.err <- apply(boot_test$t, 2, sd)
         # CI.lower1 <- pred - std.err*1.96
         # CI.upper1 <- pred + std.err*1.96
         # %%%
         # Should back trans and rescale here...
-        # TODO: use conf level to get prediction_q...
-        # capable of doing multiple CIs... - what about for brms style models...
+
       }
 
       # TODO: se-based CIs... and conf level...
       # if (lme4_specs$calc_se == T){
         # get conf level if specified
         # lme4_specs$se_conf_level 
-        # marginaleffects::predictions(mod_obj$model)
+        # marginaleffects::predictions(mod_obj$model, data, conf_level = lme4_specs$conf_level, type = "response", re.form = lme4_specs$re_form)
       # }
 
       # What if we want to include a random effect?? - lme4_specs$re_form
       
       if (!is.null(backtransform)){
         pred_df <- backtransform(pred_df)
+        # TODO: check that pred_df is positive values... 
+        # - if negative after trans, but none before, print a warning
       }
       pred_rescaled_df <- NULL
       if (rescale_specs$rescale){
@@ -2893,6 +2935,31 @@ check_covar_levels <- function(mod, proj_dat, covars){
 
 
 
-
+#' An internal helper function to convert confidence levels to associated quantiles.
+#' 
+#' @description 
+#' This function converts onfidence levels to the associated quantiles. e.g., 
+#' converting c(0.5, 0.9) to c(0.05 0.25 0.75 0.95)
+#' 
+#' @details 
+#' Expects a numeric vector
+#' @param x A numeric vector of confidence levels between 0 and 1, typically 0.5 to 0.95.
+#' @examples 
+#' \dontrun{
+#'   conf_level_to_quantiles(c(0.5, 0.9, 0.95))
+#' } 
+#' @noRd
+conf_level_to_quantiles <- function(x){
+  assertthat::assert_that(
+    is.numeric(x),
+    min(x) > 0,
+    max(x) < 1
+  )
+  
+  lwr <- 0.5 - (x/2)
+  upr <- 0.5 + (x/2)
+  
+  return(c(sort(lwr), upr))
+}
 
 
