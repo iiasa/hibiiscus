@@ -24,6 +24,12 @@
 #' model. Specifically, named items should consist of 'bootstrap' ([`logical`]) and 
 #' 'n_boot' ([`numeric`]), indicating whether bootstrapped prediction intervals should be 
 #' estimated, and if so, how many bootstrap samples should be used.
+#' In addition, 'calc_se' ([`logical`]) is used to specify whether or not a standard
+#' error based uncertainty estimate (via marginaleffects) is calculated and used 
+#' to generate confidence intervals.
+#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
+#' generated via bootstrapping or the se-based approach. Values should fall between
+#' 0 and 1, typically in the range 0.5 to 0.95.
 #' Additionally, 're_form', as 're.form' in [`predict.merMod()`], used to specify random
 #' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
 #' @param inla_specs A [`list`] containing details relevant to projecting an inla-style
@@ -35,7 +41,12 @@
 #' @param brms_specs A [`list`] containing details relevant to projecting a brms-style
 #' model. Specifically, named item should consist of 'incl_obs_uncert' ([`logical`]) 
 #' to determine whether or not observation-level uncertainty is included in predictions.
-#' Setting this parameter to TRUE will produce predictions with larger uncertainty.
+#' Setting this parameter to TRUE will produce predictions with larger uncertainty, using
+#' [`predict.brmsfit()`], setting to FALSE calls [`fitted.brmsfit()`] internally.
+#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
+#' generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95, 
+#' internally converted to quantiles and passed to the probs argument of [`predict.brmsfit()`]/
+#' [`fitted.brmsfit()`].
 #' Additionally, 're_form', as 're_formula' in [`predict.brmsfit()`], used to specify random
 #' effects to condition on when predicting a brms (formula, NULL, or NA).
 #' @param calc_aoa A [`logical`] to indicate whether or non the 'Area-of-applicability' 
@@ -48,35 +59,25 @@
 #' } 
 #' @export
 hib_project_model <- function(mod_obj, 
-                            data,
-                            backtransform = NULL,
-                            rescale_specs = NULL, # list(rescale = T/F, baseline_covar = df, baseline_re_form = formula)
-                            lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, re_form = NA),
-                            inla_specs = NULL, #list(re_form = x, link_inverse = function(y){exp(y)})
-                            brms_specs = NULL, #list(incl_obs_uncert = F, re_form = as lme4...)
-                            # more scope for adjustment, and neater
-                            calc_aoa = FALSE,
-                            cv_obj = NULL
-                            ){
+                              data,
+                              backtransform = NULL,
+                              rescale_specs = NULL, # list(rescale = T/F, baseline_covar = df, baseline_re_form = formula)
+                              lme4_specs = NULL, #list(bootstrap = F, n_boot = NA, calc_se = T, conf_level = 0.95, re_form = NA),
+                              inla_specs = NULL, #list(re_form = x, link_inverse = function(y){exp(y)})
+                              brms_specs = NULL, #list(incl_obs_uncert = F, conf_level = 0.95, re_form = as lme4...)
+                              calc_aoa = FALSE,
+                              cv_obj = NULL){
   # hib_mod_project
 
   # TODO: 
-  # improve rescaling approach - supply a df with baseline levels, if not, use intercept...
-  # allow for marginaleffects::predcition se delta intervals for LME4 - specify conf_level
-  # calc_se, conf_level - add as arge to lme4_specs...
-  
+  # Better use of functions for model checking/predictions - minor diffs for df v rast
 
-  # TODO: include conf levels - possibly multiple - for lme4/brms
-  # not sure about inla...
-  # use vector of conf levels i.e., central Xprop - such as 0.5, 0.9, 0.95
-  # convert to quantiles for use with lme4 bootstrap / brms
 
   # Assertions 
   assertthat::assert_that(
     inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
     is.data.frame(data) || inherits(data, "SpatRaster") || ( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ), 
     is.function(backtransform) || is.null(backtransform),
-    # is.logical(rescale_pred),
     
     is.list(rescale_specs) || is.null(rescale_specs),
 
@@ -100,76 +101,80 @@ hib_project_model <- function(mod_obj,
     aoa_res <- NULL
   }
   # %%%%%
-
+  
+  
+  # %%%%%%%%%%
   # Globally, set base_val to NULL, if rescale_pred = F
 
   # Check rescale_specs
-  if (is.list(rescale_specs)){
-    # Check rescale - logical
-    if ("rescale" %in% names(rescale_specs)){
-      # NA, NULL or Logical
-      assertthat::assert_that(
-        is.na(rescale_specs$rescale) || is.null(rescale_specs$rescale) ||
-        is.logical(rescale_specs$rescale)
-      )
-      if (is.na(rescale_specs$rescale) | is.null(rescale_specs$rescale)){
-        rescale_specs$rescale <- FALSE
-      }
-    }
+  rescale_specs <- check_proj_specs(rescale_specs, "rescale")
+  # if (is.list(rescale_specs)){
+  #   # Check rescale - logical
+  #   if ("rescale" %in% names(rescale_specs)){
+  #     # NA, NULL or Logical
+  #     assertthat::assert_that(
+  #       is.na(rescale_specs$rescale) || is.null(rescale_specs$rescale) ||
+  #       is.logical(rescale_specs$rescale)
+  #     )
+  #     if (is.na(rescale_specs$rescale) | is.null(rescale_specs$rescale)){
+  #       rescale_specs$rescale <- FALSE
+  #     }
+  #   }
 
-    if (!"rescale" %in% names(rescale_specs)){
-      rescale_specs$rescale <- FALSE
-    }
+  #   if (!"rescale" %in% names(rescale_specs)){
+  #     message(crayon::yellow("Warning: rescale missing from rescale_specs, using default value of FALSE.\n"))
+  #     rescale_specs$rescale <- FALSE
+  #   }
 
-    if (rescale_specs$rescale == FALSE){
-      rescale_specs$baseline_covar <- NULL
-      rescale_specs$baseline_re_form <- NA
-    }
+  #   if (rescale_specs$rescale == FALSE){
+  #     rescale_specs$baseline_covar <- NULL
+  #     rescale_specs$baseline_re_form <- NA
+  #   }
 
-    # Check baseline covar - df or null
-    if ("baseline_covar" %in% names(rescale_specs)){
-      assertthat::assert_that(
-        is.null(rescale_specs$baseline_covar) || is.data.frame(rescale_specs$baseline_covar)
-      )
-      if (is.data.frame(rescale_specs$baseline_covar)){
-        assertthat::assert_that(
-          nrow(rescale_specs$baseline_covar) == 1
-        )
-      }
-    }
-    if (!"baseline_covar" %in% names(rescale_specs)){
-      message(crayon::yellow("Warning: baseline_covar missing from rescale_specs, using default value of NULL. Model intercept will be used as the baseline.\n"))
-      rescale_specs$baseline_covar <- NULL
-    }
+  #   # Check baseline covar - df or null
+  #   if ("baseline_covar" %in% names(rescale_specs)){
+  #     assertthat::assert_that(
+  #       is.null(rescale_specs$baseline_covar) || is.data.frame(rescale_specs$baseline_covar)
+  #     )
+  #     if (is.data.frame(rescale_specs$baseline_covar)){
+  #       assertthat::assert_that(
+  #         nrow(rescale_specs$baseline_covar) == 1
+  #       )
+  #     }
+  #   }
+  #   if (!"baseline_covar" %in% names(rescale_specs)){
+  #     message(crayon::yellow("Warning: baseline_covar missing from rescale_specs, using default value of NULL. Model intercept will be used as the baseline.\n"))
+  #     rescale_specs$baseline_covar <- NULL
+  #   }
 
-    # Check baseline_re_form - form, na or null
-    if ("baseline_re_form" %in% names(rescale_specs)){
-      assertthat::assert_that(
-        is.na(c(rescale_specs$baseline_re_form)) || 
-        is.null(rescale_specs$baseline_re_form) || 
-        inherits(rescale_specs$baseline_re_form, "formula")
-      )
-    }
-    if (!"baseline_re_form" %in% names(rescale_specs)){
-      message(crayon::yellow("Warning: baseline_re_form missing from rescale_specs, using default value of NA.\n"))
-      rescale_specs$baseline_re_form <- NA
-    }
-  }
+  #   # Check baseline_re_form - form, na or null
+  #   if ("baseline_re_form" %in% names(rescale_specs)){
+  #     assertthat::assert_that(
+  #       is.na(c(rescale_specs$baseline_re_form)) || 
+  #       is.null(rescale_specs$baseline_re_form) || 
+  #       inherits(rescale_specs$baseline_re_form, "formula")
+  #     )
+  #   }
+  #   if (!"baseline_re_form" %in% names(rescale_specs)){
+  #     message(crayon::yellow("Warning: baseline_re_form missing from rescale_specs, using default value of NA.\n"))
+  #     rescale_specs$baseline_re_form <- NA
+  #   }
+  # }
 
-  if (is.null(rescale_specs)){
-    message(crayon::yellow(paste0("Warning: rescale_specs missing, using default values:\n",
-                                    "\trescale = FALSE,\n",
-                                    "\tbaseline_covar = NULL,\n",
-                                    "\tbaseline_re_form = NA",
-                                    " ...\n")))
-    rescale_specs <- list(rescale = FALSE, baseline_covar = NULL, baseline_re_form = NA) #
-  }
+  # if (is.null(rescale_specs)){
+  #   message(crayon::yellow(paste0("Warning: rescale_specs missing, using default values:\n",
+  #                                   "\trescale = FALSE,\n",
+  #                                   "\tbaseline_covar = NULL,\n",
+  #                                   "\tbaseline_re_form = NA",
+  #                                   " ...\n")))
+  #   rescale_specs <- list(rescale = FALSE, baseline_covar = NULL, baseline_re_form = NA) #
+  # }
 
   if (rescale_specs$rescale == FALSE){
     # base_val <- NULL
     baseline_val <- NULL
   }
-
+  # %%%%%%%%%%
 
   # Check type of model
   # %%%%%
@@ -181,77 +186,83 @@ hib_project_model <- function(mod_obj,
     
     # %%%%%
     # Get info re bootstrapping, re_form, se_calc and conf_level
-    if (!is.null(lme4_specs)){
-      # Check for bootstrap - logical
-      if ("bootstrap" %in% names(lme4_specs)){
-        assertthat::assert_that(is.logical(lme4_specs$bootstrap))
-      }
-      # if absent, set to F
-      if (!"bootstrap" %in% names(lme4_specs)){
-        lme4_specs$bootstrap <- FALSE
-      }
-      
-      
-      # Check for n_boot - NA/integer/numeric
-      if (lme4_specs$bootstrap){
-        if ("n_boot" %in% names(lme4_specs)){
-          assertthat::assert_that(is.numeric(lme4_specs$n_boot))
-          # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
-        }
-        # if absent, set to F
-        if (!"n_boot" %in% names(lme4_specs)){
-          message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
-          lme4_specs$n_boot <- 50
-        }
-      }
-      # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-      if (lme4_specs$bootstrap == FALSE){
-        lme4_specs$n_boot <- NA
-      }
-
-      # Get info on reform (random effects to include in predictions)
-      if ("re_form" %in% names(lme4_specs)){
-        assertthat::assert_that(
-          is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
-        )
-      }
-      if (!"re_form" %in% names(lme4_specs)){
-        message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-        lme4_specs$re_form <- NA
-      }
-
-      # Get info on se_calc
-      if ("calc_se" %in% names(lme4_specs)){
-        assertthat::assert_that(is.logical(lme4_specs$calc_se))
-      }
-      # if absent, set to T
-      if (!"calc_se" %in% names(lme4_specs)){
-        lme4_specs$calc_se <- TRUE
-      }
-
-      # Get info on conf_level
-      if ("conf_level" %in% names(lme4_specs)){
-        assertthat::assert_that(is.numeric(lme4_specs$conf_level))
-      }
-      # if absent, set to 0.95
-      if (!"conf_level" %in% names(lme4_specs)){
-        lme4_specs$conf_level <- c(0.95)
-      }
-
-    }
-    if (is.null(lme4_specs)){
-      message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
-                                    "\tbootstrap = FALSE,\n",
-                                    "\tn_boot = NA,\n",
-                                    # "\tcalc_se = TRUE,\n",
-                                    "\tconf_level = c(0.95)",
-                                    "\tre_form = NA",
-                                    " ...\n")))
-
-      lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
-                          calc_se = T, conf_level = 0.95) #
-      # calc_se = T, conf_level = 0.95
-    }
+    
+    lme4_specs <- check_proj_specs(lme4_specs, "lme4")
+    # 
+    # if (!is.null(lme4_specs)){
+    #   # Check for bootstrap - logical
+    #   if ("bootstrap" %in% names(lme4_specs)){
+    #     assertthat::assert_that(is.logical(lme4_specs$bootstrap))
+    #   }
+    #   # if absent, set to F
+    #   if (!"bootstrap" %in% names(lme4_specs)){
+    #     message(crayon::yellow("Warning: bootstrap missing, using default value of FALSE...\n"))
+    #     lme4_specs$bootstrap <- FALSE
+    #   }
+    #   
+    #   
+    #   # Check for n_boot - NA/integer/numeric
+    #   if (lme4_specs$bootstrap){
+    #     if ("n_boot" %in% names(lme4_specs)){
+    #       assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+    #       # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
+    #     }
+    #     # if absent, set to F
+    #     if (!"n_boot" %in% names(lme4_specs)){
+    #       message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
+    #       lme4_specs$n_boot <- 50
+    #     }
+    #   }
+    #   # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
+    #   if (lme4_specs$bootstrap == FALSE){
+    #     lme4_specs$n_boot <- NA
+    #   }
+    # 
+    #   # Get info on reform (random effects to include in predictions)
+    #   if ("re_form" %in% names(lme4_specs)){
+    #     assertthat::assert_that(
+    #       is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
+    #     )
+    #   }
+    #   if (!"re_form" %in% names(lme4_specs)){
+    #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+    #     lme4_specs$re_form <- NA
+    #   }
+    # 
+    #   # Get info on se_calc
+    #   if ("calc_se" %in% names(lme4_specs)){
+    #     assertthat::assert_that(is.logical(lme4_specs$calc_se))
+    #   }
+    #   # if absent, set to T
+    #   if (!"calc_se" %in% names(lme4_specs)){
+    #     message(crayon::yellow("Warning: calc_se missing, using default value of TRUE...\n"))
+    #     lme4_specs$calc_se <- TRUE
+    #   }
+    # 
+    #   # Get info on conf_level
+    #   if ("conf_level" %in% names(lme4_specs)){
+    #     assertthat::assert_that(is.numeric(lme4_specs$conf_level))
+    #   }
+    #   # if absent, set to 0.95
+    #   if (!"conf_level" %in% names(lme4_specs)){
+    #     message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
+    #     lme4_specs$conf_level <- c(0.95)
+    #   }
+    # 
+    # }
+    # if (is.null(lme4_specs)){
+    #   message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
+    #                                 "\tbootstrap = FALSE,\n",
+    #                                 "\tn_boot = NA,\n",
+    #                                 "\tcalc_se = TRUE,\n",
+    #                                 "\tconf_level = c(0.95),\n",
+    #                                 "\tre_form = NA",
+    #                                 " ...\n")))
+    # 
+    #   lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
+    #                       calc_se = T, conf_level = 0.95) #
+    #   # calc_se = T, conf_level = 0.95
+    # }
     
     # print(lme4_specs)
     # %%%%%
@@ -265,9 +276,6 @@ hib_project_model <- function(mod_obj,
     
     # TOCHECK - what about random slopes... - how are these presented in model output?
 
-    # TODO: lme4_spec checks
-    # lme4_specs - if null, set to default (F, NA)
-    # otherwise, assert that bootstrap is logical and n_boot is numeric
     # then just pass checked lme4_specs to functions - terra_proj...
     # terra_proj_lme4_mod...
     
@@ -377,14 +385,16 @@ hib_project_model <- function(mod_obj,
       # %%%
       # Use bootMer to get uncertainty
       if (lme4_specs$bootstrap == T){
-        message(crayon::green("Bootstrapping model predictions..."))
+        # message(crayon::green("Bootstrapping model predictions..."))
+        message(crayon::green(paste("Generating bootstrapped prediciton intervals using",
+                                lme4_specs$n_boot, "bootstrap samples...")))
         boot_obj <- lme4::bootMer(mod_obj$model, 
                                   function(mod, df = data){
                                     stats::predict(mod, df, 
-                                    type = "response", # lme4_specs$type,
-                                    re.form = lme4_specs$re_form)}, 
-                                  nsim = lme4_specs$n_boot)
-        # TODO: add progress bar??
+                                                   type = "response", # lme4_specs$type,
+                                                   re.form = lme4_specs$re_form)}, 
+                                  nsim = lme4_specs$n_boot,
+                                  .progress = "txt")
 
         # Use conf_level/conf_quants to get prediction_q...
         conf_quants <- conf_level_to_quantiles(lme4_specs$conf_level)
@@ -394,7 +404,7 @@ hib_project_model <- function(mod_obj,
         
         # apply, rename - prediction_boot_q..., prediction_boot_median
         boot_quants <- t(apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = conf_quants_, na.rm = TRUE)))) |> 
-              data.frame()
+          data.frame()
 
         colnames(boot_quants) <- paste0("prediction_boot_q", conf_quants_*100)
         
@@ -405,17 +415,14 @@ hib_project_model <- function(mod_obj,
         boot_quants$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
 
         pred_df <- cbind(pred_df, boot_quants)
-        # pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
-        # pred_df$prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.975, na.rm = TRUE)))
         # std.err <- apply(boot_test$t, 2, sd)
         # CI.lower1 <- pred - std.err*1.96
         # CI.upper1 <- pred + std.err*1.96
         # %%%
         # Should back trans and rescale here...
-
       }
 
-      # TODO: se-based CIs... and conf level...
+      # se-based CIs... and conf level...
       if (lme4_specs$calc_se == T){
         # print(lme4_specs$conf_level)
         message(crayon::green("\nCalculating standard error of model predictions..."))
@@ -424,13 +431,13 @@ hib_project_model <- function(mod_obj,
         # if only 1 conf_level - get single df for se CI
         # prediction_lo_<conf_level>
         se_df <- marginaleffects::predictions(mod_obj$model,
-                                               data,
-                                               re.form = lme4_specs$re_form,
-                                               type = "response",
-                                               conf_level = lme4_specs$conf_level[1]) |> 
-                    data.frame() |> 
-                    dplyr::select(estimate, std.error, conf.low, conf.high)
-
+                                              data,
+                                              re.form = lme4_specs$re_form,
+                                              type = "response",
+                                              conf_level = lme4_specs$conf_level[1]) |> 
+          data.frame() |> 
+          dplyr::select(estimate, std.error, conf.low, conf.high)
+        
         colnames(se_df) <- c("estimate",
                              "prediction_se",
                              paste0("prediction_se_", lme4_specs$conf_level[1], "_lo"),
@@ -439,16 +446,13 @@ hib_project_model <- function(mod_obj,
         # if multiple conf_level - get df once, then use conf level to adjust CI mult and generate se CIs
         if (length(lme4_specs$conf_level) > 1){
           for (i in 2:length(lme4_specs$conf_level)){
-            # print(i)
             tmp_alpha <- 1 - lme4_specs$conf_level[i]
-            # print(tmp_alpha)
             tmp_mult <- abs(stats::qnorm(tmp_alpha / 2))
-            # print(tmp_mult)
             tmp_lo_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_lo")
             tmp_hi_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_hi")
             
-            se_df[, tmp_lo_nm] <- se_df$estimate + (tmp_mult * se_df$prediction_se)
-            se_df[, tmp_hi_nm] <- se_df$estimate - (tmp_mult * se_df$prediction_se)
+            se_df[, tmp_lo_nm] <- se_df$estimate - (tmp_mult * se_df$prediction_se)
+            se_df[, tmp_hi_nm] <- se_df$estimate + (tmp_mult * se_df$prediction_se)
           }
         }
 
@@ -458,13 +462,19 @@ hib_project_model <- function(mod_obj,
         pred_df <- cbind(pred_df, se_df)
       }
 
-      # What if we want to include a random effect?? - lme4_specs$re_form
-      
       if (!is.null(backtransform)){
+        p_gt_0_orig <- all(pred_df > 0)
+
         pred_df <- backtransform(pred_df)
-        # TODO: check that pred_df is positive values... 
+        
         # - if negative after trans, but none before, print a warning
+        p_gt_0_btr <- all(pred_df > 0)
+
+        if ((p_gt_0_orig & !p_gt_0_btr)){
+          message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
+        }
       }
+
       pred_rescaled_df <- NULL
       if (rescale_specs$rescale){
         # divide predictions by baseline val
@@ -523,37 +533,39 @@ hib_project_model <- function(mod_obj,
     
     # %%%
     # Get info re bootstrapping
-    if (!is.null(inla_specs)){
+    inla_specs <- check_proj_specs(inla_specs, "inla")
     
-      if ("re_form" %in% names(inla_specs)){
-        assertthat::assert_that(
-          is.na(c(inla_specs$re_form)) || is.null(inla_specs$re_form) || inherits(inla_specs$re_form, "formula")
-        )
-      }
-      if (!"re_form" %in% names(inla_specs)){
-        message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-        inla_specs$re_form <- NA
-      }
-
-      # Link_inverse
-      if ("link_inverse" %in% names(inla_specs)){
-        assertthat::assert_that(
-          is.null(inla_specs$link_inverse) || is.function(inla_specs$link_inverse)
-        )
-      }
-      if (!"link_inverse" %in% names(inla_specs)){
-        message(crayon::yellow("Warning: link_inverse missing, using default value of NULL...\n"))
-        inla_specs$link_inverse <- NULL
-      }
-
-    }
-    if (is.null(inla_specs)){
-      message(crayon::yellow(paste0("Warning: inla_specs missing, using default values:\n",
-                                    "\tre_form = NA",
-                                    "\tlink_inverse = NULL",
-                                    " ...\n")))
-      inla_specs <- list(re_form = NA, link_inverse = NULL) #
-    }
+    # if (!is.null(inla_specs)){
+    # 
+    #   if ("re_form" %in% names(inla_specs)){
+    #     assertthat::assert_that(
+    #       is.na(c(inla_specs$re_form)) || is.null(inla_specs$re_form) || inherits(inla_specs$re_form, "formula")
+    #     )
+    #   }
+    #   if (!"re_form" %in% names(inla_specs)){
+    #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+    #     inla_specs$re_form <- NA
+    #   }
+    # 
+    #   # Link_inverse
+    #   if ("link_inverse" %in% names(inla_specs)){
+    #     assertthat::assert_that(
+    #       is.null(inla_specs$link_inverse) || is.function(inla_specs$link_inverse)
+    #     )
+    #   }
+    #   if (!"link_inverse" %in% names(inla_specs)){
+    #     message(crayon::yellow("Warning: link_inverse missing, using default value of NULL...\n"))
+    #     inla_specs$link_inverse <- NULL
+    #   }
+    # 
+    # }
+    # if (is.null(inla_specs)){
+    #   message(crayon::yellow(paste0("Warning: inla_specs missing, using default values:\n",
+    #                                 "\tre_form = NA,\n",
+    #                                 "\tlink_inverse = NULL",
+    #                                 " ...\n")))
+    #   inla_specs <- list(re_form = NA, link_inverse = NULL) #
+    # }
     # print(inla_specs)
     # %%%
 
@@ -1057,7 +1069,12 @@ hib_project_model <- function(mod_obj,
                     prediction_q97.5  = prediction_0.975quant)
     
     if (!is.null(backtransform)){
+      p_gt_0_orig <- all(pred_df > 0)
       pred_df <- backtransform(pred_df)
+      p_gt_0_btr <- all(pred_df > 0)
+      if ((p_gt_0_orig & !p_gt_0_btr)){
+        message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
+      }
     }
     
     pred_df <- dplyr::bind_cols(data_df, pred_df)
@@ -1180,48 +1197,51 @@ hib_project_model <- function(mod_obj,
     # Get incl_obs_uncert info
     # list(incl_obs_uncert = F)
     # print(brms_specs)
-    if (!is.null(brms_specs)){
-      if ("incl_obs_uncert" %in% names(brms_specs)){
-        assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
-      }
-      # if absent, set to F
-      if (!"incl_obs_uncert" %in% names(brms_specs)){
-        message(crayon::yellow("Warning: incl_obs_uncert missing, using default value of FALSE...\n"))
-        brms_specs$incl_obs_uncert <- FALSE
-      }
-
-      if ("re_form" %in% names(brms_specs)){
-        assertthat::assert_that(
-          is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
-      }
-      # if absent, set to F
-      if (!"re_form" %in% names(brms_specs)){
-        message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-        brms_specs$re_form <- NA
-      }
-
-      # Check for conf_level
-      # Get info on conf_level
-      if ("conf_level" %in% names(brms_specs)){
-        assertthat::assert_that(is.numeric(brms_specs$conf_level))
-      }
-      # if absent, set to 0.95
-      if (!"conf_level" %in% names(brms_specs)){
-        message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
-        brms_specs$conf_level <- c(0.95)
-      }
-  
-    }
-    if (is.null(brms_specs)){
-      message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
-                                  "\tincl_obs_uncert = FALSE,\n",
-                                  "\tre_form = NA,\n",
-                                  "\tconf_level = c(0.95)",
-                                  " ...\n")))
-      brms_specs <- list(incl_obs_uncert = FALSE,
-                          re_form = NA,
-                          conf_level = 0.95)
-    }
+    
+    brms_specs <- check_proj_specs(brms_specs, "brms")
+    
+    # if (!is.null(brms_specs)){
+    #   if ("incl_obs_uncert" %in% names(brms_specs)){
+    #     assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
+    #   }
+    #   # if absent, set to F
+    #   if (!"incl_obs_uncert" %in% names(brms_specs)){
+    #     message(crayon::yellow("Warning: incl_obs_uncert missing, using default value of FALSE...\n"))
+    #     brms_specs$incl_obs_uncert <- FALSE
+    #   }
+    # 
+    #   if ("re_form" %in% names(brms_specs)){
+    #     assertthat::assert_that(
+    #       is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
+    #   }
+    #   # if absent, set to F
+    #   if (!"re_form" %in% names(brms_specs)){
+    #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+    #     brms_specs$re_form <- NA
+    #   }
+    # 
+    #   # Check for conf_level
+    #   # Get info on conf_level
+    #   if ("conf_level" %in% names(brms_specs)){
+    #     assertthat::assert_that(is.numeric(brms_specs$conf_level))
+    #   }
+    #   # if absent, set to 0.95
+    #   if (!"conf_level" %in% names(brms_specs)){
+    #     message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
+    #     brms_specs$conf_level <- c(0.95)
+    #   }
+    # 
+    # }
+    # if (is.null(brms_specs)){
+    #   message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
+    #                               "\tincl_obs_uncert = FALSE,\n",
+    #                               "\tconf_level = c(0.95),\n",
+    #                               "\tre_form = NA",
+    #                               " ...\n")))
+    #   brms_specs <- list(incl_obs_uncert = FALSE,
+    #                       re_form = NA,
+    #                       conf_level = 0.95)
+    # }
     # print(brms_specs)
     # %%%%
     
@@ -1351,6 +1371,7 @@ hib_project_model <- function(mod_obj,
       conf_quants <- conf_level_to_quantiles(brms_specs$conf_level)
 
       # %%%%%
+      message(crayon::green("Projecting model...\n"))
       if (brms_specs$incl_obs_uncert == TRUE){
       # if (incl_obs_uncert == T){
         mean_df <- stats::predict(mod_obj$model,
@@ -1415,7 +1436,15 @@ hib_project_model <- function(mod_obj,
       # What if we want to include  random effect??
       
       if (!is.null(backtransform)){
+        p_gt_0_orig <- all(pred_df > 0)
+
         pred_df <- backtransform(pred_df)
+        
+        p_gt_0_btr <- all(pred_df > 0)
+
+        if ((p_gt_0_orig & !p_gt_0_btr)){
+          message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
+        }
       }
       # %%%
       # Optional rescaling
@@ -1601,6 +1630,7 @@ terra_proj <- function(data, obj, backtransform,
       # TODO: incorp uncertainty
       data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_specs)#lme4_boot, n_boot)
     }
+
     if (inherits(obj, "HibModelBRMS")){
       # TODO: change to fitted...??
       # TODO: Random covar checks
@@ -2022,7 +2052,7 @@ terra_proj <- function(data, obj, backtransform,
   
 
   # TODO: if time in data (original), ensure it is in output
-  # Assume that the time for a data SPatRaster is the same for all layers - i.e a year
+  # Assume that the time for a data SpatRaster is the same for all layers - i.e a year
   t_orig <- terra::time(data)[1]
 
   data <- c(data, data_pred, data_pred_rescaled)
@@ -2032,7 +2062,6 @@ terra_proj <- function(data, obj, backtransform,
   }
   
   # return SpatRaster or a list of SpatRasters
-
   return(data)
 }
 
@@ -2169,6 +2198,12 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
 #' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
 #' estimated, and if so, how many bootstrap samples should be used.
+#' In addition, 'calc_se' ([`logical`]) is used to specify whether or not a standard
+#' error based uncertainty estimate (via marginaleffects) is calculated and used 
+#' to generate confidence intervals.
+#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
+#' generated via bootstrapping or the se-based approach. Values should fall between
+#' 0 and 1, typically in the range 0.5 to 0.95.
 #' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
 #' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
 #' @keywords model, projection
@@ -2179,8 +2214,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #' @noRd
 terra_proj_lme4_pred <- function(mod, data, backtransform, 
                                  lme4_specs){
-                                 # lme4_boot, n_boot){
-  # TODO: maybe change to @NoRd
+                                 
   # Assertions
   assertthat::assert_that(
     inherits(mod, "merMod"),
@@ -2234,79 +2268,79 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
   
   # %%%
   # These checks are done in main function... - not needed here I think
-  if (!is.null(lme4_specs)){
-    # Check for bootstrap - logical
-    if ("bootstrap" %in% names(lme4_specs)){
-      assertthat::assert_that(is.logical(lme4_specs$bootstrap))
-    }
-    # if absent, set to F
-    if (!"bootstrap" %in% names(lme4_specs)){
-      lme4_specs$bootstrap <- FALSE
-    }
+  # if (!is.null(lme4_specs)){
+  #   # Check for bootstrap - logical
+  #   if ("bootstrap" %in% names(lme4_specs)){
+  #     assertthat::assert_that(is.logical(lme4_specs$bootstrap))
+  #   }
+  #   # if absent, set to F
+  #   if (!"bootstrap" %in% names(lme4_specs)){
+  #     lme4_specs$bootstrap <- FALSE
+  #   }
     
     
-    # Check for n_boot - NA/integer/numeric
-    if (lme4_specs$bootstrap){
-      if ("n_boot" %in% names(lme4_specs)){
-        assertthat::assert_that(is.numeric(lme4_specs$n_boot))
-        # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
-      }
-      # if absent, set to F
-      if (!"n_boot" %in% names(lme4_specs)){
-        message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
-        lme4_specs$n_boot <- 50
-      }
-    }
-    # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-    if (lme4_specs$bootstrap == FALSE){
-      lme4_specs$n_boot <- NA
-    }
+  #   # Check for n_boot - NA/integer/numeric
+  #   if (lme4_specs$bootstrap){
+  #     if ("n_boot" %in% names(lme4_specs)){
+  #       assertthat::assert_that(is.numeric(lme4_specs$n_boot))
+  #       # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
+  #     }
+  #     # if absent, set to F
+  #     if (!"n_boot" %in% names(lme4_specs)){
+  #       message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
+  #       lme4_specs$n_boot <- 50
+  #     }
+  #   }
+  #   # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
+  #   if (lme4_specs$bootstrap == FALSE){
+  #     lme4_specs$n_boot <- NA
+  #   }
   
-    # Re form var checks are needed , not done in parent call
-    if ("re_form" %in% names(lme4_specs)){
-      assertthat::assert_that(
-        is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
-      )
-    }
-    if (!"re_form" %in% names(lme4_specs)){
-      message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-      lme4_specs$re_form <- NA
-    }
-    
-    # TODO:
-    # Get info on se_calc
-    # if ("calc_se" %in% names(lme4_specs)){
-    #   assertthat::assert_that(is.logical(lme4_specs$calc_se))
-    # }
-    # # if absent, set to T
-    # if (!"calc_se" %in% names(lme4_specs)){
-    #   lme4_specs$calc_se <- TRUE
-    # }
-    
-    # Check for conf_level
-    # Get info on conf_level
-    if ("conf_level" %in% names(lme4_specs)){
-      assertthat::assert_that(is.numeric(lme4_specs$conf_level))
-    }
-    # if absent, set to 0.95
-    if (!"conf_level" %in% names(lme4_specs)){
-      lme4_specs$conf_level <- c(0.95)
-    }
 
-  }
-  if (is.null(lme4_specs)){
-    message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
-                                  "\tbootstrap = FALSE,\n",
-                                  "\tn_boot = NA,\n",
-                                  # "\tcalc_se = TRUE,\n",
-                                  "\tre_form = NA",
-                                  "\tconf_level = c(0.95)",
-                                  " ...\n")))
-    lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
-                       conf_level = 0.95) #
-    # calc_se = T
-  }
+  #   if ("re_form" %in% names(lme4_specs)){
+  #     assertthat::assert_that(
+  #       is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
+  #     )
+  #   }
+  #   if (!"re_form" %in% names(lme4_specs)){
+  #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+  #     lme4_specs$re_form <- NA
+  #   }
+    
 
+  #   # Get info on se_calc
+  #   if ("calc_se" %in% names(lme4_specs)){
+  #     assertthat::assert_that(is.logical(lme4_specs$calc_se))
+  #   }
+  #   # if absent, set to T
+  #   if (!"calc_se" %in% names(lme4_specs)){
+  #     lme4_specs$calc_se <- TRUE
+  #   }
+    
+  #   # Check for conf_level
+  #   # Get info on conf_level
+  #   if ("conf_level" %in% names(lme4_specs)){
+  #     assertthat::assert_that(is.numeric(lme4_specs$conf_level))
+  #   }
+  #   # if absent, set to 0.95
+  #   if (!"conf_level" %in% names(lme4_specs)){
+  #     lme4_specs$conf_level <- c(0.95)
+  #   }
+
+  # }
+  # if (is.null(lme4_specs)){
+  #   message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
+  #                                 "\tbootstrap = FALSE,\n",
+  #                                 "\tn_boot = NA,\n",
+  #                                 "\tcalc_se = TRUE,\n",
+  #                                 "\tre_form = NA",
+  #                                 "\tconf_level = c(0.95)",
+  #                                 " ...\n")))
+  #   lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
+  #                      conf_level = 0.95, calc_se = T)
+  # }
+  # %%%
+  message(crayon::green("Projecting model...\n"))
   data_pred <- terra::predict(data,
                               mod,
                               type = "response", # lme4_specs$type, ??
@@ -2320,13 +2354,12 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
   if (lme4_specs$bootstrap == TRUE){
   # if (lme4_boot == T){
     # %%%%
-    message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
+    message(crayon::green(paste("Generating bootstrapped prediciton intervals using",
                                 lme4_specs$n_boot, "bootstrap samples...")))
     
     
     tmp_rast_df <- terra::as.data.frame(data, xy = T)
-    # Progress bar!!
-    # pb <- txtProgressBar(min = 1, max = n_boot, style = 3)
+
     boot_obj <- lme4::bootMer(mod, 
                           function(m, rast = data){
                             tmp <- terra::predict(rast, m, 
@@ -2363,6 +2396,8 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                                     crs = terra::crs(data))
     
     data_pred <- c(data_pred, data_pred_uncert)
+
+    rm(tmp_rast_df)
     # %%%%
   }
   
@@ -2375,7 +2410,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     
     # Need to convert data to df...
     tmp_rast_df <- terra::as.data.frame(data, xy = T)
-    print(head(tmp_rast_df))
+    # print(head(tmp_rast_df))
     # if only 1 conf_level - get single df for se CI
     # prediction_lo_<conf_level>
     se_df <- marginaleffects::predictions(mod,
@@ -2402,8 +2437,8 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
         tmp_lo_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_lo")
         tmp_hi_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_hi")
         
-        se_df[, tmp_lo_nm] <- se_df$estimate + (tmp_mult * se_df$prediction_se)
-        se_df[, tmp_hi_nm] <- se_df$estimate - (tmp_mult * se_df$prediction_se)
+        se_df[, tmp_lo_nm] <- se_df$estimate - (tmp_mult * se_df$prediction_se)
+        se_df[, tmp_hi_nm] <- se_df$estimate + (tmp_mult * se_df$prediction_se)
       }
     }
     
@@ -2415,11 +2450,19 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     data_pred_se <- terra::rast(se_df,crs = terra::crs(data))
     
     data_pred <- c(data_pred, data_pred_se)
+
+    rm(tmp_rast_df, se_df)
   }
   
   # %%%
   if (!is.null(backtransform)){
+    p_gt_0_orig <- all(data_pred > 0)
     data_pred <- backtransform(data_pred)
+    p_gt_0_btr <- all(data_pred > 0)
+
+    if ((p_gt_0_orig & !p_gt_0_btr)){
+      message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
+    }
   }
   # %%% 
   return(data_pred)
@@ -2438,10 +2481,17 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 #' @param data A [`SpatRaster`], prepared for projection
 #' @param backtransform A [`function`] that can backtransform the response variable
 #' to its original/natual scale.
-#' @param brms_specs A list containing details relevant to projecting a brms-style
-#' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
+#' @param brms_specs A [`list`] containing details relevant to projecting a brms-style
+#' model. Specifically, named item should consist of 'incl_obs_uncert' ([`logical`]) 
 #' to determine whether or not observation-level uncertainty is included in predictions.
-#' Setting this parameter to TRUE will produce predictions with larger uncertainty.
+#' Setting this parameter to TRUE will produce predictions with larger uncertainty, using
+#' [`predict.brmsfit()`], setting to FALSE calls [`fitted.brmsfit()`] internally.
+#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
+#' generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95, 
+#' internally converted to quantiles and passed to the probs argument of [`predict.brmsfit()`]/
+#' [`fitted.brmsfit()`].
+#' Additionally, 're_form', as 're_formula' in [`predict.brmsfit()`], used to specify random
+#' effects to condition on when predicting a brms (formula, NULL, or NA).
 #' @keywords model, projection
 #' @examples 
 #' \dontrun{
@@ -2471,45 +2521,45 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   # list(incl_obs_uncert = F)
   # print(brms_specs)
   
-  if (!is.null(brms_specs)){
-    if ("incl_obs_uncert" %in% names(brms_specs)){
-      assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
-    }
-    # if absent, set to F
-    if (!"incl_obs_uncert" %in% names(brms_specs)){
-      brms_specs$incl_obs_uncert <- FALSE
-    }
+  # if (!is.null(brms_specs)){
+  #   if ("incl_obs_uncert" %in% names(brms_specs)){
+  #     assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
+  #   }
+  #   # if absent, set to F
+  #   if (!"incl_obs_uncert" %in% names(brms_specs)){
+  #     brms_specs$incl_obs_uncert <- FALSE
+  #   }
     
-    if ("re_form" %in% names(brms_specs)){
-      assertthat::assert_that(
-        is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
-    }
-    # if absent, set to F
-    if (!"re_form" %in% names(brms_specs)){
-      message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-      brms_specs$re_form <- NA
-    }
+  #   if ("re_form" %in% names(brms_specs)){
+  #     assertthat::assert_that(
+  #       is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
+  #   }
+  #   # if absent, set to F
+  #   if (!"re_form" %in% names(brms_specs)){
+  #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
+  #     brms_specs$re_form <- NA
+  #   }
 
-    # Get info on conf_level
-    if ("conf_level" %in% names(brms_specs)){
-      assertthat::assert_that(is.numeric(brms_specs$conf_level))
-    }
-    # if absent, set to 0.95
-    if (!"conf_level" %in% names(brms_specs)){
-      message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
-      brms_specs$conf_level <- c(0.95)
-    }
+  #   # Get info on conf_level
+  #   if ("conf_level" %in% names(brms_specs)){
+  #     assertthat::assert_that(is.numeric(brms_specs$conf_level))
+  #   }
+  #   # if absent, set to 0.95
+  #   if (!"conf_level" %in% names(brms_specs)){
+  #     message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
+  #     brms_specs$conf_level <- c(0.95)
+  #   }
 
-  }
-  if (is.null(brms_specs)){
-    message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
-                                "\tincl_obs_uncert = FALSE,\n",
-                                "\tre_form = NA,\n",
-                                  "\tconf_level = c(0.95)",
-                                " ...\n")))
-    brms_specs <- list(incl_obs_uncert = FALSE,
-                        re_form = NA)
-  }
+  # }
+  # if (is.null(brms_specs)){
+  #   message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
+  #                               "\tincl_obs_uncert = FALSE,\n",
+  #                               "\tre_form = NA,\n",
+  #                                 "\tconf_level = c(0.95)",
+  #                               " ...\n")))
+  #   brms_specs <- list(incl_obs_uncert = FALSE,
+  #                       re_form = NA)
+  # }
   # %%%%
   
   # %%%
@@ -2525,6 +2575,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   # Convert conf_level to conf_quants
   conf_quants <- conf_level_to_quantiles(brms_specs$conf_level)
 
+  message(crayon::green("Projecting model...\n"))
   if (brms_specs$incl_obs_uncert == T){
   # if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
@@ -2600,7 +2651,15 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
                              crs = terra::crs(data))
     
     if (!is.null(backtransform)){
+      p_gt_0_orig <- all(data_pred > 0)
+
       data_pred <- backtransform(data_pred)
+
+      p_gt_0_btr <- all(data_pred > 0)
+
+      if ((p_gt_0_orig & !p_gt_0_btr)){
+        message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
+      }
     }
   }
   
@@ -3119,3 +3178,156 @@ conf_level_to_quantiles <- function(x){
 }
 
 
+#' An internal helper function to check model projection specs.
+#' 
+#' @description 
+#' This function checks and corrects model projection specs.
+#' 
+#' @details 
+#' Expects a list of specs and a model type
+#' @param specs A list of model specs - for details see lme4_specs, inla_specs and
+#' brms_specs arguments to hib_project_model.
+#' @param mod_type A character indicating the model type
+#' @examples 
+#' \dontrun{
+#'   check_proj_specs(lme4_specs, "lme4")
+#' } 
+#' @noRd
+check_proj_specs <- function(specs, mod_type){
+  
+  assertthat::assert_that(
+    is.list(specs) || is.null(specs),
+    is.character(mod_type)
+  )
+  # Specify default specs
+  if (mod_type %in% c("HibModelLME4", "lme4")){
+    default_specs <- list(bootstrap  = FALSE, 
+                          n_boot     = NA, 
+                          re_form    = NA, 
+                          calc_se    = TRUE, 
+                          conf_level = 0.95)
+    mod_type_nm <- "lme4"
+  }
+  if (mod_type %in% c("HibModelINLA", "inla")){
+    default_specs <- list(re_form      = NA, 
+                          link_inverse = NULL)
+    mod_type_nm <- "inla"
+  }
+  if (mod_type %in% c("HibModelBRMS", "brms")){
+    default_specs <- list(incl_obs_uncert = FALSE,
+                          re_form         = NA, 
+                          conf_level      = 0.95)
+    mod_type_nm <- "brms"
+  }
+  if (mod_type == "rescale"){
+    default_specs <- list(rescale          = FALSE, 
+                          baseline_covar   = NULL, 
+                          baseline_re_form = NA) 
+    mod_type_nm <- "rescale"
+  }
+  
+  # If specs is.null(), set to defaults
+  if (is.null(specs)){
+    message(crayon::yellow(paste0("Warning: ", mod_type_nm, "_specs missing, using default values:\n",
+                                  "\t",
+                                  paste(paste(names(default_specs), 
+                                              default_specs, 
+                                              sep = " = "),
+                                        collapse = ",\n\t"),
+                                  " ...\n")))
+    return(default_specs)
+  }
+  
+  
+  # Assertions to check data type
+  if ("bootstrap" %in% names(specs)){
+    assertthat::assert_that(is.logical(specs$bootstrap))
+  }
+  if ("n_boot" %in% names(specs)){
+    assertthat::assert_that(is.numeric(specs$n_boot))
+  }
+  if ("re_form" %in% names(specs)){
+    assertthat::assert_that(
+      is.na(c(specs$re_form)) || 
+        is.null(specs$re_form) || 
+        inherits(specs$re_form, "formula")
+    )
+  }
+  if ("calc_se" %in% names(specs)){
+    assertthat::assert_that(is.logical(specs$calc_se))
+  }
+  if ("conf_level" %in% names(specs)){
+    assertthat::assert_that(is.numeric(specs$conf_level))
+  }
+  if ("link_inverse" %in% names(specs)){
+    assertthat::assert_that(
+      is.null(specs$link_inverse) || 
+        is.function(specs$link_inverse)
+    )
+  }
+  if ("incl_obs_incert" %in% names(specs)){
+    assertthat::assert_that(is.logical(specs$incl_obs_incert))
+  }
+  
+  
+  if ("rescale" %in% names(specs)){
+    assertthat::assert_that(
+      is.na(c(specs$rescale)) || 
+        is.null(specs$rescale) || 
+        is.logical(specs$rescale)
+    )
+    if (is.na(specs$rescale) | is.null(specs$rescale)){
+      specs$rescale <- FALSE
+    }
+  }
+  if ("baseline_covar" %in% names(specs)){
+    assertthat::assert_that(
+      is.null(specs$baseline_covar) || 
+        is.data.frame(specs$baseline_covar)
+    )
+    if (is.data.frame(specs$baseline_covar)){
+      assertthat::assert_that(
+        nrow(specs$baseline_covar) == 1
+      )
+    }
+  }
+  if ("baseline_re_form" %in% names(specs)){
+    assertthat::assert_that(
+      is.na(c(specs$baseline_re_form)) || 
+        is.null(specs$baseline_re_form) || 
+        inherits(specs$baseline_re_form, "formula")
+    )
+  }
+  
+  
+  # Fill in any missing specs
+  for (nm in names(default_specs)){
+    if (!nm %in% names(specs)){
+      # If bootstrap is TRUE, ensure n_boot is numeric
+      if (nm == "n_boot"){
+        if (specs$bootstrap){
+          message(crayon::yellow(paste0("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of ",  50, " ...\n")))
+          specs[[nm]] <- 50  
+        }
+      } else if (nm == "baseline_covar"){
+        message(crayon::yellow("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of NULL. \n          Model intercept will be used as the baseline.\n"))
+        specs[[nm]] <- NULL
+      } else if (nm == "link_inverse"){
+        message(crayon::yellow("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of NULL.\n"))
+        specs[[nm]] <- NULL
+      } else {
+        message(crayon::yellow(paste0("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of ",  default_specs[[nm]], " ...\n")))
+        specs[[nm]] <- default_specs[[nm]]
+      }
+    }
+  }
+  
+  if (mod_type == "rescale"){
+    if (specs$rescale == FALSE){
+      rescale_specs$baseline_covar <- NULL
+      rescale_specs$baseline_re_form <- NA
+    }
+  }
+  
+  return(specs)
+}
