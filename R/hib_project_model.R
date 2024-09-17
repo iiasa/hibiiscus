@@ -220,15 +220,14 @@ hib_project_model <- function(mod_obj,
         lme4_specs$re_form <- NA
       }
 
-      # TODO:
       # Get info on se_calc
-      # if ("calc_se" %in% names(lme4_specs)){
-      #   assertthat::assert_that(is.logical(lme4_specs$calc_se))
-      # }
-      # # if absent, set to T
-      # if (!"calc_se" %in% names(lme4_specs)){
-      #   lme4_specs$calc_se <- TRUE
-      # }
+      if ("calc_se" %in% names(lme4_specs)){
+        assertthat::assert_that(is.logical(lme4_specs$calc_se))
+      }
+      # if absent, set to T
+      if (!"calc_se" %in% names(lme4_specs)){
+        lme4_specs$calc_se <- TRUE
+      }
 
       # Get info on conf_level
       if ("conf_level" %in% names(lme4_specs)){
@@ -250,7 +249,7 @@ hib_project_model <- function(mod_obj,
                                     " ...\n")))
 
       lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
-                          conf_level = 0.95) #
+                          calc_se = T, conf_level = 0.95) #
       # calc_se = T, conf_level = 0.95
     }
     
@@ -385,7 +384,8 @@ hib_project_model <- function(mod_obj,
                                     type = "response", # lme4_specs$type,
                                     re.form = lme4_specs$re_form)}, 
                                   nsim = lme4_specs$n_boot)
-        
+        # TODO: add progress bar??
+
         # Use conf_level/conf_quants to get prediction_q...
         conf_quants <- conf_level_to_quantiles(lme4_specs$conf_level)
 
@@ -402,7 +402,7 @@ hib_project_model <- function(mod_obj,
           dplyr::rename(prediction_boot_median = prediction_boot_q50)
 
         # pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
-        pred_df$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
+        boot_quants$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
 
         pred_df <- cbind(pred_df, boot_quants)
         # pred_df$prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
@@ -416,11 +416,47 @@ hib_project_model <- function(mod_obj,
       }
 
       # TODO: se-based CIs... and conf level...
-      # if (lme4_specs$calc_se == T){
-        # get conf level if specified
-        # lme4_specs$se_conf_level 
-        # marginaleffects::predictions(mod_obj$model, data, conf_level = lme4_specs$conf_level, type = "response", re.form = lme4_specs$re_form)
-      # }
+      if (lme4_specs$calc_se == T){
+        # print(lme4_specs$conf_level)
+        message(crayon::green("\nCalculating standard error of model predictions..."))
+        # get conf level if specified - only one, or multiple
+
+        # if only 1 conf_level - get single df for se CI
+        # prediction_lo_<conf_level>
+        se_df <- marginaleffects::predictions(mod_obj$model,
+                                               data,
+                                               re.form = lme4_specs$re_form,
+                                               type = "response",
+                                               conf_level = lme4_specs$conf_level[1]) |> 
+                    data.frame() |> 
+                    dplyr::select(estimate, std.error, conf.low, conf.high)
+
+        colnames(se_df) <- c("estimate",
+                             "prediction_se",
+                             paste0("prediction_se_", lme4_specs$conf_level[1], "_lo"),
+                             paste0("prediction_se_", lme4_specs$conf_level[1], "_hi"))
+
+        # if multiple conf_level - get df once, then use conf level to adjust CI mult and generate se CIs
+        if (length(lme4_specs$conf_level) > 1){
+          for (i in 2:length(lme4_specs$conf_level)){
+            # print(i)
+            tmp_alpha <- 1 - lme4_specs$conf_level[i]
+            # print(tmp_alpha)
+            tmp_mult <- abs(stats::qnorm(tmp_alpha / 2))
+            # print(tmp_mult)
+            tmp_lo_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_lo")
+            tmp_hi_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_hi")
+            
+            se_df[, tmp_lo_nm] <- se_df$estimate + (tmp_mult * se_df$prediction_se)
+            se_df[, tmp_hi_nm] <- se_df$estimate - (tmp_mult * se_df$prediction_se)
+          }
+        }
+
+        se_df <- se_df |>
+          dplyr::select(-estimate)
+
+        pred_df <- cbind(pred_df, se_df)
+      }
 
       # What if we want to include a random effect?? - lme4_specs$re_form
       
@@ -1150,6 +1186,7 @@ hib_project_model <- function(mod_obj,
       }
       # if absent, set to F
       if (!"incl_obs_uncert" %in% names(brms_specs)){
+        message(crayon::yellow("Warning: incl_obs_uncert missing, using default value of FALSE...\n"))
         brms_specs$incl_obs_uncert <- FALSE
       }
 
@@ -1162,15 +1199,28 @@ hib_project_model <- function(mod_obj,
         message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
         brms_specs$re_form <- NA
       }
+
+      # Check for conf_level
+      # Get info on conf_level
+      if ("conf_level" %in% names(brms_specs)){
+        assertthat::assert_that(is.numeric(brms_specs$conf_level))
+      }
+      # if absent, set to 0.95
+      if (!"conf_level" %in% names(brms_specs)){
+        message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
+        brms_specs$conf_level <- c(0.95)
+      }
   
     }
     if (is.null(brms_specs)){
       message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
                                   "\tincl_obs_uncert = FALSE,\n",
-                                  "\tre_form = NA",
+                                  "\tre_form = NA,\n",
+                                  "\tconf_level = c(0.95)",
                                   " ...\n")))
       brms_specs <- list(incl_obs_uncert = FALSE,
-                          re_form = NA)
+                          re_form = NA,
+                          conf_level = 0.95)
     }
     # print(brms_specs)
     # %%%%
@@ -1297,13 +1347,17 @@ hib_project_model <- function(mod_obj,
         check_covar_levels(mod_obj$model, data, rand_vars)
       }
 
+      # Convert conf levels to quantiles
+      conf_quants <- conf_level_to_quantiles(brms_specs$conf_level)
+
       # %%%%%
       if (brms_specs$incl_obs_uncert == TRUE){
       # if (incl_obs_uncert == T){
         mean_df <- stats::predict(mod_obj$model,
                            data,
                            # re_form = NA
-                           re_form = brms_specs$re_form) |>
+                           re_form = brms_specs$re_form,
+                           probs = conf_quants) |>
           as.data.frame()
         med_df <- stats::predict(mod_obj$model,
                           data,
@@ -1317,25 +1371,25 @@ hib_project_model <- function(mod_obj,
         # brms::fitted.brmsfit
         mean_df <- stats::fitted(mod_obj$model,
                           data,
-                          # re_form = NA
                           scale = "response", # brms_specs$scale,
-                          re_form = brms_specs$re_form) |>
+                          re_form = brms_specs$re_form,
+                           probs = conf_quants) |>
         # re_form = brms_specs$re_form
           as.data.frame()
           # brms::fitted.brmsfit
         med_df <- stats::fitted(mod_obj$model,
                          data,
-                         # re_form = NA,
-                         scale = "response", # brms_specs$scale,
+                         scale = "response",# brms_specs$scale,
                          re_form = brms_specs$re_form,
                          robust = TRUE) |>
           as.data.frame()
       }
+
       mean_df <- mean_df |>
         dplyr::rename(prediction_mean  = Estimate,
-                      prediction_sd    = Est.Error,
-                      prediction_q2.5  = Q2.5,
-                      prediction_q97.5 = Q97.5)
+                      prediction_sd    = Est.Error) |>
+        dplyr::rename_with(~gsub("Q", "prediction_q", .x, fixed = T))#,
+
       med_df <- med_df |>
         dplyr::rename(prediction_median= Estimate,
                       prediction_mad   = Est.Error)
@@ -1383,7 +1437,7 @@ hib_project_model <- function(mod_obj,
     # Single raster object
     if (inherits(data, "SpatRaster")){
       # print(brms_specs)
-      data <- terra_proj(data, mod_obj, backtransform, rescale_pred, base_val, fix_vars,
+      data <- terra_proj(data, mod_obj, backtransform, rescale_specs$rescale, baseline_val, fix_vars,
                           rand_vars,
                          brms_specs = brms_specs)
                          # incl_obs_uncert)
@@ -2207,7 +2261,8 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     if (lme4_specs$bootstrap == FALSE){
       lme4_specs$n_boot <- NA
     }
-
+  
+    # Re form var checks are needed , not done in parent call
     if ("re_form" %in% names(lme4_specs)){
       assertthat::assert_that(
         is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
@@ -2217,7 +2272,17 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
       message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
       lme4_specs$re_form <- NA
     }
-
+    
+    # TODO:
+    # Get info on se_calc
+    # if ("calc_se" %in% names(lme4_specs)){
+    #   assertthat::assert_that(is.logical(lme4_specs$calc_se))
+    # }
+    # # if absent, set to T
+    # if (!"calc_se" %in% names(lme4_specs)){
+    #   lme4_specs$calc_se <- TRUE
+    # }
+    
     # Check for conf_level
     # Get info on conf_level
     if ("conf_level" %in% names(lme4_specs)){
@@ -2233,11 +2298,13 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
                                   "\tbootstrap = FALSE,\n",
                                   "\tn_boot = NA,\n",
+                                  # "\tcalc_se = TRUE,\n",
                                   "\tre_form = NA",
                                   "\tconf_level = c(0.95)",
                                   " ...\n")))
     lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
                        conf_level = 0.95) #
+    # calc_se = T
   }
 
   data_pred <- terra::predict(data,
@@ -2272,7 +2339,6 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                           nsim = lme4_specs$n_boot,
                           .progress = "txt")
     
-    # TODO: updated boot apptoach based on conf_level and single quantile call
     # %%%
     # Use conf_level/conf_quants to get prediction_q...
     conf_quants <- conf_level_to_quantiles(lme4_specs$conf_level)
@@ -2289,26 +2355,10 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
       dplyr::rename(prediction_boot_median = prediction_boot_q50)
     
     uncert_df$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
-    
     # %%%
-    
-    # prediction_sd <- apply(boot_obj$t, 2, stats::sd)
-    # prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
-    # prediction_q2.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.025, na.rm = TRUE)))
-    # prediction_q97.5 <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs= 0.975, na.rm = TRUE)))
-    # # TODO:
-    # # Above apply approach is v slow for large data sets...
-    # # 
-    # # TODO: alternative uncertainty intervals...
-    # 
-    # uncert_df <- data.frame(prediction_median= prediction_median,
-    #                         prediction_sd    = prediction_sd,
-    #                         prediction_q2.5  = prediction_q2.5,  
-    #                         prediction_q97.5 = prediction_q97.5)
+
     uncert_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], uncert_df)
     
-    # TODO: crs of input...
-    # data_pred_uncert <- terra::rast(uncert_df)
     data_pred_uncert <- terra::rast(uncert_df,
                                     crs = terra::crs(data))
     
@@ -2316,6 +2366,56 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     # %%%%
   }
   
+  # TODO: se-based CIs... and conf level...
+  # se-based CIs... and conf level...
+  if (lme4_specs$calc_se == T){
+    # print(lme4_specs$conf_level)
+    message(crayon::green("\nCalculating standard error of model predictions..."))
+    # get conf level if specified - only one, or multiple
+    
+    # Need to convert data to df...
+    tmp_rast_df <- terra::as.data.frame(data, xy = T)
+    print(head(tmp_rast_df))
+    # if only 1 conf_level - get single df for se CI
+    # prediction_lo_<conf_level>
+    se_df <- marginaleffects::predictions(mod,
+                                          tmp_rast_df,
+                                          re.form = lme4_specs$re_form,
+                                          type = "response",
+                                          conf_level = lme4_specs$conf_level[1]) |> 
+      data.frame() |> 
+      dplyr::select(estimate, std.error, conf.low, conf.high)
+    
+    colnames(se_df) <- c("estimate",
+                         "prediction_se",
+                         paste0("prediction_se_", lme4_specs$conf_level[1], "_lo"),
+                         paste0("prediction_se_", lme4_specs$conf_level[1], "_hi"))
+    
+    # if multiple conf_level - get df once, then use conf level to adjust CI mult and generate se CIs
+    if (length(lme4_specs$conf_level) > 1){
+      for (i in 2:length(lme4_specs$conf_level)){
+        # print(i)
+        tmp_alpha <- 1 - lme4_specs$conf_level[i]
+        # print(tmp_alpha)
+        tmp_mult <- abs(stats::qnorm(tmp_alpha / 2))
+        # print(tmp_mult)
+        tmp_lo_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_lo")
+        tmp_hi_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_hi")
+        
+        se_df[, tmp_lo_nm] <- se_df$estimate + (tmp_mult * se_df$prediction_se)
+        se_df[, tmp_hi_nm] <- se_df$estimate - (tmp_mult * se_df$prediction_se)
+      }
+    }
+    
+    se_df <- se_df |>
+      dplyr::select(-estimate)
+    
+    se_df <- dplyr::bind_cols(tmp_rast_df[,c("x", "y")], se_df)
+    
+    data_pred_se <- terra::rast(se_df,crs = terra::crs(data))
+    
+    data_pred <- c(data_pred, data_pred_se)
+  }
   
   # %%%
   if (!is.null(backtransform)){
@@ -2390,11 +2490,22 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
       brms_specs$re_form <- NA
     }
 
+    # Get info on conf_level
+    if ("conf_level" %in% names(brms_specs)){
+      assertthat::assert_that(is.numeric(brms_specs$conf_level))
+    }
+    # if absent, set to 0.95
+    if (!"conf_level" %in% names(brms_specs)){
+      message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
+      brms_specs$conf_level <- c(0.95)
+    }
+
   }
   if (is.null(brms_specs)){
     message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
                                 "\tincl_obs_uncert = FALSE,\n",
-                                "\tre_form = NA",
+                                "\tre_form = NA,\n",
+                                  "\tconf_level = c(0.95)",
                                 " ...\n")))
     brms_specs <- list(incl_obs_uncert = FALSE,
                         re_form = NA)
@@ -2410,12 +2521,17 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   # include median for prediction (incl_obs_uncert)
   # %%%%%
   # %%%%%
+
+  # Convert conf_level to conf_quants
+  conf_quants <- conf_level_to_quantiles(brms_specs$conf_level)
+
   if (brms_specs$incl_obs_uncert == T){
   # if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
                                 mod,
                                 # re_form = NA,
                                 re_form = brms_specs$re_form,
+                                probs = conf_quants,
                                 na.rm = T)
     med_pred <- terra::predict(data,
                                mod,
@@ -2426,8 +2542,13 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
     
     names(mean_pred)[names(mean_pred) == "Estimate"] <- "prediction_mean"
     names(mean_pred)[names(mean_pred) == "Est.Error"] <- "prediction_sd"
-    names(mean_pred)[names(mean_pred) == "Q2.5"] <- "prediction_q2.5"
-    names(mean_pred)[names(mean_pred) == "Q97.5"] <- "prediction_q97.5"
+
+    names(mean_pred) <- gsub("Q", "prediction_q", names(mean_pred), fixed = T)
+    # for (x in conf_quants){
+    #   tmp_quant_old <- 
+    # }
+    # names(mean_pred)[names(mean_pred) == "Q2.5"] <- "prediction_q2.5"
+    # names(mean_pred)[names(mean_pred) == "Q97.5"] <- "prediction_q97.5"
     
     names(med_pred)[names(med_pred) == "Estimate"] <- "prediction_median"
     names(med_pred)[names(med_pred) == "Est.Error"] <- "prediction_mad"
@@ -2449,7 +2570,8 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
     mean_pred <- stats::fitted(mod, tmp_df, 
                         # re_form = NA
                         scale = "response", # brms_specs$scale
-                        re_form = brms_specs$re_form) |>
+                        re_form = brms_specs$re_form,
+                        probs = conf_quants) |>
       as.data.frame()
     # brms::fitted.brmsfit
     median_pred <- stats::fitted(mod, tmp_df, 
@@ -2462,9 +2584,9 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
     
     mean_pred <- mean_pred |>
       dplyr::rename(prediction_mean  = Estimate,
-                    prediction_sd = Est.Error,
-                    prediction_q2.5  = Q2.5,
-                    prediction_q97.5 = Q97.5)
+                    prediction_sd = Est.Error) |>
+      dplyr::rename_with(~gsub("Q", "prediction_q", .x, fixed = T))
+
     median_pred <- median_pred |>
       dplyr::rename(prediction_median  = Estimate,
                     prediction_mad = Est.Error)
