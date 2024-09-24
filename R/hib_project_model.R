@@ -72,7 +72,6 @@ hib_project_model <- function(mod_obj,
   # TODO: 
   # Better use of functions for model checking/predictions - minor diffs for df v rast
 
-
   # Assertions 
   assertthat::assert_that(
     inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
@@ -84,17 +83,18 @@ hib_project_model <- function(mod_obj,
     is.list(lme4_specs) || is.null(lme4_specs),
     is.list(inla_specs) || is.null(inla_specs),
     is.list(brms_specs) || is.null(brms_specs),
+    
     is.logical(calc_aoa),
     inherits(cv_obj, "HibCV") || is.null(cv_obj)
   )
   
 
   # %%%%%
-  # TODO: - incl calculation of DI/AOA
+  # Calculation of DI/AOA
   # Need to also incl cv res
   if (calc_aoa){
     assertthat::assert_that(inherits(cv_obj, "HibCV"))  
-    message(crayon::green("Estimating Area-of-Applicability...\n"))
+    message(crayon::green("\nEstimating Area-of-Applicability..."))
     aoa_res <- hib_calc_aoa(mod_obj, cv_obj, data)
   }
   if (!calc_aoa){
@@ -106,168 +106,30 @@ hib_project_model <- function(mod_obj,
   # %%%%%%%%%%
   # Globally, set base_val to NULL, if rescale_pred = F
 
-  # Check rescale_specs
+  # Check/fix rescale_specs
   rescale_specs <- check_proj_specs(rescale_specs, "rescale")
-  # if (is.list(rescale_specs)){
-  #   # Check rescale - logical
-  #   if ("rescale" %in% names(rescale_specs)){
-  #     # NA, NULL or Logical
-  #     assertthat::assert_that(
-  #       is.na(rescale_specs$rescale) || is.null(rescale_specs$rescale) ||
-  #       is.logical(rescale_specs$rescale)
-  #     )
-  #     if (is.na(rescale_specs$rescale) | is.null(rescale_specs$rescale)){
-  #       rescale_specs$rescale <- FALSE
-  #     }
-  #   }
-
-  #   if (!"rescale" %in% names(rescale_specs)){
-  #     message(crayon::yellow("Warning: rescale missing from rescale_specs, using default value of FALSE.\n"))
-  #     rescale_specs$rescale <- FALSE
-  #   }
-
-  #   if (rescale_specs$rescale == FALSE){
-  #     rescale_specs$baseline_covar <- NULL
-  #     rescale_specs$baseline_re_form <- NA
-  #   }
-
-  #   # Check baseline covar - df or null
-  #   if ("baseline_covar" %in% names(rescale_specs)){
-  #     assertthat::assert_that(
-  #       is.null(rescale_specs$baseline_covar) || is.data.frame(rescale_specs$baseline_covar)
-  #     )
-  #     if (is.data.frame(rescale_specs$baseline_covar)){
-  #       assertthat::assert_that(
-  #         nrow(rescale_specs$baseline_covar) == 1
-  #       )
-  #     }
-  #   }
-  #   if (!"baseline_covar" %in% names(rescale_specs)){
-  #     message(crayon::yellow("Warning: baseline_covar missing from rescale_specs, using default value of NULL. Model intercept will be used as the baseline.\n"))
-  #     rescale_specs$baseline_covar <- NULL
-  #   }
-
-  #   # Check baseline_re_form - form, na or null
-  #   if ("baseline_re_form" %in% names(rescale_specs)){
-  #     assertthat::assert_that(
-  #       is.na(c(rescale_specs$baseline_re_form)) || 
-  #       is.null(rescale_specs$baseline_re_form) || 
-  #       inherits(rescale_specs$baseline_re_form, "formula")
-  #     )
-  #   }
-  #   if (!"baseline_re_form" %in% names(rescale_specs)){
-  #     message(crayon::yellow("Warning: baseline_re_form missing from rescale_specs, using default value of NA.\n"))
-  #     rescale_specs$baseline_re_form <- NA
-  #   }
-  # }
-
-  # if (is.null(rescale_specs)){
-  #   message(crayon::yellow(paste0("Warning: rescale_specs missing, using default values:\n",
-  #                                   "\trescale = FALSE,\n",
-  #                                   "\tbaseline_covar = NULL,\n",
-  #                                   "\tbaseline_re_form = NA",
-  #                                   " ...\n")))
-  #   rescale_specs <- list(rescale = FALSE, baseline_covar = NULL, baseline_re_form = NA) #
-  # }
-
+  
   if (rescale_specs$rescale == FALSE){
-    # base_val <- NULL
     baseline_val <- NULL
   }
   # %%%%%%%%%%
 
-  # Check type of model
+  # Check type of model - and process accordingly.
   # %%%%%
   # LME4
   # %%%%%
   if (inherits(mod_obj, "HibModelLME4")){
-    message(crayon::green("lme4 model detected! Projection in progress...\n"))
+    message(crayon::green("\nlme4 model detected! Projection in progress..."))
     # TODO: wrap in hib_mod_proj_lme4??
     
     # %%%%%
     # Get info re bootstrapping, re_form, se_calc and conf_level
-    
+    # Check/fix lme4 specs
     lme4_specs <- check_proj_specs(lme4_specs, "lme4")
-    # 
-    # if (!is.null(lme4_specs)){
-    #   # Check for bootstrap - logical
-    #   if ("bootstrap" %in% names(lme4_specs)){
-    #     assertthat::assert_that(is.logical(lme4_specs$bootstrap))
-    #   }
-    #   # if absent, set to F
-    #   if (!"bootstrap" %in% names(lme4_specs)){
-    #     message(crayon::yellow("Warning: bootstrap missing, using default value of FALSE...\n"))
-    #     lme4_specs$bootstrap <- FALSE
-    #   }
-    #   
-    #   
-    #   # Check for n_boot - NA/integer/numeric
-    #   if (lme4_specs$bootstrap){
-    #     if ("n_boot" %in% names(lme4_specs)){
-    #       assertthat::assert_that(is.numeric(lme4_specs$n_boot))
-    #       # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
-    #     }
-    #     # if absent, set to F
-    #     if (!"n_boot" %in% names(lme4_specs)){
-    #       message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
-    #       lme4_specs$n_boot <- 50
-    #     }
-    #   }
-    #   # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-    #   if (lme4_specs$bootstrap == FALSE){
-    #     lme4_specs$n_boot <- NA
-    #   }
-    # 
-    #   # Get info on reform (random effects to include in predictions)
-    #   if ("re_form" %in% names(lme4_specs)){
-    #     assertthat::assert_that(
-    #       is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
-    #     )
-    #   }
-    #   if (!"re_form" %in% names(lme4_specs)){
-    #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-    #     lme4_specs$re_form <- NA
-    #   }
-    # 
-    #   # Get info on se_calc
-    #   if ("calc_se" %in% names(lme4_specs)){
-    #     assertthat::assert_that(is.logical(lme4_specs$calc_se))
-    #   }
-    #   # if absent, set to T
-    #   if (!"calc_se" %in% names(lme4_specs)){
-    #     message(crayon::yellow("Warning: calc_se missing, using default value of TRUE...\n"))
-    #     lme4_specs$calc_se <- TRUE
-    #   }
-    # 
-    #   # Get info on conf_level
-    #   if ("conf_level" %in% names(lme4_specs)){
-    #     assertthat::assert_that(is.numeric(lme4_specs$conf_level))
-    #   }
-    #   # if absent, set to 0.95
-    #   if (!"conf_level" %in% names(lme4_specs)){
-    #     message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
-    #     lme4_specs$conf_level <- c(0.95)
-    #   }
-    # 
-    # }
-    # if (is.null(lme4_specs)){
-    #   message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
-    #                                 "\tbootstrap = FALSE,\n",
-    #                                 "\tn_boot = NA,\n",
-    #                                 "\tcalc_se = TRUE,\n",
-    #                                 "\tconf_level = c(0.95),\n",
-    #                                 "\tre_form = NA",
-    #                                 " ...\n")))
-    # 
-    #   lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
-    #                       calc_se = T, conf_level = 0.95) #
-    #   # calc_se = T, conf_level = 0.95
-    # }
     
-    # print(lme4_specs)
     # %%%%%
 
-    message(crayon::green("Preparing input data for projection...\n"))
+    message(crayon::green("\nPreparing input data for projection..."))
     # Get some basic info on model covars
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(stats::formula(mod_obj$model)))))
     # But what about random effects... - 
@@ -278,7 +140,6 @@ hib_project_model <- function(mod_obj,
 
     # then just pass checked lme4_specs to functions - terra_proj...
     # terra_proj_lme4_mod...
-    
 
     # %%%%%
     # Get baseline value for optional rescaling
@@ -327,6 +188,10 @@ hib_project_model <- function(mod_obj,
           
           check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, re_form_vars_baseline)
         }
+        # Add checks if baseline_re_form is NULL.
+        if (is.null(rescale_specs$baseline_re_form)){
+          check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, rand_vars)
+        }
 
         baseline_val <- stats::predict(mod_obj$model,
                                          rescale_specs$baseline_covar,
@@ -357,6 +222,7 @@ hib_project_model <- function(mod_obj,
       # if it is, check all data[,var] are in obj$data[,var]
       check_covar_levels(mod_obj$model, data, fix_vars)
       
+      # TODO: condense re_form checks
       # need to check any random vars in lme4_specs$re_form
       if (inherits(lme4_specs$re_form, "formula")){
         # print("Checking random variables")
@@ -372,8 +238,11 @@ hib_project_model <- function(mod_obj,
       if (is.null(lme4_specs$re_form)){
         check_covar_levels(mod_obj$model, data, rand_vars)
       }
-
-      message(crayon::green("Projecting model...\n"))
+      
+      
+      
+      # TODO: functionalise the below - for use with terra or df...
+      message(crayon::green("\nProjecting model..."))
       pred_df <- as.data.frame(stats::predict(mod_obj$model,
                                        data,
                                        type = "response", # lme4_specs$type,
@@ -386,7 +255,7 @@ hib_project_model <- function(mod_obj,
       # Use bootMer to get uncertainty
       if (lme4_specs$bootstrap == T){
         # message(crayon::green("Bootstrapping model predictions..."))
-        message(crayon::green(paste("Generating bootstrapped prediciton intervals using",
+        message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
                                 lme4_specs$n_boot, "bootstrap samples...")))
         boot_obj <- lme4::bootMer(mod_obj$model, 
                                   function(mod, df = data){
@@ -492,7 +361,7 @@ hib_project_model <- function(mod_obj,
       data <- terra_proj(data, mod_obj, backtransform, 
                          rescale_specs$rescale, baseline_val, # rescale_pred, base_val
                          fix_vars, rand_vars,
-                         lme4_specs = lme4_specs)
+                         proj_specs = lme4_specs)
     }
     # List of raster objects
     if ((is.list(data) & !is.data.frame(data))){
@@ -506,7 +375,7 @@ hib_project_model <- function(mod_obj,
                          base_val = baseline_val, #base_val, 
                          fix_vars = fix_vars,
                          rand_vars = rand_vars,
-                         lme4_specs = lme4_specs)
+                         proj_specs = lme4_specs)
                          # lme4_boot = lme4_boot,
                          # n_boot = n_boot)
     }
@@ -528,48 +397,13 @@ hib_project_model <- function(mod_obj,
     # rlang::check_installed("INLA", reason = "to use INLA-based model fitting.")
     
     # message(crayon::yellow("Warning: INLA model detected! Projections are not yet supported...\n"))
-    message(crayon::green("INLA model detected! Projection in progress...\n"))
+    message(crayon::green("\nINLA model detected! Projection in progress..."))
     # stop("In development")
     
     # %%%
-    # Get info re bootstrapping
+    # CHeck specs
     inla_specs <- check_proj_specs(inla_specs, "inla")
     
-    # if (!is.null(inla_specs)){
-    # 
-    #   if ("re_form" %in% names(inla_specs)){
-    #     assertthat::assert_that(
-    #       is.na(c(inla_specs$re_form)) || is.null(inla_specs$re_form) || inherits(inla_specs$re_form, "formula")
-    #     )
-    #   }
-    #   if (!"re_form" %in% names(inla_specs)){
-    #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-    #     inla_specs$re_form <- NA
-    #   }
-    # 
-    #   # Link_inverse
-    #   if ("link_inverse" %in% names(inla_specs)){
-    #     assertthat::assert_that(
-    #       is.null(inla_specs$link_inverse) || is.function(inla_specs$link_inverse)
-    #     )
-    #   }
-    #   if (!"link_inverse" %in% names(inla_specs)){
-    #     message(crayon::yellow("Warning: link_inverse missing, using default value of NULL...\n"))
-    #     inla_specs$link_inverse <- NULL
-    #   }
-    # 
-    # }
-    # if (is.null(inla_specs)){
-    #   message(crayon::yellow(paste0("Warning: inla_specs missing, using default values:\n",
-    #                                 "\tre_form = NA,\n",
-    #                                 "\tlink_inverse = NULL",
-    #                                 " ...\n")))
-    #   inla_specs <- list(re_form = NA, link_inverse = NULL) #
-    # }
-    # print(inla_specs)
-    # %%%
-
-
     # Get some basic info on model covars
     # all_covars <- all.vars(formula(delete.response(terms(obj$inla_fitted_formula))))
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$full))))
@@ -579,7 +413,7 @@ hib_project_model <- function(mod_obj,
     # TODO: put into hib_mod_proj_inla
     
     # Check type of data 
-    message(crayon::green("Preparing input data for projection...\n"))
+    message(crayon::green("\nPreparing input data for projection..."))
     if (is.data.frame(data)){
       # Don't need to do anything...Just copy data to data_df...
       data_df <- data
@@ -594,7 +428,7 @@ hib_project_model <- function(mod_obj,
     # Get random vars
     # names(mod_obj$model$summary.radom) 
     rand_vars <- all.vars(mod_obj$user_formula$random)
-    # TODO: drop any vars that are in fix vars... (i.e random slopes..)
+    # drop any vars that are in fix vars... (i.e random slopes..)
     rand_vars <- rand_vars[!rand_vars %in% fix_vars]
     # And re_form_vars
     re_form_vars <- NA
@@ -625,7 +459,7 @@ hib_project_model <- function(mod_obj,
         int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
         # TODO: What if another covar also contains intercept...
         if (length(int_id) > 1){
-          message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
+          message(crayon::yellow("\nWarning: Multiple 'Intercept' coefficients found, selecting the first..."))
           int_id <- int_id[1]
         }
         # If no explicit intercept, set as 1st value...
@@ -664,46 +498,11 @@ hib_project_model <- function(mod_obj,
           check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, re_form_vars_baseline)
         }
 
-        # Can't do this yet
-        # baseline_val <- stats::predict(mod_obj$model,
-        #                                  rescale_specs$baseline_covar,
-        #                                  type = "response", # lme4_specs$type,
-        #                                  re.form = rescale_specs$baseline_re_form)
-        # if (!is.null(backtransform)){
-        #   baseline_val <- backtransform(baseline_val)
-        # }
-
         baseline_df <- rescale_specs$baseline_covar
         # baseline_df$prediction_mean <- baseline_val
       }
     }
     # %%%%%
-
-
-    # # get model intercept
-    # int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
-    # # TODO: What if another covar also contains intercept...
-    # if (length(int_id) > 1){
-    #   message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
-    #   int_id <- int_id[1]
-    # }
-    # # If no explicit intercept, set as 1st value...
-    # if (length(int_id) == 0){
-    #   int_id <- 1
-    # }
-    # base_val <- mod_obj$model$summary.fixed$mean[int_id]
-
-    # if (is.function(inla_specs$link_inverse)){
-    #   base_val <- inla_specs$link_inverse(base_val)
-    # }
-
-    # # if backtrans - backrans intercept to get baseline val
-    # if (!is.null(backtransform)){
-    #   base_val <- backtransform(base_val)
-    # }
-    
-    
-    
 
     # If terra, convert rasters to dfs
     if (inherits(data, "SpatRaster")){
@@ -758,12 +557,12 @@ hib_project_model <- function(mod_obj,
       coord_y_col <- colnames(data_df)[tolower(colnames(data_df)) %in% coord_y_col]
 
       if (length(coord_x_col) == 0){
-        message(crayon::yellow("\nWarning: Longitude coordinate column missing! Setting to NA...\n"))
+        message(crayon::yellow("\nWarning: Longitude coordinate column missing! Setting to NA..."))
         coord_x_col <- 'longitude'
         data_df$longitude <- NA
       }
       if (length(coord_y_col) == 0){
-        message(crayon::yellow("\nWarning: Latitude coordinate column missing! Setting to NA...\n"))
+        message(crayon::yellow("\nWarning: Latitude coordinate column missing! Setting to NA..."))
         coord_y_col <- 'latitude'
         data_df$latitude <- NA
       }
@@ -811,7 +610,7 @@ hib_project_model <- function(mod_obj,
     # TODO: consider spatial effects in baseline...
     # If coords provided (x, X, Longitude, Longitude_midpoint), 
     #   make an A
-    # If not ... predcit without space? - how? set pred_A to 0?, have NA coords?
+    # If not ... predict without space? - how? set pred_A to 0?, have NA coords?
 
     # TODO: do below data prep for baseline_covars
     if (is.data.frame(rescale_specs$baseline_covar)){
@@ -830,7 +629,7 @@ hib_project_model <- function(mod_obj,
       }
       missing_covars <- NULL
       
-      # TODO: for categorical vars, ensure levels in projection input are within 
+      # for categorical vars, ensure levels in projection input are within 
       # model fitting data (or NA)
       # for each fix_vars, check if chr or fct
       # if it is, check all data[,var] are in obj$data[,var
@@ -840,7 +639,7 @@ hib_project_model <- function(mod_obj,
       if (inherits(rescale_specs$baselin_re_form, "formula")){
           # print("Checking random variables")
           baseline_re_form_vars <- all.vars(rescale_specs$baselin_re_form)
-          # TODO: drop any vars that are in fix vars... (i.e random slopes..)
+          # drop any vars that are in fix vars... (i.e random slopes..)
           baseline_re_form_vars <- baseline_re_form_vars[!baseline_re_form_vars %in% fix_vars]
       
           # Need to set rand_vars that are non-re_form_vars to NA
@@ -848,16 +647,11 @@ hib_project_model <- function(mod_obj,
           baseline_X[, non_reform_rand] <- NA
           # check_covar_levels(mod_obj$model, baseline_X, baseline_re_form_vars)
       }
-      # if (is.null(inla_specs$re_form)){
-      #     # print("Checking random variables")
-      #     check_covar_levels(mod_obj$model, pred_X, re_form_vars)
-      # }
       if (is.na(re_form_vars)){
          # Need to set rand_vars to NA
          baseline_X[, rand_vars] <- NA
       }
-      # print(head(baseline_X))
-
+      
       if (mod_obj$inla_incl_spatial_term){
         # sort out baseline_A
         # if no coords...
@@ -879,12 +673,12 @@ hib_project_model <- function(mod_obj,
         coord_y_col <- colnames(baseline_X)[tolower(colnames(baseline_X)) %in% coord_y_col]
 
         if (length(coord_x_col) == 0){
-          message(crayon::yellow("\nWarning: Longitude coordinate column missing! Setting to NA...\n"))
+          message(crayon::yellow("\nWarning: Longitude coordinate column missing! Setting to NA..."))
           coord_x_col <- 'longitude'
           baseline_X$longitude <- NA
         }
         if (length(coord_y_col) == 0){
-          message(crayon::yellow("\nWarning: Latitude coordinate column missing! Setting to NA...\n"))
+          message(crayon::yellow("\nWarning: Latitude coordinate column missing! Setting to NA..."))
           coord_y_col <- 'latitude'
           baseline_X$latitude <- NA
         }
@@ -929,9 +723,6 @@ hib_project_model <- function(mod_obj,
     covars_sub <- all_covars[all_covars %in% colnames(data_df)]
     
 
-    # print(all_covars)
-    # print(covars_sub)
-    
     pred_X <- data_df |>
       dplyr::select(covars_sub)
     
@@ -945,7 +736,7 @@ hib_project_model <- function(mod_obj,
       pred_X[, covar] <- NA
     }
     
-    # TODO: for categorical vars, ensure levels in projection input are within 
+    # for categorical vars, ensure levels in projection input are within 
     # model fitting data (or NA)
     # for each fix_vars, check if chr or fct
     # if it is, check all data[,var] are in obj$data[,var
@@ -969,19 +760,8 @@ hib_project_model <- function(mod_obj,
        pred_X[, rand_vars] <- NA
     }
 
-
-
-    # print(re_form_vars)
-    # print(head(pred_X))
-
-    
-    # print(missing_covars)
-    # print(head(pred_X))
-    # Combine data etc into stack
-    # print(head(pred_X))
+    # Create prediction stack
     if (mod_obj$inla_incl_spatial_term){
-      # print(head(pred_A |> matrix() |> unique()))
-      
       pred_stk <- INLA::inla.stack(tag = "pred",
                                    data = list(y = rep(NA, nrow(pred_X))),
                                    A = list(pred_A, 1),
@@ -996,7 +776,7 @@ hib_project_model <- function(mod_obj,
     # Get original model fitting stack..
     # And combine with pred for refitting
 
-    # TODO: if baseline_covar, add in too
+    # if baseline_covar, add in too
     if (is.data.frame(rescale_specs$baseline_covar)){
       comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
                                    pred_stk,
@@ -1007,9 +787,9 @@ hib_project_model <- function(mod_obj,
     }
 
     
-    message(crayon::green("Re-fitting INLA model to make projection (this may take a while)...\n"))
+    message(crayon::green("\nRe-fitting INLA model to make projection (this may take a while)..."))
     # re-fit/ Project
-    # TODO: incl while to ensure fixef are fitted properly!
+    # incl while to ensure fixef are fitted properly!
     # %%%%%
     if (length(fix_vars) > 0){
       check_flag <- 0
@@ -1145,7 +925,6 @@ hib_project_model <- function(mod_obj,
     
     pred_df <- dplyr::bind_cols(pred_df, pred_rescaled_df)
     
-    
     # make back into data... - if df
     if (is.data.frame(data)){
       data <- pred_df
@@ -1154,9 +933,6 @@ hib_project_model <- function(mod_obj,
     
     # if input was terra/list of terra, convert pred df back to terra format
     if (inherits(data, "SpatRaster")){
-      # TODO: crs of input...
-      # sf::st_crs(data)
-      # data_pred <- terra::rast(pred_df[,c("x", "y", pred_cols)])
       data_pred <- terra::rast(pred_df[,c("x", "y", pred_cols)],
                                crs = terra::crs(data))
       
@@ -1173,11 +949,9 @@ hib_project_model <- function(mod_obj,
                              dplyr::select(-Year)
                            
                            tmp_df <- tmp_df[,c("x", "y", col_nms)]
-                           # TODO: crs of input...
-                           # sf::st_crs(data_orig)
-                           tmp_r <- terra::rast(tmp_df)
+                           
                            tmp_r <- terra::rast(tmp_df,
-                                                crs = terra::crs(data_orig))
+                                                crs = terra::crs(data_orig[[1]]))
                            
                            out <- c(data_orig[[.x]], tmp_r)
                          })
@@ -1185,91 +959,23 @@ hib_project_model <- function(mod_obj,
       names(data) <- as.character(unique(pred_df$Year))
     }
     
-    # return(data)
     
     # %%%%%
     # BRMS
     # %%%%%
   } else if (inherits(mod_obj, "HibModelBRMS")){
-    message(crayon::green("brms model detected! Projection in progress...\n"))
+    message(crayon::green("\nbrms model detected! Projection in progress..."))
     
     # %%%%
-    # Get incl_obs_uncert info
-    # list(incl_obs_uncert = F)
-    # print(brms_specs)
-    
+    # Check specs
     brms_specs <- check_proj_specs(brms_specs, "brms")
     
-    # if (!is.null(brms_specs)){
-    #   if ("incl_obs_uncert" %in% names(brms_specs)){
-    #     assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
-    #   }
-    #   # if absent, set to F
-    #   if (!"incl_obs_uncert" %in% names(brms_specs)){
-    #     message(crayon::yellow("Warning: incl_obs_uncert missing, using default value of FALSE...\n"))
-    #     brms_specs$incl_obs_uncert <- FALSE
-    #   }
-    # 
-    #   if ("re_form" %in% names(brms_specs)){
-    #     assertthat::assert_that(
-    #       is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
-    #   }
-    #   # if absent, set to F
-    #   if (!"re_form" %in% names(brms_specs)){
-    #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-    #     brms_specs$re_form <- NA
-    #   }
-    # 
-    #   # Check for conf_level
-    #   # Get info on conf_level
-    #   if ("conf_level" %in% names(brms_specs)){
-    #     assertthat::assert_that(is.numeric(brms_specs$conf_level))
-    #   }
-    #   # if absent, set to 0.95
-    #   if (!"conf_level" %in% names(brms_specs)){
-    #     message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
-    #     brms_specs$conf_level <- c(0.95)
-    #   }
-    # 
-    # }
-    # if (is.null(brms_specs)){
-    #   message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
-    #                               "\tincl_obs_uncert = FALSE,\n",
-    #                               "\tconf_level = c(0.95),\n",
-    #                               "\tre_form = NA",
-    #                               " ...\n")))
-    #   brms_specs <- list(incl_obs_uncert = FALSE,
-    #                       re_form = NA,
-    #                       conf_level = 0.95)
-    # }
-    # print(brms_specs)
-    # %%%%
     
-    # Get baseline value for optional rescaling
-    # if ("Intercept" %in% mod_obj$fixedef_coefficients$Coefficient_name){
-    #   base_val <- mod_obj$fixedef_coefficients$Coefficient_value[mod_obj$fixedef_coefficients$Coefficient_name == "Intercept"]
-    # } else {
-    #   base_val <- mod_obj$fixedef_coefficients$Coefficient_value[1]
-    # }
-    
-    # # Convert intercept to response scale
-    # base_val <- mod_obj$model$family$linkinv(base_val)
-
-    # # if backtrans - backrans intercept to get baseline val
-    # if (!is.null(backtransform)){
-    #   base_val <- backtransform(base_val)
-    # }
-    
-    message(crayon::green("Preparing input data for projection...\n"))
+    message(crayon::green("\nPreparing input data for projection..."))
     # Get some basic info on model covars
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$model$formula$formula))))
-    # all_covars <- all.vars(formula(obj$model)[[3]])
-    # print(all_covars)
-    # But what about random effects... - 
     rand_vars <- names(brms::ranef(mod_obj$model))
-
     fix_vars <- all_covars[!all_covars %in% rand_vars]
-    # print(fix_vars)
 
     # %%%%%
     # Only needed if rescale_pred == T
@@ -1301,7 +1007,6 @@ hib_project_model <- function(mod_obj,
 
         # for categorical vars, ensure levels in projection input are within
         # model fitting data
-
         check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, fix_vars)
 
         # need to check any random vars in baseline
@@ -1314,6 +1019,9 @@ hib_project_model <- function(mod_obj,
                                 msg = "Specified re_form structure for baseline prediction contains variables not in the original model.")
           
           check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, re_form_vars_baseline)
+        }
+        if (is.null(rescale_specs$baseline_re_form)){
+          check_covar_levels(mod_obj$model, rescale_specs$baseline_covar, rand_vars)
         }
 
         baseline_val <- stats::fitted(mod_obj$model,
@@ -1347,17 +1055,19 @@ hib_project_model <- function(mod_obj,
                               msg = "Fixed effect variables missing from input data.")
       
       
-      # TODO: for categorical vars, ensure levels in projection input are within 
+      # for categorical vars, ensure levels in projection input are within 
       # model fitting data
       # for each fix_vars, check if chr or fct
       # if it is, check all data[,var] are in obj$data[,var
       check_covar_levels(mod_obj$model, data, fix_vars)
       
-      # TODO: also need to check any random vars in brms_specs$re_form
+      # also need to check any random vars in brms_specs$re_form
       # Check they are present, and check they have the correct levels...
       if (inherits(brms_specs$re_form, "formula")){
           # print("Checking random variables")
           re_form_vars <- all.vars(brms_specs$re_form)
+          re_form_vars <- re_form_vars[!re_form_vars %in% fix_vars]
+          
           assertthat::assert_that(all(re_form_vars %in% rand_vars), 
                                   msg = "Specified re_form structure contains variables not in the original model.")
           # all.vars(brms_specs$re_form[[2]])
@@ -1371,31 +1081,27 @@ hib_project_model <- function(mod_obj,
       conf_quants <- conf_level_to_quantiles(brms_specs$conf_level)
 
       # %%%%%
-      message(crayon::green("Projecting model...\n"))
+      message(crayon::green("\nProjecting model..."))
       if (brms_specs$incl_obs_uncert == TRUE){
-      # if (incl_obs_uncert == T){
+      
         mean_df <- stats::predict(mod_obj$model,
                            data,
-                           # re_form = NA
                            re_form = brms_specs$re_form,
                            probs = conf_quants) |>
           as.data.frame()
         med_df <- stats::predict(mod_obj$model,
                           data,
-                          # re_form = NA,
                           re_form = brms_specs$re_form,
                           robust = TRUE) |>
           as.data.frame()
       }
       if (brms_specs$incl_obs_uncert == FALSE){
-      # if (incl_obs_uncert == F){
         # brms::fitted.brmsfit
         mean_df <- stats::fitted(mod_obj$model,
                           data,
                           scale = "response", # brms_specs$scale,
                           re_form = brms_specs$re_form,
                            probs = conf_quants) |>
-        # re_form = brms_specs$re_form
           as.data.frame()
           # brms::fitted.brmsfit
         med_df <- stats::fitted(mod_obj$model,
@@ -1420,21 +1126,7 @@ hib_project_model <- function(mod_obj,
                            dplyr::select(prediction_median,
                                          prediction_mad))
       # %%%%%
-      
-      # Use predict
-      # pred_df <- as.data.frame(predict(obj$model,
-      #                                  data,
-      #                                  re_form = NA))
-      
-      # fix names...
-      # pred_df <- pred_df |>
-      #   dplyr::rename(prediction       = Estimate,
-      #                 prediction_error = Est.Error,
-      #                 prediction_q2.5  = Q2.5,
-      #                 prediction_q97.5 = Q97.5)
-      
-      # What if we want to include  random effect??
-      
+
       if (!is.null(backtransform)){
         p_gt_0_orig <- all(pred_df > 0)
 
@@ -1451,7 +1143,6 @@ hib_project_model <- function(mod_obj,
       pred_rescaled_df <- NULL
 
       if (rescale_specs$rescale){
-      # if (rescale_pred){
         # divide predictions by baseline val
         pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
         pred_rescaled_df <- pred_df[,pred_cols] / baseline_val
@@ -1465,15 +1156,13 @@ hib_project_model <- function(mod_obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
-      # print(brms_specs)
       data <- terra_proj(data, mod_obj, backtransform, rescale_specs$rescale, baseline_val, fix_vars,
                           rand_vars,
-                         brms_specs = brms_specs)
-                         # incl_obs_uncert)
+                         proj_specs = brms_specs)
     }
     # List of raster objects
-    if (( is.list(data) & !is.data.frame(data) & all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ) ){
-      # & inherits(data[[1]], "SpatRaster")
+    if (( is.list(data) & !is.data.frame(data) & 
+          all(unlist(lapply(data, function(x){inherits(x, "SpatRaster")}))) ) ){
       # Apply individual terra proj to each item of list...
       data <- purrr::map(data,
                          terra_proj,
@@ -1483,8 +1172,7 @@ hib_project_model <- function(mod_obj,
                          base_val = baseline_val, # base_val,
                          fix_vars = fix_vars,
                          rand_vars = rand_vars,
-                         brms_specs = brms_specs)
-                         # incl_obs_uncert = incl_obs_uncert)
+                         proj_specs = brms_specs)
     }
     
   }
@@ -1532,14 +1220,8 @@ hib_project_model <- function(mod_obj,
 #' @param base_val Model intercept, for use in rescaling predictions
 #' @param fix_vars Model fixed effects
 #' @param rand_vars Model random effects
-#' @param lme4_specs A list containing details relevant to projecting an lme4-style
-#' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
-#' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
-#' estimated, and if so, how many bootstrap samples should be used.
-#' @param brms_specs A list containing details relevant to projecting a brms-style
-#' model. Specifically, named item should consist of 'incl_obs_uncert' [`logical`] 
-#' to determine whether or not observation-level uncertainty is included in predictions. 
-#' Setting this parameter to TRUE will produce predictions with larger uncertainty.
+#' @param proj_specs A list containing details relevant to projecting the model,
+#' either lme4_specs, or brms_specs.
 #' @keywords model, projections
 #' @examples 
 #' \dontrun{
@@ -1550,13 +1232,10 @@ terra_proj <- function(data, obj, backtransform,
                        rescale_pred, base_val, 
                        fix_vars,
                        rand_vars,
-                       lme4_specs = NULL,
-                       brms_specs = NULL){
-                       # incl_obs_uncert = F,
-                       # lme4_boot = T,
-                       # n_boot = 100){
-  # TODO: maybe change to @NoRd
-  # assertions
+                       proj_specs = NULL
+                       ){
+  
+  # Assertions
   assertthat::assert_that(
     inherits(obj, "HibModelLME4") || inherits(obj, "HibModelBRMS"),
     inherits(data, "SpatRaster"), 
@@ -1565,96 +1244,48 @@ terra_proj <- function(data, obj, backtransform,
     is.numeric(base_val) || is.null(base_val),
     is.character(fix_vars),
     is.character(rand_vars) || is.na(c(rand_vars)) || is.null(rand_vars),
-    # is.logical(incl_obs_uncert),
-    # is.logical(lme4_boot),
-    # is.numeric(n_boot) || is.null(n_boot)
-    is.list(lme4_specs) || is.null(lme4_specs),
-    is.list(brms_specs) || is.null(brms_specs)
+    is.list(proj_specs) || is.null(proj_specs)
   )
-  # Covar checks
-  # print(fix_vars)
-  # print(names(data))
-
+ 
   # Extract important re_form_vars
+  # Condense into single set of calls to specs
   re_form_vars <- NA
-  if (inherits(obj, "HibModelLME4")){
-    if (inherits(lme4_specs$re_form, "formula")){
-      re_form_vars <- all.vars(lme4_specs$re_form)
-      assertthat::assert_that(all(re_form_vars %in% rand_vars), 
-                              msg = "Specified re_form structure contains variables not in the original model.")
-    }
-    if (is.null(lme4_specs$re_form)){
-      re_form_vars <- rand_vars
-    }
+  if (inherits(proj_specs$re_form, "formula")){
+    re_form_vars <- all.vars(proj_specs$re_form)
+    re_form_vars <- re_form_vars[!re_form_vars %in% fix_vars]
+    assertthat::assert_that(all(re_form_vars %in% rand_vars), 
+                            msg = "Specified re_form structure contains variables not in the original model.")
   }
-  if (inherits(obj, "HibModelBRMS")){
-    if (inherits(brms_specs$re_form, "formula")){
-      re_form_vars <- all.vars(brms_specs$re_form)
-      assertthat::assert_that(all(re_form_vars %in% rand_vars), 
-                              msg = "Specified re_form structure contains variables not in the original model.")
-    }
-    if (is.null(brms_specs$re_form)){
-      re_form_vars <- rand_vars
-    }
+  if (is.null(proj_specs$re_form)){
+    re_form_vars <- rand_vars
   }
-
 
   if (all(fix_vars %in% names(data))){
-    # data_pred <- terra::predict(data,
-    #                             obj$model,
-    #                             re.form = NA)
-    # 
-    # if (!is.null(backtransform)){
-    #   data_pred <- backtransform(data_pred)
-    # }
-    # names(data_pred) <- "prediction"
-    
-    # TODO: for categorical vars, ensure levels in projection input are within 
-    # model fitting data
-    # for each fix_vars, check if chr or fct
-    # if it is, check all data[,var] are in obj$data[,var
+    # Covar checks
     check_covar_levels(obj$model, data, fix_vars)
 
+    if ( (inherits(proj_specs$re_form, "formula") | 
+          is.null(proj_specs$re_form)) ){
+      check_covar_levels(obj$model, data, re_form_vars)
+    }
+    
+    
     if (inherits(obj, "HibModelLME4")){
-      # TODO: Random covar checks
-      if (inherits(lme4_specs$re_form, "formula")){
-        # print("Checking random variables")
-        # re_form_vars <- all.vars(lme4_specs$re_form)
-        # all.vars(brms_specs$re_form[[2]])
-        check_covar_levels(obj$model, data, re_form_vars)
-      }
-      if (is.null(lme4_specs$re_form)){
-        check_covar_levels(obj$model, data, re_form_vars)
-      }
-
-      # TODO: incorp uncertainty
-      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, lme4_specs)#lme4_boot, n_boot)
+      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, proj_specs)#lme4_boot, n_boot)
     }
 
     if (inherits(obj, "HibModelBRMS")){
-      # TODO: change to fitted...??
-      # TODO: Random covar checks
-      if (inherits(brms_specs$re_form, "formula")){
-        # print("Checking random variables")
-        # re_form_vars <- all.vars(brms_specs$re_form)
-        # all.vars(brms_specs$re_form[[2]])
-        check_covar_levels(obj$model, data, re_form_vars)
-      }
-      if (is.null(brms_specs$re_form)){
-        check_covar_levels(obj$model, data, re_form_vars)
-      }
-      # print(brms_specs)
-      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, brms_specs)#incl_obs_uncert)
+      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, proj_specs)#incl_obs_uncert)
     }
+    
     # %%%%
   } else {
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
-    # TODO: want to incl ranefs here -- either from re_form, or model
-    if (!is.na(re_form_vars)){
+    # incl ranefs here -- either from re_form, or model
+    if (!all(is.na(re_form_vars))){
       ranefs_in_rast <- names(data)[names(data) %in% re_form_vars]
       covars_in_rast <- c(covars_in_rast, ranefs_in_rast)
-      # print(covars_in_rast)
     }
 
     tmp_pred_rast <- NULL
@@ -1666,7 +1297,7 @@ terra_proj <- function(data, obj, backtransform,
     
     # any layer with a name not in fix_covars needs to be aligned to a var
     non_covars_in_rast <- names(data)[!names(data) %in% fix_vars]
-    # TODO: want to drop ranefs here -- either from re_form, or model ??
+    # drop ranefs here -- either from re_form, or model ??
     # Easy way to drop ranefs_in_rast 
     non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% covars_in_rast]
     # But, also want to drop ranefs that aren't in rast from non_covars_in_rast
@@ -1683,18 +1314,17 @@ terra_proj <- function(data, obj, backtransform,
     
     if (length(non_covars_in_rast) > 0 ){
       # for each covar, get unique levels (if factor in mod_df) - what about chr..
-      # TODO: Should use model-fitting data from obj$model...
+      # Use model-fitting data from obj$model...
       # lmer: @frame
       # inla: $.args$data
       # brms: @frame
       
-      # # lme4 fit data,
-      # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
-      if ((inherits(obj$model, "lmerMod") || inherits(obj$model, "glmerMod"))){
+      # lme4 fit data,
+      # merMod
+      if (inherits(obj$model, "merMod")){
         fit_dat <- obj$model@frame
       }
       # brms fit data
-      # if (class(obj$model) == "brmsfit"){
       if (inherits(obj$model, "brmsfit")){
         fit_dat <- obj$model$data
       }
@@ -1707,12 +1337,10 @@ terra_proj <- function(data, obj, backtransform,
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
                                              if (is.character(fit_dat[[x]])){
-                                               # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
                                                                      covar_levs = unique(fit_dat[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
                                              } else if (is.factor(fit_dat[[x]])){
-                                             # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
                                                                      covar_levs = levels(fit_dat[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
@@ -1748,7 +1376,6 @@ terra_proj <- function(data, obj, backtransform,
         dplyr::group_by(covar_nm) |>
         dplyr::mutate(is_binary_covar = all(is_binary_layer, na.rm = T))
       
-      # print(covars_not_in_rast)
       
       # Split binary and non binary layers
       bin_covars <- covars_not_in_rast |>
@@ -1765,7 +1392,7 @@ terra_proj <- function(data, obj, backtransform,
       # then do multiplication to aggregate
       # predict for non-prop vars - sum
       if (length(unique(non_bin_covars$covar_nm)) > 1){
-        message(crayon::yellow("Warning: SpatRaster with multiple non-binary layers detected! Projections are not yet supported...\n"))
+        message(crayon::yellow("\nWarning: SpatRaster with multiple non-binary layers detected! Projections are not yet supported..."))
         stop("In development")
       }
       
@@ -1784,7 +1411,7 @@ terra_proj <- function(data, obj, backtransform,
       # covar level (Not Pasture) is simply ignored!
       if (length(problem_layers) > 0){
         # Maybe better to throw a warning/error??
-        message(crayon::red(paste0("Error: covariate layer/s in the projection ",
+        message(crayon::red(paste0("\nError: covariate layer/s in the projection ",
                                    "data do not align with the model fitting data!\n\n",
                                    "Please fix this, see details below:\n")
                             )
@@ -1823,7 +1450,6 @@ terra_proj <- function(data, obj, backtransform,
         n_bin_covar_layers <- dim(tmp_bin_rast)[3]
       }
       
-      
       # For non-binary layers - factor is layer name, minus covar nm if name is covar_nm_lev
       # BUT, also need to record values for later aggregation
       # currently assume only one non_bin_covar...
@@ -1841,11 +1467,8 @@ terra_proj <- function(data, obj, backtransform,
           unlist() |>
           c() |>
           terra::rast()
-        # print(tmp_prop_rast)
         # Want to end up with N raster stacks - 1 per prop level
         n_prop_covar_lyrs <- dim(tmp_prop_rast)[3]
-        
-        # print(tmp_prop_rast)
       }
       # Check tmp_prop_rast is a terra SpatRaster
       # Could optionally exit here if prepping for inla...
@@ -1860,13 +1483,15 @@ terra_proj <- function(data, obj, backtransform,
       non_bin_sub <- non_bin_covars |>
         dplyr::filter(!is.na(covar_levs_rast))
       
-      # print(tmp_prop_rast)
-      # print(non_bin_covars)
-      # print(non_bin_sub)
       non_bin_r <- tmp_rast[[non_bin_sub$covar_levs_rast]]
       
       tmp_pred_rast_ls <- vector("list", n_prop_covar_lyrs)
       names(tmp_pred_rast_ls) <- rep("", n_prop_covar_lyrs)
+
+      # TODO: print "Projecting model..." here, 
+      # Optionally include se message 
+      # Then per iter, print lyr i...
+
       for (i in 1:n_prop_covar_lyrs){
         # TODO: need to be careful combining these, if first item is null,
         # output becomes a list of 1...
@@ -1876,7 +1501,6 @@ terra_proj <- function(data, obj, backtransform,
         if (is.list(tmp_)){
           tmp_ <- tmp_[[1]]
         }
-        # print(tmp_)
 
         assertthat::assert_that(
           inherits(tmp_, "SpatRaster")
@@ -1886,50 +1510,28 @@ terra_proj <- function(data, obj, backtransform,
         tmp_pred_rast_ls[[i]] <- tmp_ # c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
         
         # Check all covars in new SpatRaster
-        # print(tmp_pred_rast_ls[[i]])
-
-        # print(c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]]))
-        # print(fix_vars)
-        # print(names(tmp_pred_rast_ls[[i]]))
-
         assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast_ls[[i]])))
         
-        # tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
-        #                                               tmp_pred_rast_ls[[i]], 
-        #                                               backtransform)
-        
-        # TODO: for categorical vars, ensure levels in projection input are within 
-        # model fitting data
-        # for each fix_vars, check if chr or fct
-        # if it is, check all data[,var] are in obj$data[,var
         check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], fix_vars)
         
+        if ((inherits(proj_specs$re_form, "formula") |
+             is.null(proj_specs$re_form)) ){
+          check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
+        }
+        
         if (inherits(obj, "HibModelLME4")){
-          # TODO : ranef covar check
-          if (inherits(lme4_specs$re_form, "formula")){
-            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
-          }
-          if (is.null(lme4_specs$re_form)){
-            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
-          }
-          
+          # TODO: silent proj
           tmp_pred_rast_ls[[i]] <- terra_proj_lme4_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
                                                         backtransform,
-                                                        lme4_specs)
+                                                        proj_specs)
         }
         if (inherits(obj, "HibModelBRMS")){
-          # TODO : ranef covar check
-          if (inherits(brms_specs$re_form, "formula")){
-            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
-          }
-          if (is.null(brms_specs$re_form)){
-            check_covar_levels(obj$model, tmp_pred_rast_ls[[i]], re_form_vars)
-          }
+          # TODO: silent proj
           tmp_pred_rast_ls[[i]] <- terra_proj_brms_pred(obj$model, 
                                                         tmp_pred_rast_ls[[i]], 
                                                         backtransform,
-                                                        brms_specs)
+                                                        proj_specs)
         }
         
         
@@ -1937,10 +1539,6 @@ terra_proj <- function(data, obj, backtransform,
         lyr_nm <- terra::cats(tmp_prop_rast)[[i]] |> 
           dplyr::filter(ID == as.vector(unname(unique(terra::values(tmp_prop_rast[[i]])))) ) |> 
           dplyr::pull(category)
-        
-        # print(tmp_prop_rast[[i]])
-        # print(terra::cats(tmp_prop_rast)[[i]])
-        # print(unique(terra::values(tmp_prop_rast[[i]])))
         
         lyr_orig_nm <- non_bin_sub |>
           dplyr::filter(covar_levs == lyr_nm) |>
@@ -1988,7 +1586,6 @@ terra_proj <- function(data, obj, backtransform,
     # otherwise, just combine all into one raster stack
     if (n_prop_covar_lyrs == 0){
       
-
       tmp_pred_rast <- c(tmp_pred_rast, tmp_bin_rast) #[[1]]
       if (is.list(tmp_pred_rast)){
           tmp_pred_rast <- tmp_pred_rast[[1]]
@@ -2001,37 +1598,21 @@ terra_proj <- function(data, obj, backtransform,
       # Check all covars in new SpatRaster
       assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast)))
       
-      # TODO: for categorical vars, ensure levels in projection input are within 
-      # model fitting data
-      # for each fix_vars, check if chr or fct
-      # if it is, check all data[,var] are in obj$data[,var
       check_covar_levels(obj$model, tmp_pred_rast, fix_vars)
       
-      # TODO : ranef covar check
-
-      # Predict
+      # ranef covar check
+      if ( (inherits(proj_specs$re_form, "formula") | 
+            is.null(proj_specs$re_form)) ){
+        check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
+      }
+      
       if (inherits(obj, "HibModelLME4")){
-        if (inherits(lme4_specs$re_form, "formula")){
-            check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
-        }
-        if (is.null(lme4_specs$re_form)){
-          check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
-        }
-
         data_pred <- terra_proj_lme4_pred(obj$model, tmp_pred_rast, backtransform,
-                                          lme4_specs)
-                                          # lme4_boot, n_boot)
+                                          proj_specs)
       }
       if (inherits(obj, "HibModelBRMS")){
-        if (inherits(brms_specs$re_form, "formula")){
-            check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
-        }
-        if (is.null(brms_specs$re_form)){
-          check_covar_levels(obj$model, tmp_pred_rast, re_form_vars)
-        }
         data_pred <- terra_proj_brms_pred(obj$model, tmp_pred_rast, backtransform,
-                                          brms_specs)
-                                          # incl_obs_uncert)
+                                          proj_specs)
       }
     }
   }
@@ -2046,12 +1627,11 @@ terra_proj <- function(data, obj, backtransform,
     # Or does it??
     # data_pred_rescaled <- data_pred_rescaled[[names(data_pred_rescaled) != "prediction_error"]]
     # data_pred_rescaled <- data_pred_rescaled[[names(data_pred_rescaled) != "prediction_Est.error"]]
-    
     names(data_pred_rescaled) <- paste0("rescaled_", names(data_pred_rescaled))
   }
   
 
-  # TODO: if time in data (original), ensure it is in output
+  # if time in data (original), ensure it is in output
   # Assume that the time for a data SpatRaster is the same for all layers - i.e a year
   t_orig <- terra::time(data)[1]
 
@@ -2109,7 +1689,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   
   if (input_type == "binary"){
     if (max(terra::values(sum(r)), na.rm = T) != 1){
-      message(crayon::yellow("Warning: Binary SpatRaster contains cells with >1 category! Layers will be discarded ...\n"))
+      message(crayon::yellow("\nWarning: Binary SpatRaster contains cells with >1 category! Layers will be discarded ..."))
       return (NULL)
     }  
   }
@@ -2122,7 +1702,6 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   fac_lev_df <- data.frame(ID = as.numeric(mod_data[[covar_nm]]),
                            category = mod_data[[covar_nm]]) |>
     unique()
-  # print(fac_lev_df)
   
   
   r <- lapply(r, function(lyr, covar_df = df, lev_df = fac_lev_df){
@@ -2161,12 +1740,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     terra::rast() 
   
   if (input_type == "binary"){
-    
-    # print(r |>
-    #         max() |>
-    #         terra::as.factor())
-    # print(fac_lev_df)
-    
+
     r <- r |>
       max() |>
       terra::as.factor() |>
@@ -2179,7 +1753,6 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   # %%%
   names(r) <- rep(covar_nm, dim(r)[3]) 
   
-  # print(r)
   return(r)
 }
 
@@ -2212,135 +1785,24 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 #'   pred <- terra_proj_lme4_pred(mod, data, backtransform)
 #' } 
 #' @noRd
-terra_proj_lme4_pred <- function(mod, data, backtransform, 
-                                 lme4_specs){
-                                 
+terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_specs){
+              
+  # TODO: silent/verbose arg - use if multiple layers in input raster, or a list...
+
   # Assertions
   assertthat::assert_that(
     inherits(mod, "merMod"),
     inherits(data, "SpatRaster"), 
     is.null(backtransform) || is.function(backtransform),
-    # is.logical(lme4_boot), 
-    # is.numeric(n_boot) || is.null(n_boot)
     is.list(lme4_specs) || is.null(lme4_specs)
   )
-  # Check all fixef covars are in data - already done before func call!
   
   # %%%
   # Project
   # TODO: could also incl df.. - more general
   
-
-  # %%%%%
-  # Get info re bootstrapping
-  # Should already be checked!!! - CHECK
-  # Maybe just include for safety
-  # if (!is.null(lme4_specs)){
-  #   # Check for bootstrap - logical
-  #   if ("bootstrap" %in% names(lme4_specs)){
-  #     assertthat::assert_that(is.logical(lme4_specs$bootstrap))
-  #   }
-  #   # if absent, set to F
-  #   if (!"bootstrap" %in% names(lme4_specs)){
-  #     lme4_specs$bootstrap <- FALSE
-  #   }
-    
-    
-  #   # Check for n_boot - NA/integer/numeric
-  #   if (lme4_specs$bootstrap){
-  #     if ("n_boot" %in% names(lme4_specs)){
-  #       assertthat::assert_that(is.numeric(lme4_specs$n_boot))
-  #     }
-  #     # if absent, set to F
-  #     if (!"n_boot" %in% names(lme4_specs)){
-  #       message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
-  #       lme4_specs$n_boot <- 50
-  #     }
-  #   }
-  #   # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-  #   if (lme4_specs$bootstrap == F){
-  #     lme4_specs$n_boot <- NA
-  #   }
-  # }
-  # if (is.null(lme4_specs)){
-  #   lme4_specs <- list(bootstrap = F, n_boot = NA) # , re_form = NA
-  # }
-  
   # %%%
-  # These checks are done in main function... - not needed here I think
-  # if (!is.null(lme4_specs)){
-  #   # Check for bootstrap - logical
-  #   if ("bootstrap" %in% names(lme4_specs)){
-  #     assertthat::assert_that(is.logical(lme4_specs$bootstrap))
-  #   }
-  #   # if absent, set to F
-  #   if (!"bootstrap" %in% names(lme4_specs)){
-  #     lme4_specs$bootstrap <- FALSE
-  #   }
-    
-    
-  #   # Check for n_boot - NA/integer/numeric
-  #   if (lme4_specs$bootstrap){
-  #     if ("n_boot" %in% names(lme4_specs)){
-  #       assertthat::assert_that(is.numeric(lme4_specs$n_boot))
-  #       # Could fix n_boot to 50 if is.na(n_boot) but bootstrap == TRUE
-  #     }
-  #     # if absent, set to F
-  #     if (!"n_boot" %in% names(lme4_specs)){
-  #       message(crayon::yellow("Warning: n_boot missing, using default value of 50...\n"))
-  #       lme4_specs$n_boot <- 50
-  #     }
-  #   }
-  #   # if absent, if bootstrap, set to 50, if not bootstrap, set to NA
-  #   if (lme4_specs$bootstrap == FALSE){
-  #     lme4_specs$n_boot <- NA
-  #   }
-  
-
-  #   if ("re_form" %in% names(lme4_specs)){
-  #     assertthat::assert_that(
-  #       is.na(c(lme4_specs$re_form)) || is.null(lme4_specs$re_form) || inherits(lme4_specs$re_form, "formula")
-  #     )
-  #   }
-  #   if (!"re_form" %in% names(lme4_specs)){
-  #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-  #     lme4_specs$re_form <- NA
-  #   }
-    
-
-  #   # Get info on se_calc
-  #   if ("calc_se" %in% names(lme4_specs)){
-  #     assertthat::assert_that(is.logical(lme4_specs$calc_se))
-  #   }
-  #   # if absent, set to T
-  #   if (!"calc_se" %in% names(lme4_specs)){
-  #     lme4_specs$calc_se <- TRUE
-  #   }
-    
-  #   # Check for conf_level
-  #   # Get info on conf_level
-  #   if ("conf_level" %in% names(lme4_specs)){
-  #     assertthat::assert_that(is.numeric(lme4_specs$conf_level))
-  #   }
-  #   # if absent, set to 0.95
-  #   if (!"conf_level" %in% names(lme4_specs)){
-  #     lme4_specs$conf_level <- c(0.95)
-  #   }
-
-  # }
-  # if (is.null(lme4_specs)){
-  #   message(crayon::yellow(paste0("Warning: lme4_specs missing, using default values:\n",
-  #                                 "\tbootstrap = FALSE,\n",
-  #                                 "\tn_boot = NA,\n",
-  #                                 "\tcalc_se = TRUE,\n",
-  #                                 "\tre_form = NA",
-  #                                 "\tconf_level = c(0.95)",
-  #                                 " ...\n")))
-  #   lme4_specs <- list(bootstrap = FALSE, n_boot = NA, re_form = NA,
-  #                      conf_level = 0.95, calc_se = T)
-  # }
-  # %%%
-  message(crayon::green("Projecting model...\n"))
+  message(crayon::green("\nProjecting model..."))
   data_pred <- terra::predict(data,
                               mod,
                               type = "response", # lme4_specs$type, ??
@@ -2348,13 +1810,11 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
                               na.rm = T)
   names(data_pred) <- "prediction_mean"
   
-  # %%%
-  # print(lme4_specs)
+  
   # %%%%%
   if (lme4_specs$bootstrap == TRUE){
-  # if (lme4_boot == T){
     # %%%%
-    message(crayon::green(paste("Generating bootstrapped prediciton intervals using",
+    message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
                                 lme4_specs$n_boot, "bootstrap samples...")))
     
     
@@ -2401,16 +1861,13 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     # %%%%
   }
   
-  # TODO: se-based CIs... and conf level...
   # se-based CIs... and conf level...
   if (lme4_specs$calc_se == T){
-    # print(lme4_specs$conf_level)
     message(crayon::green("\nCalculating standard error of model predictions..."))
     # get conf level if specified - only one, or multiple
     
     # Need to convert data to df...
     tmp_rast_df <- terra::as.data.frame(data, xy = T)
-    # print(head(tmp_rast_df))
     # if only 1 conf_level - get single df for se CI
     # prediction_lo_<conf_level>
     se_df <- marginaleffects::predictions(mod,
@@ -2429,11 +1886,9 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
     # if multiple conf_level - get df once, then use conf level to adjust CI mult and generate se CIs
     if (length(lme4_specs$conf_level) > 1){
       for (i in 2:length(lme4_specs$conf_level)){
-        # print(i)
         tmp_alpha <- 1 - lme4_specs$conf_level[i]
-        # print(tmp_alpha)
         tmp_mult <- abs(stats::qnorm(tmp_alpha / 2))
-        # print(tmp_mult)
+        
         tmp_lo_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_lo")
         tmp_hi_nm <- paste0("prediction_se_", lme4_specs$conf_level[i], "_hi")
         
@@ -2464,7 +1919,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
       message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
     }
   }
-  # %%% 
+  
   return(data_pred)
 }
 
@@ -2500,82 +1955,28 @@ terra_proj_lme4_pred <- function(mod, data, backtransform,
 #' @noRd
 terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   
+  # TODO: silent/verbose arg - use if multiple layers in input raster, or a list...
+
   # Assertions
   assertthat::assert_that(
     inherits(mod, "brmsfit"),
     inherits(data, "SpatRaster"), 
     is.null(backtransform) || is.function(backtransform),
-    # is.logical(incl_obs_uncert)
     is.list(brms_specs) || is.null(brms_specs)
   )
-  # Check type of inputs
-  # Check all fixef covars are in data 
-  
-  # TODO: for categorical vars, ensure levels in projection input are within 
-  # model fitting data
-  # for each fix_vars, check if chr or fct
-  # if it is, check all data[,var] are in obj$data[,var
-  
-  # %%%%
-  # Get incl_obs_uncert info
-  # list(incl_obs_uncert = F)
-  # print(brms_specs)
-  
-  # if (!is.null(brms_specs)){
-  #   if ("incl_obs_uncert" %in% names(brms_specs)){
-  #     assertthat::assert_that(is.logical(brms_specs$incl_obs_uncert))
-  #   }
-  #   # if absent, set to F
-  #   if (!"incl_obs_uncert" %in% names(brms_specs)){
-  #     brms_specs$incl_obs_uncert <- FALSE
-  #   }
-    
-  #   if ("re_form" %in% names(brms_specs)){
-  #     assertthat::assert_that(
-  #       is.na(c(brms_specs$re_form)) || is.null(brms_specs$re_form) || inherits(brms_specs$re_form, "formula"))
-  #   }
-  #   # if absent, set to F
-  #   if (!"re_form" %in% names(brms_specs)){
-  #     message(crayon::yellow("Warning: re_form missing, using default value of NA...\n"))
-  #     brms_specs$re_form <- NA
-  #   }
-
-  #   # Get info on conf_level
-  #   if ("conf_level" %in% names(brms_specs)){
-  #     assertthat::assert_that(is.numeric(brms_specs$conf_level))
-  #   }
-  #   # if absent, set to 0.95
-  #   if (!"conf_level" %in% names(brms_specs)){
-  #     message(crayon::yellow("Warning: conf_level missing, using default value of 0.95...\n"))
-  #     brms_specs$conf_level <- c(0.95)
-  #   }
-
-  # }
-  # if (is.null(brms_specs)){
-  #   message(crayon::yellow(paste0("Warning: brms_specs missing, using default values:\n",
-  #                               "\tincl_obs_uncert = FALSE,\n",
-  #                               "\tre_form = NA,\n",
-  #                                 "\tconf_level = c(0.95)",
-  #                               " ...\n")))
-  #   brms_specs <- list(incl_obs_uncert = FALSE,
-  #                       re_form = NA)
-  # }
-  # %%%%
-  
+ 
   # %%%
   # Project
   # TODO: could also incl df.. - more general
   
-  # print("HERE")
-  # print(brms_specs$incl_obs_uncert)
-  # include median for prediction (incl_obs_uncert)
+ 
   # %%%%%
   # %%%%%
 
   # Convert conf_level to conf_quants
   conf_quants <- conf_level_to_quantiles(brms_specs$conf_level)
 
-  message(crayon::green("Projecting model...\n"))
+  message(crayon::green("\nProjecting model..."))
   if (brms_specs$incl_obs_uncert == T){
   # if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
@@ -2595,12 +1996,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
     names(mean_pred)[names(mean_pred) == "Est.Error"] <- "prediction_sd"
 
     names(mean_pred) <- gsub("Q", "prediction_q", names(mean_pred), fixed = T)
-    # for (x in conf_quants){
-    #   tmp_quant_old <- 
-    # }
-    # names(mean_pred)[names(mean_pred) == "Q2.5"] <- "prediction_q2.5"
-    # names(mean_pred)[names(mean_pred) == "Q97.5"] <- "prediction_q97.5"
-    
+  
     names(med_pred)[names(med_pred) == "Estimate"] <- "prediction_median"
     names(med_pred)[names(med_pred) == "Est.Error"] <- "prediction_mad"
     
@@ -2619,14 +2015,12 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
     tmp_df <- terra::as.data.frame(data, xy = T)
     # brms::fitted.brmsfit
     mean_pred <- stats::fitted(mod, tmp_df, 
-                        # re_form = NA
                         scale = "response", # brms_specs$scale
                         re_form = brms_specs$re_form,
                         probs = conf_quants) |>
       as.data.frame()
     # brms::fitted.brmsfit
     median_pred <- stats::fitted(mod, tmp_df, 
-                          # re_form = NA,
                           scale = "response", # brms_specs$scale
                           re_form = brms_specs$re_form,
                           robust = T) |>
@@ -2663,20 +2057,6 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
     }
   }
   
-  # %%%%%
-  # %%%%%
-  # data_pred <- terra::predict(data,
-  #                             mod,
-  #                             re_form = NA)
-  # if (!is.null(backtransform)){
-  #   data_pred <- backtransform(data_pred)
-  # }
-  # 
-  # names(data_pred)[names(data_pred) == "Estimate"] <- "prediction"
-  # names(data_pred)[names(data_pred) == "Est.Error"] <- "prediction_error"
-  # names(data_pred)[names(data_pred) == "Q2.5"] <- "prediction_q2.5"
-  # names(data_pred)[names(data_pred) == "Q97.5"] <- "prediction_q97.5"
-  # %%%%
   return(data_pred)
 }
 
@@ -2706,7 +2086,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
 #' } 
 #' @noRd
 terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
-  # TODO: maybe change to @NoRd
+
   # TODO: maybe co-opt to use fitted for brms rather then predict - for terra input
   
   # assertions
@@ -2735,7 +2115,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
           missing_covars <- re_form_vars[!re_form_vars %in% names(data)]
           missing_covars_chr <- paste(missing_covars, collapse = " ; ")
 
-          message(crayon::red(paste0("Error: random effect variable specified in ",
+          message(crayon::red(paste0("\nError: random effect variable specified in ",
                                     "re_form is missing.\n")))
           message(crayon::red(paste("Missing covariates: ",
                                 missing_covars_chr, sep = "")))
@@ -2748,7 +2128,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
     # TODO: also get ranefs. - assume not proportions/binary - as in model
-    if (!is.na(re_form_vars)){
+    if (!all(is.na(re_form_vars))){
       ranefs_in_rast <- names(data)[names(data) %in% re_form_vars]
       covars_in_rast <- c(covars_in_rast, ranefs_in_rast)
     }
@@ -2781,24 +2161,12 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
     if (length(non_covars_in_rast) > 0 ){
       # for each covar, get unique levels (if factor in mod_df)
 
-      # TODO: Should use model-fitting data from obj$model...
+      # Use model-fitting data from obj$model...
       # lmer: @frame
       # inla: $.args$data
       # brms: @frame
       
-      # # lme4 fit data,
-      # TODO: convert class().. to inherits(obj, "class")
-      # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
-      # if ((inherits(obj$model, "lmerMod") || inherits(obj$model, "glmerMod"))){
-      #   fit_dat <- obj$model@frame
-      # }
-      # # brms fit data
-      # # if (class(obj$model) == "brmsfit"){
-      # if (inherits(obj$model, "brmsfit")){
-      #   fit_dat <- obj$model$data
-      # }
-      # inla fit data
-      # if (class(obj$model) == "inla"){
+      # inla fit data,
       if (inherits(obj$model, "inla")){
         fit_dat <- obj$model$.args$data
       }
@@ -2806,7 +2174,6 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
                                              if (is.factor(fit_dat[[x]])){
-                                             # if (is.factor(obj$data[[x]])){
                                                tmp_out <- data.frame(covar_nm = x,
                                                                      covar_levs = levels(fit_dat[[x]]))
                                                # Could add covar_lev_idx here... - save doing later...
@@ -2850,7 +2217,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
         dplyr::filter(is_binary_covar == F)
       
       if (length(unique(non_bin_covars$covar_nm)) > 1){
-        message(crayon::yellow("Warning: SpatRaster with multiple non-binary layers detected! Projections are not yet supported...\n"))
+        message(crayon::yellow("\nWarning: SpatRaster with multiple non-binary layers detected! Projections are not yet supported...\n"))
         stop("In development")
       }
       
@@ -2874,7 +2241,6 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
         n_bin_covar_layers <- dim(tmp_bin_rast)[3]
       }
       
-      
       # For non-binary layers - factor is layer name, minus covar nm if name is covar_nm_lev
       # BUT, also need to record values for later aggregation
       # currently assume only one non_bin_covar...
@@ -2892,7 +2258,6 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
           unlist() |>
           c() |>
           terra::rast()
-        # print(tmp_prop_rast)
         # Want to end up with N raster stacks - 1 per prop level
         n_prop_covar_lyrs <- dim(tmp_prop_rast)[3]
       }
@@ -2928,8 +2293,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
           inherits(tmp_, "SpatRaster")
         )
         # If is a SpatRaser, use as is.
-
-        tmp_r <- tmp_ # c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
+        tmp_r <- tmp_ 
         
         # %%%%
         # Check fix vars and re-form_vars are present
@@ -2942,7 +2306,6 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
         # %%%%
 
         # %%%
-        # tmp_r <- c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
         # Convert to df
         tmp_df <- terra::as.data.frame(tmp_r,
                                        xy = T)
@@ -2960,10 +2323,11 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
                                         xy = T)
         
         prop_df$prop_cover <- prop_df[[lyr_orig_nm]]
-        # print(head(prop_df))
         # rename lyr_orig_nm as prop_cover
-        # left_join prop_df to tmp_df
-        tmp_pred_df_ls[[i]] <- dplyr::left_join(tmp_df, prop_df[,c("x", "y", "prop_cover")])
+
+        tmp_pred_df_ls[[i]] <- dplyr::left_join(tmp_df, 
+                                                prop_df[,c("x", "y", "prop_cover")],
+                                                by = c("x", "y"))
         
       }
       
@@ -2981,7 +2345,6 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
     }
   }
   
-  # print(head(data_df))
   return(data_df)  
   
 }
@@ -3011,8 +2374,6 @@ check_covar_levels <- function(mod, proj_dat, covars){
   
   # Assertion checks
   assertthat::assert_that(
-    # class(mod) == "lmerMod" || class(mod) == "glmerMod" || 
-    #   class(mod) == "brmsfit" || class(mod) == "inla",
     inherits(mod, "lmerMod") || inherits(mod, "glmerMod") ||
       inherits(mod, "brmsfit") || inherits(mod, "inla"),
     is.data.frame(proj_dat) || inherits(proj_dat, "SpatRaster"),
@@ -3025,8 +2386,8 @@ check_covar_levels <- function(mod, proj_dat, covars){
     # Get missing covars
     missing_covars <- covars[!covars %in% names(proj_dat)]
     missing_covars_chr <- paste(missing_covars, collapse = " ; ")
-    message(crayon::red("Error: covariates missing from projection data!\n"))
-    message(crayon::red(paste("Missing covariates: ",
+    message(crayon::red("\nError: covariates missing from projection data!"))
+    message(crayon::red(paste("\nMissing covariates: ",
                               missing_covars_chr, sep = "")))
     
     stop()
@@ -3042,42 +2403,34 @@ check_covar_levels <- function(mod, proj_dat, covars){
   }
   
   # lme4 fit data,
-  # if ((class(obj$model) == "lmerMod" || class(obj$model) == "glmerMod")){
   if ((inherits(mod, "lmerMod") || inherits(mod, "glmerMod"))){
     fit_dat <- mod@frame
   }
   # brms fit data
-  # if (class(obj$model) == "brmsfit"){
   if (inherits(mod, "brmsfit")){
     fit_dat <- mod$data
   }
   # inla fit data
-  # if (class(obj$model) == "inla"){
   if (inherits(mod, "inla")){
     fit_dat <- mod$.args$data
   }
   
   problem_vars <- list()
   
-  # print(fit_dat)
-  
   is_problem_var <- FALSE
   for (i in 1:length(covars)){
     # Check if var is a factor/chr
     var_i <- covars[i]
-    # print(var_i)
     if ( (is.factor(fit_dat[[var_i]]) | is.character(fit_dat[[var_i]])) ){
       # Get unique chr values for fit data
       var_i_fit_levs <- fit_dat[[var_i]] |> 
         unique() |>
         as.character()
       # Alternative - get levels directly - if factor
-      # levels(fit_dat[[var_i]])
       if (is.factor(fit_dat[[var_i]])){
         var_i_fit_levs <- levels(fit_dat[[var_i]])
       }
       
-      # print(var_i_fit_levs)
       # Get unique chr values for proj data 
       var_i_proj <- proj_dat[[var_i]]
       
@@ -3086,7 +2439,6 @@ check_covar_levels <- function(mod, proj_dat, covars){
           unique() |>
           as.character()
         # Alternative - get levels directly - if factor
-        # levels(fit_dat[[var_i]])
         if (is.factor(var_i_proj)){
           var_i_proj_levs <- levels(var_i_proj)
         }
@@ -3094,10 +2446,6 @@ check_covar_levels <- function(mod, proj_dat, covars){
       if (proj_dat_type == "rast"){
         var_i_proj_levs <- terra::levels(var_i_proj)[[1]][["category"]]
       }
-      
-      # print(head(var_i_proj_levs))
-      # print(head(var_i_fit_levs))
-      # print(var_i_proj_levs %in% var_i_fit_levs)
 
       # Check all var_i_proj_levs are in var_i_fit_levs
       if (!all(var_i_proj_levs %in% var_i_fit_levs)){
@@ -3116,7 +2464,7 @@ check_covar_levels <- function(mod, proj_dat, covars){
   }
   if (is_problem_var){
     # Print an error message - detail variables and levels that are issues...
-    message(crayon::red(paste0("Some categorical covariates in the projection data ",
+    message(crayon::red(paste0("\nSome categorical covariates in the projection data ",
                                "are not in the model fitting data!\n\n",
                                "Please fix this, see details below:\n"
                                ) ))
@@ -3126,7 +2474,6 @@ check_covar_levels <- function(mod, proj_dat, covars){
       insight::export_table() |>
       message()
     
-    # print()
     stop("Unknown covariate levels, see above.", call. = F)
   }
 }
@@ -3158,7 +2505,8 @@ check_covar_levels <- function(mod, proj_dat, covars){
 #' 
 #' @details 
 #' Expects a numeric vector
-#' @param x A numeric vector of confidence levels between 0 and 1, typically 0.5 to 0.95.
+#' @param x A numeric vector of confidence levels between 0 and 1, typically
+#' 0.5 to 0.95.
 #' @examples 
 #' \dontrun{
 #'   conf_level_to_quantiles(c(0.5, 0.9, 0.95))
@@ -3185,8 +2533,8 @@ conf_level_to_quantiles <- function(x){
 #' 
 #' @details 
 #' Expects a list of specs and a model type
-#' @param specs A list of model specs - for details see lme4_specs, inla_specs and
-#' brms_specs arguments to hib_project_model.
+#' @param specs A list of model specs - for details see lme4_specs, inla_specs 
+#' and brms_specs arguments to hib_project_model.
 #' @param mod_type A character indicating the model type
 #' @examples 
 #' \dontrun{
@@ -3228,13 +2576,13 @@ check_proj_specs <- function(specs, mod_type){
   
   # If specs is.null(), set to defaults
   if (is.null(specs)){
-    message(crayon::yellow(paste0("Warning: ", mod_type_nm, "_specs missing, using default values:\n",
-                                  "\t",
+    message(crayon::yellow(paste0("\nWarning: ", mod_type_nm, "_specs missing, using default values:\n",
+                                  "\t ",
                                   paste(paste(names(default_specs), 
                                               default_specs, 
                                               sep = " = "),
-                                        collapse = ",\n\t"),
-                                  " ...\n")))
+                                        collapse = ",\n\t "),
+                                  " ...")))
     return(default_specs)
   }
   
@@ -3306,17 +2654,17 @@ check_proj_specs <- function(specs, mod_type){
       # If bootstrap is TRUE, ensure n_boot is numeric
       if (nm == "n_boot"){
         if (specs$bootstrap){
-          message(crayon::yellow(paste0("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of ",  50, " ...\n")))
+          message(crayon::yellow(paste0("\nWarning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of ",  50, " ...")))
           specs[[nm]] <- 50  
         }
       } else if (nm == "baseline_covar"){
-        message(crayon::yellow("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of NULL. \n          Model intercept will be used as the baseline.\n"))
+        message(crayon::yellow("\nWarning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of NULL. \n          Model intercept will be used as the baseline."))
         specs[[nm]] <- NULL
       } else if (nm == "link_inverse"){
-        message(crayon::yellow("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of NULL.\n"))
+        message(crayon::yellow("\nWarning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of NULL."))
         specs[[nm]] <- NULL
       } else {
-        message(crayon::yellow(paste0("Warning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of ",  default_specs[[nm]], " ...\n")))
+        message(crayon::yellow(paste0("\nWarning: ", nm, " missing from ", mod_type_nm, "_specs, using default value of ",  default_specs[[nm]], " ...")))
         specs[[nm]] <- default_specs[[nm]]
       }
     }
