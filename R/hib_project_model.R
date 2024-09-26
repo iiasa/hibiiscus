@@ -333,12 +333,12 @@ hib_project_model <- function(mod_obj,
 
       if (!is.null(backtransform)){
         p_gt_0_orig <- all(pred_df > 0)
-
+        
         pred_df <- backtransform(pred_df)
         
         # - if negative after trans, but none before, print a warning
         p_gt_0_btr <- all(pred_df > 0)
-
+        
         if ((p_gt_0_orig & !p_gt_0_btr)){
           message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
         }
@@ -1911,9 +1911,10 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_specs){
   
   # %%%
   if (!is.null(backtransform)){
-    p_gt_0_orig <- all(data_pred > 0)
+    p_gt_0_orig <- all(terra::values(data_pred) > 0)
+    
     data_pred <- backtransform(data_pred)
-    p_gt_0_btr <- all(data_pred > 0)
+    p_gt_0_btr <- all(terra::values(data_pred) > 0)
 
     if ((p_gt_0_orig & !p_gt_0_btr)){
       message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
@@ -2045,11 +2046,11 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
                              crs = terra::crs(data))
     
     if (!is.null(backtransform)){
-      p_gt_0_orig <- all(data_pred > 0)
+      p_gt_0_orig <- all(terra::values(data_pred) > 0)
 
       data_pred <- backtransform(data_pred)
 
-      p_gt_0_btr <- all(data_pred > 0)
+      p_gt_0_btr <- all(terra::values(data_pred) > 0)
 
       if ((p_gt_0_orig & !p_gt_0_btr)){
         message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))

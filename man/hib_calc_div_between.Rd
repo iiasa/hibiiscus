@@ -47,8 +47,8 @@ the PREDICTS database.}
 
 \item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
 which compositional dissimilarity is calculated per study. If NULL, compositional
-dissimilarity is calculated between all sites within each studie.
-Default values is TRUE.}
+dissimilarity is calculated between all sites within each study.
+Default values is 'Primary vegetation_Minimal use'.}
 }
 \description{
 This function calculates compositional dissimilarity between sites within a study

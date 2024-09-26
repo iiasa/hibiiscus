@@ -1125,6 +1125,8 @@ hib_calc_div_within <- function(obj, metrics){
 #' be used; applicable for euclidean ...
 #' @param rescale A [`logical`] value - should distance be rescaled relative to
 #' theoretical max (if applicable and not 1)
+#' @param div_metric_type A [`character`] describing the type of biodiversity records
+#' at the site of interest - one of "Occurrence" or "Abundance". Set by hib_cacl_div_between.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1345,7 +1347,9 @@ calc_horn_overlap <- function(x, y){
 #' be used; applicable for hypervolume and baselga_ metrics. Cosine and theta are 
 #' unaffected by relative abundance v raw abundance.
 #' @param rescale A [`logical`] - should distance be rescaled relative to
-#' theoretical max (if applicable and not 1)
+#' theoretical max (if applicable and not 1).
+#' @param div_metric_type A [`character`] describing the type of biodiversity records
+#' at the site of interest - one of "Occurrence" or "Abundance". Set by hib_cacl_div_between.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{

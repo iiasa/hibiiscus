@@ -4,7 +4,14 @@
 \alias{hib_calc_veg}
 \title{Calculate vegan-based dissimilarity metrics}
 \usage{
-hib_calc_veg(spp_site_data, metric, binary, rel_abund, rescale)
+hib_calc_veg(
+  spp_site_data,
+  metric,
+  binary,
+  rel_abund,
+  rescale,
+  div_metric_type
+)
 }
 \arguments{
 \item{spp_site_data}{A dataframe/tibble object.}
@@ -18,6 +25,9 @@ be used; applicable for euclidean ...}
 
 \item{rescale}{A \code{\link{logical}} value - should distance be rescaled relative to
 theoretical max (if applicable and not 1)}
+
+\item{div_metric_type}{A \code{\link{character}} describing the type of biodiversity records
+at the site of interest - one of "Occurrence" or "Abundance". Set by hib_cacl_div_between.}
 }
 \description{
 This function calculates vegan-based dissimilarity metrics between sites

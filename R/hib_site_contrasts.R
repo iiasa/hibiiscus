@@ -8,6 +8,17 @@
 #' @param obj A [`HibDatabase`] object.
 #' @param metrics A [`character`] vector of 'distance' metrics. Current options are;
 #' "lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint", "env_dist".
+#' @param custom_metric_specs A named [`list`] with each named item containing the
+#' specifications for the named custom metric. Custom metrics must be based on 
+#' vegdist distance metrics. 
+#' Essential named values within the specifications of a custom metric are: 
+#' \code{dist_metr} - a character indicating the metric of choice;
+#' \code{vars} - a character vector indicating the site variables to use when calculating
+#' the distance metric. 
+#' For example: \code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1", "env2", "env3")),
+#'                         Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))}
+#' Metric names (as specified in the name of the sub-lists) will be converted to 
+#' sentence-case in the output data.
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
 #' which dis/similarity is calculated per study - should match the value used 
 #' when calculating compositional dis/similarity (hib_calc_div_between)
@@ -576,7 +587,7 @@ hib_calc_site_contrasts <- function(obj,
     env_dist_df <- purrr::map_dfr(.x = ss_un,
                                  .f = function(ss = .x,
                                                env_data = site_df[,c("SS", "SSBS", "wc2.1_30s_bio_5", "wc2.1_30s_bio_6", "wc2.1_30s_bio_13", "wc2.1_30s_bio_14", "wc2.1_30s_elev")] |> 
-                                                 na.omit(),
+                                                 stats::na.omit(),
                                                contrasts = site_comp_df$SSBS_contrast){
                                    
                                    tmp_env <- env_data |> 
@@ -631,7 +642,7 @@ hib_calc_site_contrasts <- function(obj,
       tmp_custom_df <- purrr::map_dfr(.x = ss_un,
                                  .f = function(ss = .x,
                                                inp_data = site_df[,c("SS", "SSBS", tmp_spec$vars)] |> 
-                                                 na.omit(),
+                                                 stats::na.omit(),
                                                metr_nm = tmp_spec$dist_metr, 
                                                contrasts = site_comp_df$SSBS_contrast){
                                    

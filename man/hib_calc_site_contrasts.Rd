@@ -7,18 +7,35 @@
 hib_calc_site_contrasts(
   obj,
   metrics,
-  baseline_lui = "Primary vegetation_Minimal use"
+  custom_metric_specs = NULL,
+  baseline_lui = "Primary vegetation_Minimal use",
+  overwrite = FALSE
 )
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
 \item{metrics}{A \code{\link{character}} vector of 'distance' metrics. Current options are;
-"lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint".}
+"lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint", "env_dist".}
+
+\item{custom_metric_specs}{A named \code{\link{list}} with each named item containing the
+specifications for the named custom metric. Custom metrics must be based on
+vegdist distance metrics.
+Essential named values within the specifications of a custom metric are:
+\code{dist_metr} - a character indicating the metric of choice;
+\code{vars} - a character vector indicating the site variables to use when calculating
+the distance metric.
+For example: \code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1", "env2", "env3")),
+                        Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))}
+Metric names (as specified in the name of the sub-lists) will be converted to
+sentence-case in the output data.}
 
 \item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
 which dis/similarity is calculated per study - should match the value used
 when calculating compositional dis/similarity (hib_calc_div_between)}
+
+\item{overwrite}{A \code{\link{logical}} indicating whether or not any current site contrast
+data should be over-written.}
 }
 \description{
 This function calculates dissimilarity measures between sites within a study,

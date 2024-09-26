@@ -54,7 +54,7 @@ function found within this package.
   obj,
   proj,
   backtransform,
-  rescale_pred,
+  rescale_specs,
   lme4_specs,
   inla_specs,
   brms_specs,
@@ -73,11 +73,11 @@ The results of model projection.}
 
 \item{\code{backtransform}}{(\code{function} or \code{NULL})\cr
 Describes the backtransformation specified when
-making a model projection.}
-
-\item{\code{rescale_pred}}{(\code{logical})\cr
-Describes whether projected values are rescaled
+making a model projection.
 relative to the baseline land-use class.}
+
+\item{\code{rescale_specs}}{(\code{list})\cr
+List of specifications used for rescaling predictions.}
 
 \item{\code{lme4_specs}}{(\code{list})\cr
 List of specifications used for lme4 models.}

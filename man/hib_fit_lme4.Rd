@@ -15,7 +15,8 @@ hib_fit_lme4(
   model_average = FALSE,
   weight_specs = list(weights = NULL, weight_type = NULL),
   scale_specs = list(covars_to_scale = NULL, scale_func = NULL),
-  relevel_specs = c(NULL)
+  relevel_specs = c(NULL),
+  ...
 )
 }
 \arguments{
@@ -53,6 +54,8 @@ the specified covariates - if NULL, base::scale() will be used.}
 
 \item{relevel_specs}{A named \code{\link{vector}} where each item is:
 "<covar_to_relevel_name>" = "<base_level>".}
+
+\item{...}{Any other named arguments that can be passed to lme4::lmer()/lme4::glmer(), e.g., na.action}
 }
 \description{
 This function fits an lme4 model using the supplied database, formula and other

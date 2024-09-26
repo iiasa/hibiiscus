@@ -4,7 +4,14 @@
 \alias{hib_calc_nonveg}
 \title{Calculate non-vegan-based dissimilarity metrics}
 \usage{
-hib_calc_nonveg(spp_site_data, metric, binary, rel_abund, rescale)
+hib_calc_nonveg(
+  spp_site_data,
+  metric,
+  binary,
+  rel_abund,
+  rescale,
+  div_metric_type
+)
 }
 \arguments{
 \item{spp_site_data}{A dataframe/tibble object.}
@@ -20,7 +27,10 @@ be used; applicable for hypervolume and baselga_ metrics. Cosine and theta are
 unaffected by relative abundance v raw abundance.}
 
 \item{rescale}{A \code{\link{logical}} - should distance be rescaled relative to
-theoretical max (if applicable and not 1)}
+theoretical max (if applicable and not 1).}
+
+\item{div_metric_type}{A \code{\link{character}} describing the type of biodiversity records
+at the site of interest - one of "Occurrence" or "Abundance". Set by hib_cacl_div_between.}
 }
 \description{
 This function calculates non-vegan-based dissimilarity metrics between sites

@@ -49,12 +49,15 @@ Imports:
     tidyr,
     utils,
     vegan,
-    stringi
+    stringi,
+    marginaleffects
 Suggests:
     INLA,
     posterior,
     rnaturalearth,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    ncdf4,
+    stars
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-GB

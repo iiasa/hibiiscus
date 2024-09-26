@@ -8,7 +8,7 @@ hib_project_model(
   mod_obj,
   data,
   backtransform = NULL,
-  rescale_pred = FALSE,
+  rescale_specs = NULL,
   lme4_specs = NULL,
   inla_specs = NULL,
   brms_specs = NULL,
@@ -25,13 +25,27 @@ to project onto - should contain x and y columns if a dataframe.}
 \item{backtransform}{A \code{\link{function}} that will backtransform the model response
 to the scale of the original variable, e.g., exp() as the inverse of log()}
 
-\item{rescale_pred}{A \code{\link{logical}} value - should the predictions be rescaled relative
-to the model intercept (assumes intercept is for baseline environment/LU)}
+\item{rescale_specs}{A \code{\link{list}} containing details relevant to rescaling projections.
+Specifically, named items should consist of 'rescale' (\code{\link{logical}}),
+'baseline_covar' (\code{\link{data.frame}}, or NULL), 'baseline_re_form' (\code{\link{formula}}, \code{\link{NA}}, or \code{\link{NULL}}).
+In combination, these arguments determine if predictions will be rescaled or not
+(based on value of $rescale), the covariate values used to generate the baseline
+against which other predictions are rescaled ($baseline_covar), and whether/how
+random effects should be incorporated in the generation of this baseline ($baseline_re_form,
+see lme4/inla/brms_specs).
+If $rescale == TRUE, but no baseline_covar is provided, the intercept of the
+model will be used as the baseline value.}
 
 \item{lme4_specs}{A \code{\link{list}} containing details relevant to projecting an lme4-style
 model. Specifically, named items should consist of 'bootstrap' (\code{\link{logical}}) and
 'n_boot' (\code{\link{numeric}}), indicating whether bootstrapped prediction intervals should be
 estimated, and if so, how many bootstrap samples should be used.
+In addition, 'calc_se' (\code{\link{logical}}) is used to specify whether or not a standard
+error based uncertainty estimate (via marginaleffects) is calculated and used
+to generate confidence intervals.
+'conf_level' (\code{\link{numeric}}) is used to specify the confidence levels of intervals
+generated via bootstrapping or the se-based approach. Values should fall between
+0 and 1, typically in the range 0.5 to 0.95.
 Additionally, 're_form', as 're.form' in \code{\link[=predict.merMod]{predict.merMod()}}, used to specify random
 effects to condition on when predicting an lme4 model (formula, NULL, or NA).}
 
@@ -45,7 +59,12 @@ Used to backtranform the global intercept for use in rescaling predictions.}
 \item{brms_specs}{A \code{\link{list}} containing details relevant to projecting a brms-style
 model. Specifically, named item should consist of 'incl_obs_uncert' (\code{\link{logical}})
 to determine whether or not observation-level uncertainty is included in predictions.
-Setting this parameter to TRUE will produce predictions with larger uncertainty.
+Setting this parameter to TRUE will produce predictions with larger uncertainty, using
+\code{\link[=predict.brmsfit]{predict.brmsfit()}}, setting to FALSE calls \code{\link[=fitted.brmsfit]{fitted.brmsfit()}} internally.
+'conf_level' (\code{\link{numeric}}) is used to specify the confidence levels of intervals
+generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95,
+internally converted to quantiles and passed to the probs argument of \code{\link[=predict.brmsfit]{predict.brmsfit()}}/
+\code{\link[=fitted.brmsfit]{fitted.brmsfit()}}.
 Additionally, 're_form', as 're_formula' in \code{\link[=predict.brmsfit]{predict.brmsfit()}}, used to specify random
 effects to condition on when predicting a brms (formula, NULL, or NA).}
 
