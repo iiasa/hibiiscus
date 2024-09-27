@@ -5,17 +5,17 @@ Authors@R:
     c(
     person("Richard", "Cornford", , "cornford@iiasa.ac.at", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-9963-3603")),
-    person("Martin", "Jung", , "jung@iiasa.ac.at", role = c("aut"),
+    person("Martin", "Jung", , "martinjung@zoho.com", role = c("aut"),
            comment = c(ORCID = "0000-0002-7569-1390"))
            )
-Maintainer: Martin Jung <jung@iiasa.ac.at>
+Maintainer: Richard Cornford <cornford@iiasa.ac.at>
 Description: This package uses principles of ecological meta-analysis to
     assess the impacts of land use and land-use intensity on ecological
     communities. Data and modelling approach originate from the PREDICTS
     framework and are adapted for greater transferability, accounting of
     uncertainty and robustness.
 License: CC BY 4.0
-URL: https://github.com/iiasa/hibiiscus
+URL: https://github.com/iiasa/hibiiscus, https://iiasa.github.io/hibiiscus/
 BugReports: https://github.com/iiasa/hibiiscus/issues
 Depends:
     R(>= 4.1.0)
@@ -35,6 +35,7 @@ Imports:
     insight,
     lifecycle,
     lme4,
+    randomForest,
     lubridate,
     matrixStats,
     MuMIn,
@@ -52,16 +53,16 @@ Imports:
     stringi,
     marginaleffects
 Suggests:
-    INLA,
     posterior,
     rnaturalearth,
+    rnaturalearthdata,
     testthat (>= 3.0.0),
     ncdf4,
     stars
+Additional_repositories: https://inla.r-inla-download.org/R/testing
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-GB
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Roxygen: list(markdown = TRUE)
 LazyData: true
-
