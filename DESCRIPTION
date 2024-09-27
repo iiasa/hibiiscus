@@ -35,6 +35,7 @@ Imports:
     insight,
     lifecycle,
     lme4,
+    randomForest,
     lubridate,
     matrixStats,
     MuMIn,
