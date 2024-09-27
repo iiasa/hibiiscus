@@ -3,7 +3,7 @@ pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   01_basic_use: 01_basic_use.html
-last_built: 2024-09-27T19:52Z
+last_built: 2024-09-27T20:31Z
 urls:
   reference: https://iiasa.github.io/hibiiscus/reference
   article: https://iiasa.github.io/hibiiscus/articles
