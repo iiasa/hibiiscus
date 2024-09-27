@@ -12,6 +12,7 @@ This package uses principles of ecological meta-analysis to assess the impacts o
 Useful links:
 \itemize{
   \item \url{https://github.com/iiasa/hibiiscus}
+  \item \url{https://iiasa.github.io/hibiiscus/}
   \item Report bugs at \url{https://github.com/iiasa/hibiiscus/issues}
 }
 
@@ -21,7 +22,7 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Martin Jung \email{jung@iiasa.ac.at} (\href{https://orcid.org/0000-0002-7569-1390}{ORCID})
+  \item Martin Jung \email{martinjung@zoho.com} (\href{https://orcid.org/0000-0002-7569-1390}{ORCID})
 }
 
 }

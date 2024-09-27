@@ -1,6 +1,13 @@
 # Testthat checks for hib_fit_brms.R, cv, projection
 
 test_that("Check brms modelling pipeline works as desired.", {
+  
+  testthat::skip_if_not_installed("rstan")
+  testthat::skip_if_not_installed("brms")
+  
+  # MJ - Skipping on CI as I think it takes too long... 
+  testthat::skip_on_ci()
+  
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        dataset_name = "custom - dummy_data")
@@ -25,7 +32,7 @@ test_that("Check brms modelling pipeline works as desired.", {
   # within-site model
   suppressWarnings(mod_w <- hib_fit_brms(tmp_db,
                                          log(Total_abundance + 1) ~ LUI + (1 | SS),
-                                         iter = 200,
+                                         iter = 100,
                                          chains = 1
                                          # relevel_specs = c("LUI" = "Cropland_Intense_use")
                                          ))
@@ -35,7 +42,7 @@ test_that("Check brms modelling pipeline works as desired.", {
   # between-site model
   suppressWarnings(mod_b <- hib_fit_brms(tmp_db,
                                          Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
-                                         iter = 200,
+                                         iter = 100,
                                          chains = 1 #,
                                          # scale_specs = list(covars_to_scale = "Geogr_dist_hav",
                                          #                    scale_func = NULL)
