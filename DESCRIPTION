@@ -52,7 +52,6 @@ Imports:
     stringi,
     marginaleffects
 Suggests:
-    INLA,
     posterior,
     rnaturalearth,
     rnaturalearthdata,
