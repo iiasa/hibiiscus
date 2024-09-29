@@ -120,7 +120,7 @@ hib_db <- hib_calc_div_between(hib_db,
 # And calculate site contrasts too (for between site models)
 hib_db <- hib_calc_site_contrasts(hib_db,
                                   c("lui_contrast"),
-                                  "Natural")
+                                  baseline_lui = "Natural")
 
 print(hib_db)
 

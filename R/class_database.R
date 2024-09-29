@@ -266,6 +266,8 @@ HibDatabase <- R6Class("HibDatabase",
                         assertthat::has_name(sites, "Source_ID"),
                         assertthat::has_name(sites, "SS"),
                         assertthat::has_name(sites, "Diversity_metric"),
+                        # TODO:
+                        # assertthat::has_name(sites, "Diversity_metric_type"), 
                         assertthat::has_name(sites, "SSBS"),
                         assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
                         assertthat::has_name(sites, "Use_intensity"),
@@ -276,6 +278,7 @@ HibDatabase <- R6Class("HibDatabase",
                         assertthat::has_name(sites, "Latitude"),
 
                         # And the species data
+                        # Do we need Source_ID??
                         assertthat::has_name(species, "Source_ID"),
                         assertthat::has_name(species, "SS"),
                         assertthat::has_name(species, "SSBS"),
@@ -284,6 +287,7 @@ HibDatabase <- R6Class("HibDatabase",
                         # Predominant_land_use, Use_intensity, LUI - optional, if present in sites,
                         # can be added from there... - could even be added later... via set_lu_legend
                         
+                        # These aren't needed 
                         assertthat::has_name(species, "Predominant_land_use"), 
                         assertthat::has_name(species, "Use_intensity"), 
                         assertthat::has_name(species, "LUI"), 
@@ -302,7 +306,7 @@ HibDatabase <- R6Class("HibDatabase",
 
                       )
                       # Finally, check that all sites are in species
-                      # NOTE RC - source ID is just the paper...
+                      # NOTE RC - source ID is just the paper... - change to SSBS
                       assertthat::assert_that(
                         nrow(sites) > 0, nrow(species) > 0,
                         all( unique(sites$Source_ID) %in% unique(species$Source_ID) )

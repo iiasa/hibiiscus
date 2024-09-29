@@ -5,6 +5,8 @@
 # taxonomic level is recorded...
 # TODO: add unequalness 
 # TODO: Hill numbers of various powers? -  
+# TODO: check limits of metric outputs: none should be negative, many should be <=1, 
+# others have a specific max
 
 #' Calculate number of species (best guess) and original taxa names
 #' 
@@ -100,7 +102,11 @@ hib_calc_ta <- function(spp_df, measure_var){
                   # Rescaled_total_abundance = Total_abundance / max(Total_abundance)) |>
     dplyr::ungroup() |>
     dplyr::select(-max_ta)
-
+  
+  # TODO: ensure all rescaled values between 0 and 1! - avoid rounding errors
+  # abund_df$Rescaled_total_abundance[abund_df$Rescaled_total_abundance < 0] <- 0
+  # abund_df$Rescaled_total_abundance[abund_df$Rescaled_total_abundance > 1] <- 1
+  
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
 
   # n_guess_taxa <- sub_df |>
@@ -222,6 +228,9 @@ hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
     dplyr::summarise(Simpson_diversity = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ) ) |>
     dplyr::ungroup()
   # %%%%%
+  # TODO: ensure all values between 0 and 1!
+  # simp_df$Simpson_diversity[simp_df$Simpson_diversity < 0] <- 0
+  # simp_df$Simpson_diversity[simp_df$Simpson_diversity > 1] <- 1
   
   # TODO: above is gini-simpson?/uncorrected PIE....
   # Above is 'Simpson's Index of Diversity' - 0 = no div, 1 = max div
@@ -530,6 +539,10 @@ hib_calc_ma <- function(spp_df, measure_var){
     # dplyr::mutate(Rescaled_mean_abundance = Mean_abundance / max(Mean_abundance)) |>
     # dplyr::ungroup()
   
+  # TODO: ensure all rescaled values between 0 and 1!
+  # abund_df$Rescaled_mean_abundance[abund_df$Rescaled_mean_abundance < 0] <- 0
+  # abund_df$Rescaled_mean_abundance[abund_df$Rescaled_mean_abundance > 1] <- 1
+  
   # Get N species used
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
 
@@ -601,6 +614,10 @@ hib_calc_gma <- function(spp_df, measure_var){
     dplyr::select(-max_gma)
     # dplyr::mutate(Rescaled_geometric_mean_abundance = Geometric_mean_abundance / max(Geometric_mean_abundance)) |>
     # dplyr::ungroup()
+  
+  # TODO: ensure all rescaled values between 0 and 1!
+  # abund_df$Rescaled_geometric_mean_abundance[abund_df$Rescaled_geometric_mean_abundance < 0] <- 0
+  # abund_df$Rescaled_geometric_mean_abundance[abund_df$Rescaled_geometric_mean_abundance > 1] <- 1
   
   # Get N species used
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
@@ -727,7 +744,11 @@ hib_calc_pie <- function(spp_df, measure_var){
                      sPIE = (1 / (1 - PIE)) ) |>
     dplyr::ungroup() |>
     dplyr::select(SSBS, SS, PIE, sPIE)
-
+  
+  # TODO: ensure all PIE values between 0 and 1!
+  # pie_df$PIE[pie_df$PIE < 0] <- 0
+  # pie_df$PIE[pie_df$PIE > 1] <- 1
+  
   # Get N species used
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
 
@@ -1212,12 +1233,19 @@ hib_calc_veg <- function(spp_site_data,
   
   if (rescale & !is.na(max_dist)){
     dist_df$Distance <- dist_df$Distance / max_dist
+    # TODO: Ensure no rounding errors- 0-1
+    # dist_df$Distance[dist_df$Distance > 1] <- 1
   }
   # Adding rescaling of euclidian if using relative abundance
   if (rescale & rel_abund & metric == "euclidean"){
     dist_df$Distance <- dist_df$Distance / sqrt(2)
+    # TODO: Ensure no rounding errors- 0-1
+    # dist_df$Distance[dist_df$Distance > 1] <- 1
   }
-
+  
+  # TODO: Ensure no rounding errors- > 0 ?
+  # dist_df$Distance[dist_df$Distance < 0] <- 0
+  
   # Ideally, if rescale is T and max_dist is NA, edit rescale to be F in output
   
   
@@ -1259,7 +1287,12 @@ calc_cosine_sim <- function(x1, x2){
 
   # if one of the sites doesn't have any individuals/species in it
   # i.e. the row sum is 0
-
+  
+  # TODO: ensure all values between 0 and ?1?!
+  # if (cosine < 0){ cosine <- 0}
+  # if (cosine > 1){ cosine <- 1}
+  
+  
   # # TODO: think I should scrap the below adjustments...
   # if ((sum(x1, na.rm = TRUE) == 0) |
   #     (sum(x2, na.rm = TRUE) == 0)) {
@@ -1282,10 +1315,10 @@ calc_cosine_sim <- function(x1, x2){
 #' species at two sites
 #' @details 
 #' Expects two vectors, one each for the abundance/occurence of species at two sites
-#' assuming that values at the same index (e.g., x1[i], x2[i]) correspond to the 
+#' assuming that values at the same index (e.g., x[i], y[i]) correspond to the 
 #' same species/taxonomic entity
-#' @param x1 A [`numeric`] vector for abundance/occurence of species at site 1
-#' @param x2 A [`numeric`] vector for abundance/occurence of species at site 2
+#' @param x A [`numeric`] vector for abundance/occurence of species at site 1
+#' @param y A [`numeric`] vector for abundance/occurence of species at site 2
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1450,15 +1483,20 @@ hib_calc_nonveg <- function(spp_site_data,
     cosine_sim <- calc_cosine_sim(x1, x2)
 
     if (metric == "cosine"){
+      # TODO: ensure all rescaled values between 0 and 1!
       out <- data.frame("Cosine" = 1 - cosine_sim)
     }
     if (metric == "theta"){
       theta <- acos(cosine_sim)
       # print("Here 3")
-
+      # if (theta < 0){ theta <- 0}
       if (rescale){
         theta <- theta / (pi / 2)
+        # TODO: ensure all rescaled values between 0 and 1!
+        # if (theta > 1){ theta <- 1}
       }
+      # Else ensure 0 - pi/2
+      # if (theta > (pi/2)){ theta <- (pi/2)}
       out <- data.frame("Theta" = theta)
     }
   }
