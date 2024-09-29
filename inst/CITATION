@@ -1,11 +1,11 @@
-bibentry(
-  bibtype  = "Article",
-  title    = ,
-  author   = ,
-  journal  = ,
-  year     = ,
-  volume   = ,
-  number   = ,
-  pages    = ,
-  doi      =
-)
+citHeader("If you use this software, please cite it as below.")
+
+bibentry( 
+    bibtype = "Misc",
+    title = {"hibiiscus - Modelling framework for hierachical ecological impact analysis"},
+    author = c(
+        as.person("Richard Cornford"),
+        as.person("Martin Jung")
+        ),
+	url = "https://github.com/iiasa/hibiiscus",
+  textVersion  = " Cornford, R & Jung, Martin (2024). hibiiscus - Modelling framework for hierachical ecological impact analysis. R package version 0.1, https://github.com/iiasa/hibiiscus")
