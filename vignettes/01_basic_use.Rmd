@@ -120,16 +120,16 @@ hib_db <- hib_calc_div_between(hib_db,
                               baseline_lui = "Natural")
 
 # And calculate site contrasts too (for between site models)
-# hib_db <- hib_calc_site_contrasts(hib_db,
-#                                   c("lui_contrast"),
-#                                   "Natural")
+hib_db <- hib_calc_site_contrasts(hib_db,
+                                  c("lui_contrast"),
+                                  baseline_lui = "Natural")
 
 
 print(hib_db)
 
 ```
 Note: other metrics of within-site diversity include; 
-"Species_richness", "Chao1_diversity", "Rarefied_species_richness", "Simpson_diversity", "Shannon_diversity", "Mean_abundance", "Geometric_mean_abundance", "HillShannon_diversity", "HillSimpson_diversity", "Evenness" and "PIE".
+"Species_richness", "Chao1_diversity", "Rarefied_species_richness", "Simpson_diversity", "Shannon_diversity", "Mean_abundance", "Geometric_mean_abundance", "HillShannon_diversity", "HillSimpson_diversity", "Evenness", "PIE" and "Equalness".
 
 Other metrics of between-site diversity include;
 "manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord", "hellinger", "aitchison", "robust.aitchison", "hypervolume", "cosine", "theta", "baselga_bray_balanced", "baselga_bray_gradient", "baselga_ruzicka_balanced" and "baselga_ruzicka_gradient".
@@ -146,14 +146,14 @@ hib_ta_mod <- hib_fit_lme4(hib_db,
 print(hib_ta_mod)
 
 # Between-site Bray-Curtis model
-# hib_bc_mod <- hib_fit_lme4(hib_db,
-#                            car::logit(Baselga_bray_balanced, adjust = 0.001, percents = FALSE) ~ LUI_contrast + (1 | SS),
-#                            REML = F,
-#                            calc_CIs = "Wald",
-#                            # Ensure Natural_vs_Natural is the baseline/intercept
-#                            relevel_specs = c("LUI_contrast" = "Natural_vs_Natural"))
-# 
-# print(hib_bc_mod)
+hib_bc_mod <- hib_fit_lme4(hib_db,
+                           car::logit(Baselga_bray_balanced, adjust = 0.001, percents = FALSE) ~ LUI_contrast + (1 | SS),
+                           REML = F,
+                           calc_CIs = "Wald",
+                           # Ensure Natural_vs_Natural is the baseline/intercept
+                           relevel_specs = c("LUI_contrast" = "Natural_vs_Natural"))
+
+print(hib_bc_mod)
 
 ```
 
@@ -167,9 +167,9 @@ hib_ta_mod$plot("random-effects")
 
 ```{r Simple plot of fixed-effects random effects for bray-curtis model, fig.width=10, fig.height=5, fig.show="hold", out.width="50%"}
 # Check the bray-curtis model
-# hib_bc_mod$plot()
+hib_bc_mod$plot()
 
-# hib_bc_mod$plot("random-effects")
+hib_bc_mod$plot("random-effects")
 ```
 
 ### 6. Cross-validate the fitted model, using both Random, and geographically blocked folds.
@@ -248,19 +248,21 @@ used to fit the model. There are therefore no locations outside the AOA in this 
 
 ```{r Simple plot of projection, fig.width=7, fig.height=5}
 # Visualise our projection.
-#hib_proj$plot(response_var = "rescaled_prediction_mean")
+hib_proj$plot(response_var = "prediction_mean")
 ```
 
 
 ```{r Bivariate map of projected values and uncertainty, fig.width=7.5, fig.height=5}
 # A figure incorporating both projected values and their uncertainty.
-#hib_proj$plot("bivariate-map")
+hib_proj$plot("bivariate-map", 
+              response_var = "prediction_mean",
+              uncertainty_var = "prediction_se")
 ```
 
 
 ```{r Simple plot of distribution of projected values, fig.width=6, fig.height=5}
 # Check the distribution of projected values.
-#hib_proj$plot("response-distr", response_var = "rescaled_prediction_mean")
+hib_proj$plot("response-distr", response_var = "prediction_mean")
 ```
 
 
