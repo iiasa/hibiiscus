@@ -2,7 +2,7 @@
 #' 
 #' @description 
 #' This function calculates dissimilarity measures between sites within a study,
-#' for use as covariates in models of comopositional dis/similarity
+#' for use as covariates in models of compositional dis/similarity
 #' @details 
 #' Expects a [`HibDatabase`] object.
 #' @param obj A [`HibDatabase`] object.
@@ -10,7 +10,7 @@
 #' "lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint", "env_dist".
 #' @param custom_metric_specs A named [`list`] with each named item containing the
 #' specifications for the named custom metric. Custom metrics must be based on 
-#' vegdist distance metrics. 
+#' `vegdist` distance metrics. 
 #' Essential named values within the specifications of a custom metric are: 
 #' \code{dist_metr} - a character indicating the metric of choice;
 #' \code{vars} - a character vector indicating the site variables to use when calculating
@@ -34,7 +34,8 @@
 #' @export
 hib_calc_site_contrasts <- function(obj,
                                     metrics,
-                                    custom_metric_specs = NULL, #list(list(custom_name = "...", dist_metr = "gower", vars = c("...")), list())
+                                    custom_metric_specs = NULL, 
+                                    #list(dist_metr = list("gower", vars = c("...")))
                                     baseline_lui = "Primary vegetation_Minimal use",
                                     overwrite = FALSE){
   

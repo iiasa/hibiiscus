@@ -66,11 +66,7 @@ HibDatabase <- R6Class("HibDatabase",
                         is.character(dataset_name), 
                         is.list(paths)
                         )
-                      
-                      # path$sites/species is character - already checked in create_hib
-                      # ------ #
 
-                      # dataset_name
                       message(crayon::green(paste0("\nInitialising HibDatabase using ", 
                                                    dataset_name, " data ...\n")) )
                       
@@ -130,10 +126,29 @@ HibDatabase <- R6Class("HibDatabase",
                           assertthat::has_name(sites, "Use_intensity")
                         )
                         
-                        # Ensure that Predominant_land_use is present - for LUI
-                        if (!"Predominant_land_use" %in% colnames(sites)){
-                          species <- species |>
-                            dplyr::mutate(Predominant_land_use = Predominant_habitat)
+                        # # Ensure that Predominant_land_use is present - for LUI
+                        # if (!"Predominant_land_use" %in% colnames(sites)){
+                        #   species <- species |>
+                        #     dplyr::mutate(Predominant_land_use = Predominant_habitat)
+                        # }
+                        
+                        # If predicts2022 column names, rename to align with 2016...
+                        if ("Predominant_habitat" %in% colnames(sites)){
+                          sites <- sites |>
+                            dplyr::rename(Predominant_land_use = Predominant_habitat)
+                        }
+                        if ("Source_for_predominant_habitat" %in% colnames(sites)){
+                          sites <- sites |>
+                            dplyr::rename(Source_for_predominant_land_use = Source_for_predominant_habitat)
+                        }
+                        
+                        if ("Eco_region_distance_metres" %in% colnames(sites)){
+                          sites <- sites |>
+                            dplyr::rename(Ecoregion_distance_metres = Eco_region_distance_metres)
+                        }
+                        if ("Max_linear_extent" %in% colnames(sites)){
+                          sites <- sites |>
+                            dplyr::rename(Max_linear_extent_metres = Max_linear_extent)
                         }
                       }
                       
@@ -223,7 +238,6 @@ HibDatabase <- R6Class("HibDatabase",
                       
                       # %%%%%
                       
-                      # TODO:
                       # safely set NAs in Measurement to 0s
                       if (sum(is.na(species$Measurement)) > 0){
                         message(crayon::yellow("\nWarning: NAs detected in 'Measurement'. Setting NAs to zeros."))
@@ -266,12 +280,12 @@ HibDatabase <- R6Class("HibDatabase",
                         assertthat::has_name(sites, "Source_ID"),
                         assertthat::has_name(sites, "SS"),
                         assertthat::has_name(sites, "Diversity_metric"),
-                        # TODO:
+                        
                         # assertthat::has_name(sites, "Diversity_metric_type"), 
                         assertthat::has_name(sites, "SSBS"),
                         assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
                         assertthat::has_name(sites, "Use_intensity"),
-                        # TODO: extra essential columns
+                        # extra essential columns
                         assertthat::has_name(sites, "SSB"), 
                         assertthat::has_name(sites, "LUI"), 
                         assertthat::has_name(sites, "Longitude"), 
@@ -287,23 +301,21 @@ HibDatabase <- R6Class("HibDatabase",
                         # Predominant_land_use, Use_intensity, LUI - optional, if present in sites,
                         # can be added from there... - could even be added later... via set_lu_legend
                         
-                        # These aren't needed 
-                        assertthat::has_name(species, "Predominant_land_use"), 
-                        assertthat::has_name(species, "Use_intensity"), 
-                        assertthat::has_name(species, "LUI"), 
+                        # These aren't really needed 
+                        assertthat::has_name(species, "Predominant_land_use"),
+                        assertthat::has_name(species, "Use_intensity"),
+                        assertthat::has_name(species, "LUI"),
 
                         # dataset_name ??
 
                         assertthat::has_name(species, "Diversity_metric_type"), 
+                        # assertthat::has_name(species, "Diversity_metric_unit"), 
+                        assertthat::has_name(species, "Diversity_metric_is_effort_sensitive"), 
+                        assertthat::has_name(species, "Diversity_metric_is_suitable_for_Chao"), 
 
-                        # Should cols needed for div metrics be enforced here...
-                        # What use is the database if metrics can't be calculated..?!
-                        # Taxon_name_entered, Best_guess_binomial, Sampling_effort
                         assertthat::has_name(species, "Taxon_name_entered"), 
-                        # assertthat::has_name(species, "Best_guess_binomial"), 
                         assertthat::has_name(species, "Sampling_effort")
-                        # Diversity_metric_is_effort_sensitive
-
+                        
                       )
                       # Finally, check that all sites are in species
                       # NOTE RC - source ID is just the paper... - change to SSBS
@@ -577,7 +589,7 @@ HibDatabase <- R6Class("HibDatabase",
                                          legend.title = ggplot2::element_text(size = 18),
                                          legend.text.align = 0) 
                       
-                      # TODO: combine similar plot types into one call
+                      # combine similar plot types into one call
                       # %%%%%
                       if (type %in% c("map-sites", "map-studies")){
 
