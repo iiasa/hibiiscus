@@ -1562,17 +1562,27 @@ hib_calc_nonveg <- function(spp_site_data,
     }
     if (metric == "theta"){
       theta <- acos(cosine_sim)
-      if (theta < 0){ 
-        theta <- 0
+      if (!is.na(theta)){
+        if (theta < 0){ 
+          theta <- 0
+        }  
       }
+      
       if (rescale){
         theta <- theta / (pi / 2)
         # Ensure all rescaled values between 0 and 1!
-        if (theta > 1){ theta <- 1}
+        if (!is.na(theta)){
+          if (theta > 1){ 
+            theta <- 1
+          }  
+        }
+        
       }
       # Else ensure 0 - pi/2
-      if (theta > (pi/2)){ 
-        theta <- (pi/2)
+      if (!is.na(theta)){
+        if (theta > (pi/2)){ 
+          theta <- (pi/2)
+        }
       }
       out <- data.frame("Theta" = theta)
     }
