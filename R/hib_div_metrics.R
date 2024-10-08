@@ -228,6 +228,8 @@ hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
     dplyr::summarise(Simpson_diversity = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ) ) |>
     dplyr::ungroup()
   # %%%%%
+  # Empty comms - NaN
+  
   # Ensure all values between 0 and 1!
   simp_df$Simpson_diversity[simp_df$Simpson_diversity < 0] <- 0
   simp_df$Simpson_diversity[simp_df$Simpson_diversity > 1] <- 1
@@ -606,7 +608,7 @@ hib_calc_gma <- function(spp_df, measure_var){
     dplyr::bind_rows(zero_abund_df) |>
     # Re-scale abundance to 0-1 per study (SS) 
     dplyr::group_by(SS) |>
-    # if max Mean_abundance is 0..., leave as is..
+    # if max Geometric_mean_abundance is 0..., leave as is..
     dplyr::mutate(max_gma = max(Geometric_mean_abundance),
                   Rescaled_geometric_mean_abundance = dplyr::case_when(max_gma == 0 ~ Geometric_mean_abundance,
                                                                        T ~ Geometric_mean_abundance / max_gma)) |>
@@ -616,8 +618,8 @@ hib_calc_gma <- function(spp_df, measure_var){
     # dplyr::ungroup()
   
   # TODO: ensure all rescaled values between 0 and 1!
-  # abund_df$Rescaled_geometric_mean_abundance[abund_df$Rescaled_geometric_mean_abundance < 0] <- 0
-  # abund_df$Rescaled_geometric_mean_abundance[abund_df$Rescaled_geometric_mean_abundance > 1] <- 1
+  abund_df$Rescaled_geometric_mean_abundance[abund_df$Rescaled_geometric_mean_abundance < 0] <- 0
+  abund_df$Rescaled_geometric_mean_abundance[abund_df$Rescaled_geometric_mean_abundance > 1] <- 1
   
   # Get N species used
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
@@ -723,6 +725,8 @@ hib_calc_shannon <- function(spp_df, measure_var, msg = TRUE){
 #' @noRd
 hib_calc_pie <- function(spp_df, measure_var){
   message(crayon::white("\tProbability of Interspecific Encounter (PIE) ...\n"))
+  
+  # if measure_var != "Measurement" - print a warning and change measure_var
   # Assertion checks
   assertthat::assert_that(
     assertthat::has_name(spp_df, "SS"), # obj$species
@@ -733,21 +737,84 @@ hib_calc_pie <- function(spp_df, measure_var){
     assertthat::has_name(spp_df, "Best_guess_binomial")
   )
   
+  
   spp_df <- spp_df |>
     dplyr::filter(Diversity_metric_type == "Abundance") 
-
+  
+  # If non-counts in abundance - warning / flag in output
+  # if (measure_var == "Effort_corrected_measurement"){
+  if (any(spp_df[,measure_var] %% 1 != 0, na.rm = TRUE)){
+    message(crayon::yellow("Warning: use of non-count abudance data could lead to issues calculating PIE..."))
+  }
+  # if (any(grepl("percent cover"), spp_df$Diversity_metric))
+  
+  
+  # TO CHECK - can PIE be calculated on effort corrected measures? -
+  # Mobr code suggests not...
+  # Should really be counts 
+  # Also only really works for counts...
+  # TODO: fixes for empty comms - currently, if all 0, PIE == NAN, should it be 0?
+  # TODO: fixes for comm of singletons, currently PIE == 1, sPIE == Inf, zero?, 1 - undefined
+  
+  # NOTES: in other functions, if N (total abund) < 2, PIE == NA
+  # If PIE == 1, sPIE == NA
+  
+  # In MOBR, if 0/all zero, PIE == 0, sPIE == 0
+  # In MOBR, if only 1 indiv, PIE == NA, sPIE == NA
+  # In MOBR, if multiple singletons, PIE == 1, sPIE == NA
+  
+  # simpson ~ PIE
+  # In vegan, if simpson, and all 0, output == 1, thus inv_simpson == Inf!!
+  # In vegan, if simpson, and single 1, output == 0, thus inv_simpson == 1!!
+  # Vegan treats NAs as 0s, ish, drops NAs from summation...
+  # How to address 
+  
+  
   pie_df <- spp_df |>
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(adj_val = sum( !!dplyr::sym(measure_var) ) / ( sum( !!dplyr::sym(measure_var) ) - 1 ),
                      PIE_ = 1 - sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 ),
                      PIE = adj_val * PIE_,
-                     sPIE = (1 / (1 - PIE)) ) |>
-    dplyr::ungroup() |>
-    dplyr::select(SSBS, SS, PIE, sPIE)
+                     sPIE = (1 / (1 - PIE)),
+                     
+                     N_spp = sum(!!dplyr::sym(measure_var) > 0 ),
+                     Tot_abund =  sum(!!dplyr::sym(measure_var)) ) |>
+    dplyr::ungroup() 
   
   # Ensure all PIE values between 0 and 1!
   pie_df$PIE[pie_df$PIE < 0] <- 0
   pie_df$PIE[pie_df$PIE > 1] <- 1
+  
+  # Based on MOBR, do the following
+  # If N (total abund) < 2, PIE should be NA ?, or 0
+  # Tot_abund, N_spp
+  pie_df$PIE[pie_df$Tot_abund <= 1] <- NA
+  pie_df$PIE[pie_df$Tot_abund == 0] <- 0
+  
+  if (any(pie_df$Tot_abund == 1)){
+    message(crayon::yellow("Warning: some sites contain only one individual, PIE will be undefined (NA) ..."))
+  }
+  if ( any( ((pie_df$Tot_abund <= 1)  &  (pie_df$Tot_abund > 0)) ) ){
+    message(crayon::yellow("Warning: some sites contain fewer than one individual, PIE will be undefined (NA) ..."))
+  }
+  
+  if ( any( sapply(pie_df$PIE, function(x){isTRUE(all.equal(x, 1))}) ) ){
+    message(crayon::yellow("Warning: some sites contain only singletons, sPIE will be undefined (NA) ..."))
+  }
+  
+  # If PIE == 1, sPIE should be NA  - 
+  # If PIE == 0, sPIE should be 0
+  pie_df$sPIE[is.na(pie_df$PIE)] <- NA
+  pie_df$sPIE[pie_df$PIE == 1] <- NA
+  pie_df$sPIE[pie_df$PIE == 0] <- 0
+  
+  pie_df$sPIE[sapply(pie_df$PIE, function(x){isTRUE(all.equal(x, 1))})] <- NA
+  pie_df$sPIE[sapply(pie_df$PIE, function(x){isTRUE(all.equal(x, 0))})] <- 0
+  
+  # pie_df$sPIE[is.infinite(pie_df$sPIE)] <- NA
+  
+  pie_df <- pie_df |> 
+    dplyr::select(SSBS, SS, PIE, sPIE)
   
   # Get N species used
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
@@ -921,6 +988,7 @@ hib_calc_div_within <- function(obj, metrics){
     is.character(metrics)
   )
 
+  # Also need "Diversity_metric" ?
   # TODO:
   # Custom metric - 
   # use "custom_metric" in metrics vec
@@ -1292,10 +1360,12 @@ calc_cosine_sim <- function(x1, x2){
   # if one of the sites doesn't have any individuals/species in it
   # i.e. the row sum is 0
   
-  # TODO: ensure all values between 0 and ?1?!
-  if (cosine < 0){ cosine <- 0}
-  if (cosine > 1){ cosine <- 1}
-  
+  # 
+  # ensure all values between 0 and ?1?!
+  if (!is.na(cosine)){
+    if (cosine < 0){ cosine <- 0}
+    if (cosine > 1){ cosine <- 1}  
+  }
   
   # # TODO: think I should scrap the below adjustments...
   # if ((sum(x1, na.rm = TRUE) == 0) |
