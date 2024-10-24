@@ -1678,12 +1678,12 @@ hib_calc_nonveg <- function(spp_site_data,
 #' be rescaled relative to its maximum value - applies to metrics that are not 
 #' on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), 
 #' chord, hellinger
-#' Default values is "Primary vegetation_Minimal use" - the most pristine LUI within
-#' the PREDICTS database.
+#' Default values is `TRUE`.
 #' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
 #' which compositional dissimilarity is calculated per study. If NULL, compositional 
 #' dissimilarity is calculated between all sites within each study.
-#' Default values is 'Primary vegetation_Minimal use'.
+#' Default values is 'Primary vegetation_Minimal use' - the most pristine LUI within
+#' the PREDICTS database.
 #' @keywords database, processing
 #' @examples 
 #' \dontrun{
@@ -1700,7 +1700,9 @@ hib_calc_div_between <- function(obj,
                                  binary = FALSE,
                                  rel_abund = TRUE,
                                  rescale = TRUE,
+                                 # lui_column = "LUI",
                                  baseline_lui = "Primary vegetation_Minimal use"
+                                 # effort_diff_thr = 0.1
                                  ){
 
   # TODO:
@@ -1832,21 +1834,16 @@ hib_calc_div_between <- function(obj,
   # Or could include occurence, and filter it out in subsequent functions if !binary...
 
   spp_tmp <- obj$species |>
-
-  # TODO:
-    # dplyr::filter(#!is.na(Predominant_land_use) & # ?? - drop this
-    #               Diversity_metric_type == "Abundance") |>
-
     dplyr::filter(#!is.na(Predominant_land_use) & # ?? - drop this
                   Diversity_metric_type %in% c("Abundance",
                                                "Occurrence")) |>
     
     dplyr::group_by(SS) |>
-    dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
+    dplyr::mutate(#n_sample_effort = dplyr::n_distinct(Sampling_effort),
                   # Taxon_name_entered v best_guess_binomial ??
                   n_species = dplyr::n_distinct(Taxon_name_entered)) |>
     dplyr::ungroup() |>
-    dplyr::filter(n_sample_effort == 1 &
+    dplyr::filter(#n_sample_effort == 1 &
                     n_species > 1)
   
   # print(metrics_spec_df)
@@ -1987,6 +1984,8 @@ hib_calc_div_between <- function(obj,
     return(site_comparisons)
   })
   
+  # Add effort for ssbs1/2 ??
+
   # if nrow(site_comp_df == 0) stop...
   if (nrow(site_comp_df) == 0){
     message(crayon::red(paste0("\nError: no site comparisons possible...\n\n",

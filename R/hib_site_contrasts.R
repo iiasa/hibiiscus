@@ -74,7 +74,7 @@ hib_calc_site_contrasts <- function(obj,
   # get obj$sites columns of interest - SSBS, SS, LUI, lat/long etc
   cols_of_interest <- c("SSBS", "SSB", "SS")
   if ("lui_contrast" %in% metrics){
-    cols_of_interest <- c(cols_of_interest, "LUI")
+    cols_of_interest <- c(cols_of_interest, "LUI", "Sampling_effort")
   }
   if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
     cols_of_interest <- c(cols_of_interest, "Latitude", "Longitude")
@@ -291,13 +291,13 @@ hib_calc_site_contrasts <- function(obj,
     
     spp_tmp <- spp_tmp |>
       dplyr::filter(#!is.na(Predominant_land_use) &
-                    Diversity_metric_type == "Abundance") |>
+                    Diversity_metric_type %in% c("Abundance", "Occurrence")) |>
       dplyr::group_by(SS) |>
-      dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
+      dplyr::mutate(#n_sample_effort = dplyr::n_distinct(Sampling_effort),
                     # Taxon_name_entered v best_guess_binomial ?? - what if none..
                     n_species = dplyr::n_distinct(Taxon_name_entered)) |>
       dplyr::ungroup() |>
-      dplyr::filter(n_sample_effort == 1 &
+      dplyr::filter(#n_sample_effort == 1 &
                n_species > 1)
     
     # if (primin_baseline == T){
@@ -483,6 +483,20 @@ hib_calc_site_contrasts <- function(obj,
       site_comp_df <- site_comp_df |>
         dplyr::mutate(Baseline_LUI = NA)
     }
+
+    # Add sampling effort - note, present in spp_tmp
+    effort_df <- unique(spp_tmp[, c("SSBS", "Sampling_effort")])
+
+    site_comp_df <- site_comp_df |>
+      dplyr::left_join(effort_df, 
+                       by = c("SSBS1" = "SSBS")) |>
+      dplyr::rename(SSBS1_Effort = Sampling_effort) |> 
+      dplyr::left_join(effort_df, 
+                       by = c("SSBS2" = "SSBS")) |>
+      dplyr::rename(SSBS2_Effort = Sampling_effort) |>
+      dplyr::mutate(SSBS2_Relative_effort_diff = (SSBS2_Effort - SSBS1_Effort)/SSBS1_Effort ,
+                    SSBS2_Relative_effort = SSBS2_Effort / SSBS1_Effort
+                    )
   }
   # TODO: lu contrast (Predominant_land_use), i contrast (Use_intensity)
   # if ("lu_contrast" %in% metrics){
@@ -598,7 +612,8 @@ hib_calc_site_contrasts <- function(obj,
                                                               "gower",
                                                               F,
                                                               F,
-                                                              F)
+                                                              F,
+                                                              "")
                                      
                                      tmp_dist <- tmp_dist |>
                                        dplyr::rename(SSBS_contrast = contrast) |>
@@ -654,7 +669,8 @@ hib_calc_site_contrasts <- function(obj,
                                                               metr_nm,
                                                               F,
                                                               F,
-                                                              F)
+                                                              F,
+                                                              "")
                                      
                                      tmp_dist <- tmp_dist |>
                                        dplyr::rename(SSBS_contrast = contrast) |>
