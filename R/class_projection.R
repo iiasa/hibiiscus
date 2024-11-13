@@ -187,7 +187,7 @@ HibProjection <- R6Class("HibProjection",
                                   
                                   n_pred_vars <- length(fix_vars)
                                   if (length(fix_vars) > 3){
-                                    pred_vars <- paste(paste(fix_vars[1:3], collapse = ", ", ", ...", sep = ""))
+                                    pred_vars <- paste(paste(fix_vars[1:3], collapse = ", "), ", ...", sep = "")
                                     pred_vars <- paste0(pred_vars, " (", n_pred_vars, " in total)")
                                   } else {
                                     pred_vars <- paste(fix_vars, collapse = ", ")

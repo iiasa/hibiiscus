@@ -1679,7 +1679,7 @@ hib_calc_nonveg <- function(spp_site_data,
 #' on a 0-1 scale by default - hypervolume, euclidean (if relative abundance), 
 #' chord, hellinger
 #' Default values is `TRUE`.
-#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
+#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI/s against
 #' which compositional dissimilarity is calculated per study. If NULL, compositional 
 #' dissimilarity is calculated between all sites within each study.
 #' Default values is 'Primary vegetation_Minimal use' - the most pristine LUI within
@@ -1874,11 +1874,33 @@ hib_calc_div_between <- function(obj,
     if (nrow(site_tmp) == 0){
       stop("\nError: no site comparisons possible. Check your data and the metric specifications.", call. = F)
     }
+    # %%%%%
+    # TODO: allow for multiple baseline_lui
+    if (!all(baseline_lui %in% unique(site_tmp$LUI))){
+      missing_baseline <- baseline_lui[!baseline_lui %in% unique(site_tmp$LUI)]
+      baseline_lui <- baseline_lui[baseline_lui %in% unique(site_tmp$LUI)]
 
-    assertthat::assert_that(baseline_lui %in% unique(site_tmp$LUI),
-                            msg = "baseline_lui is not present in the site data that can be used for comparisons. \n      Consider changing your data and/or the metric specifications.")
+      if (length(baseline_lui) > 0){
+        message(crayon::yellow(paste0("Warning: specified baseline/s missing, only ",
+                                    "using available baseline/s...\n",
+                                    "\tMissing baseline/s: ", paste0(missing_baseline, collapse = ", "), "\n",
+                                    "\tUsed baseline/s:    ", paste0(baseline_lui, collapse = ", "), "\n"
+                                    )))
+      } else {
+        message(crayon::red(paste0("\nError: no sites avilable with specified baseline LUI/s...\n")))
+        stop("Specific baseline not in LUI column.")
 
-    site_tmp$base_lui <- site_tmp$LUI == baseline_lui
+      }
+      
+    }
+    assertthat::assert_that(all(baseline_lui %in% unique(site_tmp$LUI)))
+
+    site_tmp$base_lui <- site_tmp$LUI %in% baseline_lui
+    # %%%%%
+    # assertthat::assert_that(baseline_lui %in% unique(site_tmp$LUI),
+    #                         msg = "baseline_lui is not present in the site data that can be used for comparisons. \n      Consider changing your data and/or the metric specifications.")
+
+    # site_tmp$base_lui <- site_tmp$LUI == baseline_lui
     
     site_tmp <- site_tmp |>
       dplyr::group_by(SS) |>
@@ -1989,7 +2011,8 @@ hib_calc_div_between <- function(obj,
   # if nrow(site_comp_df == 0) stop...
   if (nrow(site_comp_df) == 0){
     message(crayon::red(paste0("\nError: no site comparisons possible...\n\n",
-                               "Maybe check that the specified baseline LUI ('", baseline_lui,
+                               "Maybe check that the specified baseline LUI/s ('", 
+                               paste(baseline_lui, collapse = ", "),
                                "') is present ...\n"))
     )
     stop("Unable to generate any site comparisons, see above for details.", call. = FALSE)
@@ -2335,7 +2358,7 @@ hib_calc_div_between <- function(obj,
     dplyr::mutate(Metric = tools::toTitleCase(metric))
   
   metrics_spec_df <- metrics_spec_df |>
-    dplyr::mutate(baseline_lui = baseline_lui)
+    dplyr::mutate(baseline_lui = paste(baseline_lui, collapse = ", "))
   if (is.null(baseline_lui)){
     metrics_spec_df <- metrics_spec_df |>
       dplyr::mutate(baseline_lui = NA)

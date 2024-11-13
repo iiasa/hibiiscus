@@ -19,8 +19,8 @@
 #'                         Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))}
 #' Metric names (as specified in the name of the sub-lists) will be converted to 
 #' sentence-case in the output data.
-#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
-#' which dis/similarity is calculated per study - should match the value used 
+#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI/s against
+#' which dis/similarity is calculated per study - should match the value/s used 
 #' when calculating compositional dis/similarity (hib_calc_div_between)
 #' @param overwrite A [`logical`] indicating whether or not any current site contrast
 #' data should be over-written.
@@ -332,9 +332,33 @@ hib_calc_site_contrasts <- function(obj,
 
       # print(baseline_lui)
       # print(unique(site_tmp$LUI))
-      assertthat::assert_that(baseline_lui %in% unique(site_tmp$LUI))
 
-      site_tmp$base_lui <- site_tmp$LUI == baseline_lui
+      # %%%%%%%%%%
+      # TODO: allow for multiple baselines?
+      # if any baseline_lui missing, throw a warning, keep remainder
+      if (!all(baseline_lui %in% unique(site_tmp$LUI))){
+        missing_baseline <- baseline_lui[!baseline_lui %in% unique(site_tmp$LUI)]
+        baseline_lui <- baseline_lui[baseline_lui %in% unique(site_tmp$LUI)]
+
+        if (length(baseline_lui) > 0){
+          message(crayon::yellow(paste0("Warning: specified baseline/s missing, only ",
+                                      "using available baseline/s...\n",
+                                      "\tMissing baseline/s: ", paste0(missing_baseline, collapse = ", "), "\n",
+                                      "\tUsed baseline/s:    ", paste0(baseline_lui, collapse = ", "), "\n"
+                                      )))
+        } else {
+          message(crayon::red(paste0("\nError: no sites avilable with specified baseline LUI/s...\n")))
+          stop("Specific baseline not in LUI column.")
+
+        }
+        
+      }
+      # site_tmp$base_lui <- site_tmp$LUI %in% baseline_lui
+
+      # %%%%%%%%%%
+      assertthat::assert_that(all(baseline_lui %in% unique(site_tmp$LUI)))
+
+      site_tmp$base_lui <- site_tmp$LUI %in% baseline_lui
       
       site_tmp <- site_tmp |>
         dplyr::group_by(SS) |>
@@ -431,8 +455,9 @@ hib_calc_site_contrasts <- function(obj,
 
     if (nrow(site_comp_df) == 0){
       message(crayon::red(paste0("\nError: no site comparisons possible...\n\n",
-                                 "Maybe check that the specified baseline LUI ('", baseline_lui,
-                                 "') is present ...\n"))
+                                 "Maybe check that the specified baseline LUI/s ('", 
+                                 paste(baseline_lui, collapse = ", "),
+                                 "') are present ...\n"))
       )
       stop("Unable to generate any site comparisons, see above for details.")
     }
@@ -478,7 +503,8 @@ hib_calc_site_contrasts <- function(obj,
       dplyr::rename(SSBS2_LUI = LUI) |>
       # create an lui_contrast column (what we'll use for modelling)
       dplyr::mutate(LUI_contrast = paste(SSBS1_LUI, SSBS2_LUI, sep = "_vs_"),
-                    Baseline_LUI = baseline_lui)
+                    Baseline_LUI = SSBS1_LUI)
+      # TODO; if baseline luis , just use SSBS1_LUI !!
     if (is.null(baseline_lui)){
       site_comp_df <- site_comp_df |>
         dplyr::mutate(Baseline_LUI = NA)
