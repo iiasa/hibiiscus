@@ -436,7 +436,7 @@ hib_calc_rsr <- function(spp_df, measure_var){
   )
   
   rarefy_comm <- function(abund_distr, N){
-    comm <- rep(letters[1:length(abund_distr)], abund_distr)
+    comm <- rep(as.character(1:length(abund_distr)), abund_distr)
     samp <- sample(comm, N)
     sr <- length(table(samp))
     # <- length(unique(samp)) # more efficient?
