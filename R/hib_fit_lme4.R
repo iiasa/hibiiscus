@@ -108,7 +108,7 @@ hib_fit_lme4 <- function(obj,
     
     mod_df <- dplyr::bind_rows(mod_df_ls,
                               .id = "dataset_modelling_id")
-    
+    # TODO: ensure that mod_df has >1 row of data!
     n_spp_taxa <- purrr::map2(.x = obj, 
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
@@ -125,6 +125,7 @@ hib_fit_lme4 <- function(obj,
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
+    # TODO: ensure that mod_df has >1 row of data!
     n_spp_taxa <- calc_N_spp(obj, mod_df, mod_resp)
     n_spp = n_spp_taxa$N_spp
     n_taxa = n_spp_taxa$N_taxa
