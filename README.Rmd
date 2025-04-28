@@ -38,6 +38,13 @@ devtools::install_github("IIASA/hibiiscus")
 install.packages("hibiiscus", repos = "https://iiasa.r-universe.dev")
 ```
 
+## Overview
+
+**hibiiscus** is an `R` package for conducting ecological impact analyses with hierarchical data. It allows for reproducible workflows spanning data preparation, through model fitting, impact estimation to model projection on new covariates. It incorporates functionality for estimating a range of ecological/biodiversity indicators (taxonomic diversity), fitting frequentist and Bayesian models, and model evaluation (including cross-validation, and area-of-applicability, Meyer and Pebesma, 2021).
+
+**hibiiscus** is based on R6 Classes (objects) with data components internally stored as `data.frame`/`tibble` or **terra** `SpatRaster`.
+
+
 ## Example
 
 This is a basic example which shows you how to solve a common problem:

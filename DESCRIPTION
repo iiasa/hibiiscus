@@ -1,5 +1,5 @@
 Package: hibiiscus
-Title: Framework for transferable ecological impact analyses
+Title: Modelling framework for hierachical ecological impact analysis
 Version: 0.1
 Authors@R: 
     c(
@@ -9,11 +9,12 @@ Authors@R:
            comment = c(ORCID = "0000-0002-7569-1390"))
            )
 Maintainer: Richard Cornford <cornford@iiasa.ac.at>
-Description: This package uses principles of ecological meta-analysis to
+Description: This package uses principles of hierarchical modelling to
     assess the impacts of land use and land-use intensity on ecological
     communities. Data and modelling approach originate from the PREDICTS
-    framework and are adapted for greater transferability, accounting of
-    uncertainty and robustness.
+    framework and are adapted for use with alternative land-use categories 
+    (legends), integration of additional ecological data, modelling with frequentist
+    and Bayesian approaches, and extended model evaluation.
 License: CC BY 4.0
 URL: https://github.com/iiasa/hibiiscus, https://iiasa.github.io/hibiiscus/
 BugReports: https://github.com/iiasa/hibiiscus/issues
