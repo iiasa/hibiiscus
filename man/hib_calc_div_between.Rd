@@ -2,7 +2,7 @@
 % Please edit documentation in R/hib_div_metrics.R
 \name{hib_calc_div_between}
 \alias{hib_calc_div_between}
-\title{Calculate compositional dissimilarity (wrapper) between sites}
+\title{Calculate between-site (within study) diversity metrics}
 \usage{
 hib_calc_div_between(
   obj,
@@ -16,45 +16,55 @@ hib_calc_div_between(
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{metrics}{A \code{\link{character}} vector of dissimilarity metrics.
+\item{metrics}{Character vector of dissimilarity/distance metrics.
 Metrics available via \code{vegan::vegdist}: "manhattan", "euclidean", "canberra", "clark",
 "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn",
 "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord",
 "hellinger", "aitchison", "robust.aitchison".
 Other available metrics: "hypervolume", "cosine", "theta", "baselga_bray_balanced",
 "baselga_bray_gradient", "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
-"horn_dissim".
+"horn_dissim", "normalised_euclidean".
 Metrics can be provided in upper or lower case - internal processing is done
 using lower-case - and as as unambiguous abbreviations.
 Note: "horn" refers to the "Morisita-Horn" index in the vegan package.
-"horn_dissim" refers to (1 - Horn overlap), calculated endogenously within this package.}
+"horn_dissim" refers to (1 - Horn overlap), calculated endogenously within
+this package.}
 
-\item{binary}{A \code{\link{logical}} vector, should metric be calculated using occurence
-values (if TRUE) or abundance (if FALSE, default).}
+\item{binary}{Logical vector - should metric be calculated using occurence
+values (\code{TRUE}) or abundance (\code{FALSE}, default). Should be a single entry, or
+of the same length as 'metrics'. Vectors of other lengths will be recycled to
+the length of 'metrics'.}
 
-\item{rel_abund}{A \code{\link{logical}} vector determining whether relative abundance
+\item{rel_abund}{Logical vector - determining whether relative abundance
 should be used to calculate the dissimilarity metric, only applicable for some metrics,
-e.g., euclidean, hypervolume - Note: many metrics include rescaling to 'relative abundances'
-as part of the calculation.
-Default values is TRUE.}
+e.g., euclidean, hypervolume.
+Note: many metrics include rescaling of abundances as part of the calculation.
+Default values is \code{TRUE}.}
 
-\item{rescale}{A \code{\link{logical}} vector determining if dissimilarity measure should
+\item{rescale}{Logical vector - determining if dissimilarity measure should
 be rescaled relative to its maximum value - applies to metrics that are not
 on a 0-1 scale by default - hypervolume, euclidean (if relative abundance),
-chord, hellinger
-Default values is "Primary vegetation_Minimal use" - the most pristine LUI within
-the PREDICTS database.}
+chord, hellinger.
+Default values is \code{TRUE}.}
 
-\item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
+\item{baseline_lui}{Character or NULL, indicating the baseline LUI/s against
 which compositional dissimilarity is calculated per study. If NULL, compositional
 dissimilarity is calculated between all sites within each study.
-Default values is 'Primary vegetation_Minimal use'.}
+Default values is 'Primary vegetation_Minimal use' - the most pristine LUI within
+the PREDICTS database.}
+}
+\value{
+HibDatabase with updated '$diversity_between' tibble
 }
 \description{
-This function calculates compositional dissimilarity between sites within a study
+This function calculates a range of compositional dissimilarity/distance measures
+between sites (within studies) based on taxonomic diversity and for the associated
+HibDatabase.
 }
 \details{
-Expects a \code{\link{HibDatabase}} object.
+As is standard for R6 Classes, the HibDatabase is modified in-place.
+If effort correction (\code{hib_effort_correction()}) has previously been conducted,
+diversity metrics will be estimated using effort corrected measurements.
 }
 \examples{
 \dontrun{

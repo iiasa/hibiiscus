@@ -20,7 +20,7 @@ hib_calc_site_contrasts(
 
 \item{custom_metric_specs}{A named \code{\link{list}} with each named item containing the
 specifications for the named custom metric. Custom metrics must be based on
-vegdist distance metrics.
+\code{vegdist} distance metrics.
 Essential named values within the specifications of a custom metric are:
 \code{dist_metr} - a character indicating the metric of choice;
 \code{vars} - a character vector indicating the site variables to use when calculating
@@ -30,8 +30,8 @@ For example: \code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1"
 Metric names (as specified in the name of the sub-lists) will be converted to
 sentence-case in the output data.}
 
-\item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI against
-which dis/similarity is calculated per study - should match the value used
+\item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI/s against
+which dis/similarity is calculated per study - should match the value/s used
 when calculating compositional dis/similarity (hib_calc_div_between)}
 
 \item{overwrite}{A \code{\link{logical}} indicating whether or not any current site contrast
@@ -39,7 +39,7 @@ data should be over-written.}
 }
 \description{
 This function calculates dissimilarity measures between sites within a study,
-for use as covariates in models of comopositional dis/similarity
+for use as covariates in models of compositional dis/similarity
 }
 \details{
 Expects a \code{\link{HibDatabase}} object.

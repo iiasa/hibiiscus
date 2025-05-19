@@ -9,13 +9,16 @@ hib_update_db(obj, path_species, path_sites = "", dataset_name = "", ...)
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{path_species}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted occurrence database.}
+\item{path_species}{A character pointing to a \code{PREDICTS} formatted abundance/
+occurrence database.}
 
-\item{path_sites}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted site database, or "" otherwise.}
+\item{path_sites}{Optional character argument, pointing to a \code{PREDICTS}
+formatted site database. Default value is \code{""}.}
 
 \item{dataset_name}{A \code{\link{character}} indicating the dataset used to create the
-HibDatabase. Default is ''. If '' is supplied, function will update parameter
-to the filename associated with \code{path_species}.}
+HibDatabase. Default is \code{""}.
+If \code{""} is supplied, the parameter will be internally updated to the filename
+associated with \code{path_species}.}
 
 \item{...}{Other non-specified parameters.}
 }

@@ -331,7 +331,7 @@ HibCV <- R6Class("HibCV",
                           if (self$model_type == "HibModelBRMS"){
                             mtype_shrt <- "brms"
                           }
-                          if (self$model_type == "HibModelLME4"){
+                          if (self$model_type == "HibModelINLA"){
                             mtype_shrt <- "INLA"
                           }
                           message(

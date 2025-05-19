@@ -2,32 +2,41 @@
 % Please edit documentation in R/hib_create_db.R
 \name{hib_create_db}
 \alias{hib_create_db}
-\title{Create a database object}
+\title{Create a database object from input files}
 \usage{
 hib_create_db(path_species, path_sites = "", dataset_name = "", ...)
 }
 \arguments{
-\item{path_species}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted occurrence database.}
+\item{path_species}{A character pointing to a \code{PREDICTS} formatted abundance/
+occurrence database.}
 
-\item{path_sites}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted site database, or "" otherwise.}
+\item{path_sites}{Optional character argument, pointing to a \code{PREDICTS}
+formatted site database. Default value is \code{""}.}
 
 \item{dataset_name}{A \code{\link{character}} indicating the dataset used to create the
-HibDatabase. Default is ''. If '' is supplied, function will update parameter
-to the filename associated with \code{path_species}.}
+HibDatabase. Default is \code{""}.
+If \code{""} is supplied, the parameter will be internally updated to the filename
+associated with \code{path_species}.}
 
 \item{...}{Other non-specified parameters.}
 }
+\value{
+An object of class \code{HibDatabase}, containing site and species information
+which can be further modified for subsequent ecological analysis.
+}
 \description{
-This function creates a \code{\link{R6}} \code{HibDatabase} object containing the loaded
-\code{PREDICTS} database.
-It assumes that a species database is present, with a site database being optional.
-All files are loaded and compiled in a single database that can be stored for future use.
+This function creates an \code{\link{R6}} \code{HibDatabase} object containing the loaded
+\code{PREDICTS}-like database.
+It assumes that a species database file is present, with a site database file
+being optional.
+All files are loaded and compiled into a single database object that can be
+stored for future use (see \code{\link[=hib_save]{hib_save()}}).
 
 This object is then used in other functions of this package to prepare or filter the
 database and enable ecological impact analyses.
 }
 \note{
-Other or later \code{PREDICTS} formatted object need to be supplied via ...
+Other or later \code{PREDICTS} formatted object need to be supplied via ... ??
 }
 \examples{
 \dontrun{

@@ -1705,8 +1705,7 @@ hib_calc_nonveg <- function(spp_site_data,
                       several.ok = FALSE)
   # TODO: challenge of single spp communities?? - this would affect metric calcs..??
 
-  # TODO:
-  # if!binary, ensure only abundance data is used...
+  # Check for binary
   if ((binary == F) & (div_metric_type == "Occurrence")){
     return(NULL)
   }
@@ -1721,15 +1720,15 @@ hib_calc_nonveg <- function(spp_site_data,
       spp_site_data <- spp_site_data/row_abund
     }
   }
-  # Use species occurence if specified
-  # if!binary, enruse only abundance data is used...
+  # Use species occurence if binary specified
   if (binary){
     spp_site_data[spp_site_data > 0] <- 1
   }
+  # if!binary, abundance data only is filtered later
 
   # Calculate hypervolume
   if (metric == "hypervolume"){
-    # Should always use relative abundance!
+    # Should really always use relative abundance! - raw abundance doesn't make sense
     # transpose site_spp_data for use in convhulln (M rows of N dimensions)
     spp_site_data <- t(spp_site_data)
     
@@ -1737,7 +1736,6 @@ hib_calc_nonveg <- function(spp_site_data,
     spp_site_data <- rbind(spp_site_data,
                            rep(0, ncol(spp_site_data)))
 
-    # Should an error default to 0
     # 0 should be vol if either site has 0 total abund
     # And technically if both comms are 0..
     vol <- tryCatch(
@@ -1746,15 +1744,24 @@ hib_calc_nonveg <- function(spp_site_data,
                             output.options = TRUE)$vol
       },
       error = function(e) {
+        # TODO: Would NA be a better error value??
         # NA # ??
         0
-        # Wouldn't NA be a better error value
       }
     )
     
-    if (rescale & rel_abund){
-      vol <- vol / 0.5
-    }
+    # Scale based on min(Nspp, Ncomm) - generally assume to be 2. 
+    # If only 1 species, will return an error?
+    vol <- sqrt(vol)
+    #  - theor. max is 1 in paper, not 0.5
+
+    # In Song et al, vol is further rescaled by min(Nspp, Ncomm) - not done here
+    # We simply return normalised hypervolume - implicitly has max of 1.
+    
+    
+    # if (rescale & rel_abund){
+    #   vol <- vol / 0.5
+    # }
     
     out <- data.frame("Hypervolume" = vol)
   }
@@ -1824,19 +1831,7 @@ hib_calc_nonveg <- function(spp_site_data,
     
     out <- as.data.frame.list(out)
 
-    # if one of the sites doesn't have any individuals/species in it
-    # i.e. the row sum is 0
-    # TODO: but is the below true for the gradient/turnover components calculated
-    # by betapart...
-    # if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 1){
-    #   # then the similarity between sites should be 0
-    #   out[1,] <- 0
-    #   # if both sites have no individuals/species
-    # } else if (sum(rowSums(spp_site_data) == 0, na.rm = TRUE) == 2){
-    #   # then class the similarity as NA
-    #   out[1,] <- NA
-    # }
-    
+   
     # Rename columns
     if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient")){
       out <- out |>
@@ -1855,7 +1850,6 @@ hib_calc_nonveg <- function(spp_site_data,
     colnames(out) <- tools::toTitleCase(colnames(out))
   }
   
-  # TO check:
   # normalised_euclidean
   else if (metric == "normalised_euclidean"){
     x <- as.matrix(spp_site_data)
@@ -1936,7 +1930,6 @@ hib_calc_div_between <- function(obj,
                                  binary = FALSE,
                                  rel_abund = TRUE,
                                  rescale = TRUE,
-                                 # lui_column = "LUI",
                                  baseline_lui = "Primary vegetation_Minimal use"
                                  # effort_diff_thr = 0.1
                                  ){
@@ -2056,14 +2049,9 @@ hib_calc_div_between <- function(obj,
   
   # Get site comparisons
 
-  # TODO: if all metrics are binary 
-  # can also use 'Occurrence' data...
-  # Diversity_metric_type == 'Occurrence'
-  # if (all(metrics_spec_df$binary)){}
-
-  # if (!all(metrics_spec_df$binary)){}
-  # Or could include occurence, and filter it out in subsequent functions if !binary...
-
+  # If metrics are binary can also use 'Occurrence' data...
+  # If metrics do not use abundance data, these contrasts are filtered out later.
+  
   spp_tmp <- obj$species |>
     dplyr::filter(#!is.na(Predominant_land_use) & # ?? - drop this
                   Diversity_metric_type %in% c("Abundance",
@@ -2597,10 +2585,16 @@ hib_calc_div_between <- function(obj,
                                              log(2), 1, 1, NA, 1,
                                              NA, NA, NA, 1, NA, sqrt(2), 
                                              sqrt(2), NA, NA))
-  
-  if (rel_abund == T){
-    veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
+  # only if Euclidean is rel_abund
+  if ("Euclidean" %in% metrics_spec_df_$Metric){
+    euc_rel <- metrics_spec_df_$Relative_abundance[metrics_spec_df_$Metric == "Euclidean"]
+    if (euc_rel == T){
+      veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
+    }
   }
+  # if (rel_abund == T){
+  #   veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
+  # }
   # Max gower dist for 2 sites is 1, rel_abund or not...
   # ...  sum (diff_i / diff_i) / N
   # if diff_i != 0, ratio is 1, 
@@ -2625,9 +2619,16 @@ hib_calc_div_between <- function(obj,
                                                  1, 1,
                                                  1, 1,
                                                  1, 1))
-  if (rel_abund == T){
-    non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 0.5
+  # only if Hypervolume is rel_abund
+  if ("Hypervolume" %in% metrics_spec_df_$Metric){
+    vol_rel <- metrics_spec_df_$Relative_abundance[metrics_spec_df_$Metric == "Hypervolume"]
+    if (vol_rel == T){
+      non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 1
+    }
   }
+  # if (rel_abund == T){
+  #   non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 0.5
+  # }
 
   max_df <- dplyr::bind_rows(veg_max_df,
                              non_veg_max_df)

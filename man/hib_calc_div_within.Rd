@@ -9,23 +9,30 @@ hib_calc_div_within(obj, metrics)
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{metrics}{A \code{\link{character}} vector, any/all of \code{"Total_abundance"}, "Species_richness",
+\item{metrics}{Character vector, any/all of; "Total_abundance", "Species_richness",
 "Chao1_diversity",  "Simpson_diversity", "Rarefied_species_richness",
 "Mean_abundance", "Geometric_mean_abundance", "Shannon_diversity",
-"HillShannon_diversity", "HillSimpson_diversity", "PIE".
-Metrics can be provided in upper or lower case - internal processing is done
-using lower-case - and as unambiguous abbreviations.}
+"HillShannon_diversity", "HillSimpson_diversity", "PIE", "Equalness".
+Metrics can be provided in upper or lower case and as unambiguous abbreviations
+(internal processing is done using lower-case).}
+}
+\value{
+HibDatabase with updated '$diversity_within' tibble
 }
 \description{
-This function calculates diversity per site, wrapper for the above functions
+This function calculates multiple, user specified measures of site-level
+(taxonomic) diversity for sites in the associated HibDatabase.
 }
 \details{
-Expects a \code{\link{HibDatabase}} object.
+As is standard for R6 Classes, the HibDatabase is modified in-place.
+If effort correction (\code{hib_effort_correction()}) has previously been conducted,
+diversity metrics will be estimated using effort corrected measurements.
 }
 \examples{
 \dontrun{
-  obj <- hib_calc_div_within(obj, c("Total_abundance", "Species_richness"))
-} 
+  hib_db <- hib_calc_div_within(hib_db, c("Total_abundance", "Species_richness"))
+}
+ 
 }
 \keyword{database,}
 \keyword{processing}

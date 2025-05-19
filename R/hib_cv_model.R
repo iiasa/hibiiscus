@@ -118,6 +118,7 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
   }
   
   if (inherits(mod_obj, "HibModelLME4")){
+    # TODO: fix formula formatting, sometimes multiple components - need to collapse
     message(crayon::green(paste0("Cross-validating supplied lme4 model:\n\t", 
                                  format(stats::formula(mod_obj$model)), "\n")))
   }
