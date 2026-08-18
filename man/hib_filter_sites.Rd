@@ -2,23 +2,27 @@
 % Please edit documentation in R/hib_filter.R
 \name{hib_filter_sites}
 \alias{hib_filter_sites}
-\title{Filter the database object by site(s)}
+\title{hib_filter_sites: Filter the database object by site-linked variables}
 \usage{
 hib_filter_sites(obj, condition)
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{condition}{An expression identifying how to filter the sites dataframe.}
+\item{condition}{An expression identifying how to filter the sites data.frame,
+as would be passed to \code{dplyr::filter}.}
+}
+\value{
+\code{HibDatabase}
 }
 \description{
-This function returns a database object containing only sites whose characteristics
-are retained.
+This function returns a database object containing only sites (and associated
+species) whose characteristics are retained.
 }
 \examples{
 \dontrun{
-  hib_filter_species(hib_obj, UN_region == "Europe")
+  hib_obj <- hib_filter_sites(hib_obj, UN_region == "Europe")
 }
 }
-\keyword{database}
+\keyword{database,}
 \keyword{filtering}

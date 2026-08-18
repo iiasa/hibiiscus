@@ -2,7 +2,7 @@
 % Please edit documentation in R/hib_project_model.R
 \name{hib_project_model}
 \alias{hib_project_model}
-\title{Project a hib, mixed-effects model}
+\title{hib_project_model: Project a hibiiscus mixed-effects model}
 \usage{
 hib_project_model(
   mod_obj,
@@ -19,71 +19,124 @@ hib_project_model(
 \arguments{
 \item{mod_obj}{One of; \code{\link{HibModelLME4}}, \code{\link{HibModelINLA}} or \code{\link{HibModelBRMS}}.}
 
-\item{data}{Either a dataframe-like object or a raster stack that can be used
-to project onto - should contain x and y columns if a dataframe.}
+\item{data}{A \code{data.frame}-like object, a \code{SpatRaster}, or a list of
+\code{SpatRaster}.
+Should contain all fixed-effect variables used in the fitted model, and any
+required random variables.
+If \code{data} is a \code{data.frame}, \code{x} and \code{y} columns should also be included.}
 
-\item{backtransform}{A \code{\link{function}} that will backtransform the model response
-to the scale of the original variable, e.g., exp() as the inverse of log()}
+\item{backtransform}{A \code{function} that will backtransform the model response
+to the scale of the original variable, e.g., \code{exp()} as the inverse of \code{log()}.
+Default is \code{NULL}, i.e., no backtransformation.}
 
-\item{rescale_specs}{A \code{\link{list}} containing details relevant to rescaling projections.
-Specifically, named items should consist of 'rescale' (\code{\link{logical}}),
-'baseline_covar' (\code{\link{data.frame}}, or NULL), 'baseline_re_form' (\code{\link{formula}}, \code{\link{NA}}, or \code{\link{NULL}}).
+\item{rescale_specs}{A named \code{list} (or \code{NULL}) containing details relevant
+to rescaling projections.
+Specifically, named items should consist of:
+\itemize{
+\item \code{rescale} (\code{logical}),
+\item \code{baseline_covar} (\code{data.frame}, or NULL),
+\item \code{baseline_re_form} (\code{formula}, \code{NA}, or \code{NULL}). \cr
+}
+
 In combination, these arguments determine if predictions will be rescaled or not
-(based on value of $rescale), the covariate values used to generate the baseline
-against which other predictions are rescaled ($baseline_covar), and whether/how
-random effects should be incorporated in the generation of this baseline ($baseline_re_form,
-see lme4/inla/brms_specs).
-If $rescale == TRUE, but no baseline_covar is provided, the intercept of the
+(\code{rescale}), the covariate values used to generate the baseline against which
+other predictions are rescaled (\code{baseline_covar}), and whether/how random
+effects should be incorporated in the generation of this baseline (\code{baseline_re_form},
+see \code{re_form} in \code{lme4/inla/brms_specs} argument). \cr
+If \code{rescale == TRUE}, but no \code{baseline_covar} is provided, the intercept of the
 model will be used as the baseline value.}
 
-\item{lme4_specs}{A \code{\link{list}} containing details relevant to projecting an lme4-style
-model. Specifically, named items should consist of 'bootstrap' (\code{\link{logical}}) and
-'n_boot' (\code{\link{numeric}}), indicating whether bootstrapped prediction intervals should be
-estimated, and if so, how many bootstrap samples should be used.
-In addition, 'calc_se' (\code{\link{logical}}) is used to specify whether or not a standard
-error based uncertainty estimate (via marginaleffects) is calculated and used
-to generate confidence intervals.
-'conf_level' (\code{\link{numeric}}) is used to specify the confidence levels of intervals
-generated via bootstrapping or the se-based approach. Values should fall between
+\item{lme4_specs}{A named \code{list} (or \code{NULL}) containing details relevant to
+projecting a \code{HibModelLME4}. \cr
+Named items should consist of:
+\itemize{
+\item \code{bootstrap} (\code{logical}), indicating whether bootstrapped prediction intervals
+should be estimated. Can be slow for large models.
+\item \code{n_boot} (\code{numeric}), how many bootstrap samples should be used to estimate
+prediction uncertainty.
+\item \code{calc_se} (\code{logical}), specify whether or not a standard error based uncertainty
+estimate (via \code{\link[marginaleffects:predictions]{marginaleffects::predictions}}) is calculated and used to generate prediction
+intervals.
+\item \code{conf_level} (\code{numeric}) is used to specify the confidence levels of intervals
+generated via bootstrapping or the SE-based approach. Values should fall between
 0 and 1, typically in the range 0.5 to 0.95.
-Additionally, 're_form', as 're.form' in \code{\link[=predict.merMod]{predict.merMod()}}, used to specify random
-effects to condition on when predicting an lme4 model (formula, NULL, or NA).}
+Multiple values can be provided.
+\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re.form} in \code{\link[=predict.merMod]{predict.merMod()}},
+used to specify random effects to condition on when predicting.
+}}
 
-\item{inla_specs}{A \code{\link{list}} containing details relevant to projecting an inla-style
-model.
-'re_form', as 're.form' in \code{\link[=predict.merMod]{predict.merMod()}}, used to specify random
-effects to condition on when predicting an inla model (formula, NULL, or NA).
-'link_inverse' a function that is the invers of the link used to fit the model.
-Used to backtranform the global intercept for use in rescaling predictions.}
+\item{inla_specs}{A named \code{list} (or \code{NULL}) containing details relevant to
+projecting a \code{HibModelINLA}. \cr
+\itemize{
+\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re.form} in \code{\link[=predict.merMod]{predict.merMod()}},
+used to specify random effects to condition on when predicting.
+\item \code{link_inverse} a \code{function} that is the inverse of the link used to fit the model.
+Used to backtranform the global intercept for use in rescaling predictions.
+}}
 
-\item{brms_specs}{A \code{\link{list}} containing details relevant to projecting a brms-style
-model. Specifically, named item should consist of 'incl_obs_uncert' (\code{\link{logical}})
-to determine whether or not observation-level uncertainty is included in predictions.
-Setting this parameter to TRUE will produce predictions with larger uncertainty, using
-\code{\link[=predict.brmsfit]{predict.brmsfit()}}, setting to FALSE calls \code{\link[=fitted.brmsfit]{fitted.brmsfit()}} internally.
-'conf_level' (\code{\link{numeric}}) is used to specify the confidence levels of intervals
-generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95,
-internally converted to quantiles and passed to the probs argument of \code{\link[=predict.brmsfit]{predict.brmsfit()}}/
-\code{\link[=fitted.brmsfit]{fitted.brmsfit()}}.
-Additionally, 're_form', as 're_formula' in \code{\link[=predict.brmsfit]{predict.brmsfit()}}, used to specify random
-effects to condition on when predicting a brms (formula, NULL, or NA).}
+\item{brms_specs}{A named \code{list} (or \code{NULL}) containing details relevant to
+projecting a \code{HibModelBRMS}.
+Named items should consist of:
+\itemize{
+\item \code{incl_obs_uncert} (\code{logical}), to determine whether or not observation-level
+uncertainty is included in predictions.
+Setting this parameter to \code{TRUE} will produce predictions using
+\code{\link[=predict.brmsfit]{predict.brmsfit()}} (larger uncertainty), setting to \code{FALSE} calls
+\code{\link[=fitted.brmsfit]{fitted.brmsfit()}} internally.
+\item \code{conf_level} (\code{numeric}) is used to specify the confidence levels of intervals
+generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95.
+Internally converted to quantiles and passed to the \code{probs} argument of \code{predict.brmsfit()}/
+\code{fitted.brmsfit()}.
+\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re_formula} in \code{predict.brmsfit()},
+used to specify random effects to condition on when predicting.
+}}
 
-\item{calc_aoa}{A \code{\link{logical}} to indicate whether or non the 'Area-of-applicability'
-(AOA) should be estimated - following Meyer and Pebesma (2021)}
+\item{calc_aoa}{A \code{logical} to indicate whether or not the 'Area-of-Applicability'
+(AOA) should be estimated - following Meyer and Pebesma (2021).}
 
 \item{cv_obj}{A \code{\link{HibCV}} object, used in AOA estimation.}
 }
+\value{
+HibProjection
+}
 \description{
-This function projects a fitted hib model using the supplied model object and
-data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
+This function projects a fitted HibModelXXX using the supplied model object and
+data to be used in projection.
 }
 \details{
-Expects a HibModel object and data for use in a projection.
+Given a HibModelXXX, new data and specification, this function projects/predicts
+modelled responses for each 'unit' of the new data.
+Calculation of the 'Area-of-Applicability' of the model within the new data is
+an optional addition.
+Specification arguments allow for customisation of the prediction type.
+If specifications are not provided, defaults will be used.
+Projections will be returned in the same format as the provided data.
+If data is provided as \code{SpatRaster}, a land-use variable should be included
+as a single categorical layer, or as multiple, proportional layers, named to
+align with the levels of the categorical variable.
+Currently, only a single 'categorical' variable can be provided in
+'proportional cover' format in a \code{SpatRaster}.
 }
 \examples{
 \dontrun{
   proj <- hib_mod_project(hib_model, proj_data)
 } 
+}
+\references{
+\itemize{
+\item Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the
+area of applicability of spatial prediction models.
+Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+\item Meyer H, Milà C, Ludwig M, Linnenbrink J (2023). \emph{CAST: 'caret' Applications
+for Spatial-Temporal Models}. R package, \url{https://CRAN.R-project.org/package=CAST}.
+}
+}
+\seealso{
+\code{\link{HibProjection}}
+\code{\link{hib_calc_aoa}}
+\code{\link[lme4]{predict.merMod}}
+\code{\link[brms]{fitted.brmsfit}}
+\code{\link[brms]{predict.brmsfit}}
 }
 \keyword{model,}
 \keyword{projections}

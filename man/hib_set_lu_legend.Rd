@@ -2,24 +2,35 @@
 % Please edit documentation in R/hib_lu_legend.R
 \name{hib_set_lu_legend}
 \alias{hib_set_lu_legend}
-\title{Set a loaded lu legend as the LU legend within a hibiiscus database}
+\title{hib_set_lu_legend: Set a \code{HibLULegend} as the LU legend in a \code{HibDatabase}}
 \usage{
 hib_set_lu_legend(obj, leg)
 }
 \arguments{
-\item{obj}{A \code{\link{HibDatabase}}.}
+\item{obj}{A \code{HibDatabase}.}
 
-\item{leg}{A \code{\link{HibLULegend}}.}
+\item{leg}{A \code{HibLULegend}.}
+}
+\value{
+\code{HibDatabase}
 }
 \description{
-This function adds a land-use legend to a database - specifically modifying the
-sites dataframe.
+This function adds the \code{HibLULegend} to the \code{HibDatabase}, modifying both the
+\code{sites} and \code{species} data.frames.
+}
+\details{
+This function updates (and therefore overwrites) the previous
+\code{Predominant_land_use}, \code{Use_intensity} and \code{LUI} columns in both the \code{sites}
+and \code{species} data.frames.
 }
 \examples{
 \dontrun{
-  obj <- set_lu_legend(obj, leg)
-  obj
+  obj <- hib_set_lu_legend(obj, leg)
 }
+}
+\seealso{
+\link{HibDatabase}
+\link{HibLULegend}
 }
 \keyword{database,}
 \keyword{land-use,}

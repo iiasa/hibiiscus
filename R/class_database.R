@@ -4,762 +4,715 @@
 #' This is the template object for an [R6][R6::R6Class] database containing PREDICTS 
 #' or PREDICTS-like data.
 #' Functions are provided to prepare the data for modelling and visualise the data.
+#' 
+#' @inherit hib_create_db references
 #' @keywords classes
 #' @import R6
 #' @rdname HibDatabase-Class
 #' @export
 HibDatabase <- R6Class("HibDatabase",
-                  # Public data objects and functions
-                  public = list(
-                    #' @field dataset_name (`character()`)\cr
-                    #' Identifies the dataset used.
-                    dataset_name = NULL,
-                    
-                    #' @field last_update (`character()`)\cr
-                    #' Identifies the most recent update to the Database (YYYY-MM-DD).
-                    last_update = NULL,
-                    
-                    #' @field paths (`list()`)\cr
-                    #' Identifies the files used to create the Database object.
-                    paths = NULL,
-                    
-                    #' @field sites (`data.frame`)\cr
-                    #' Stores information on the sites within the Database.
-                    sites = NULL,
-                    
-                    #' @field species (`data.frame`)\cr
-                    #' Stores information on the species within the Database.
-                    species = NULL,
-                    
-                    #' @field diversity_within (`tibble`)\cr
-                    #' Stores information on biodiversity metrics calculated for
-                    #' each site (i.e. alpha diversity).
-                    diversity_within = NULL,
-                    
-                    #' @field diversity_between (`tibble`)\cr
-                    #' Stores information on biodiversity metrics calculated 
-                    #' between sites, within studies (i.e. beta diversity).
-                    diversity_between = NULL,
-                    
-                    #' @field site_contrasts (`data.frame`)\cr
-                    #' Stores information on 'distances' between sites, within 
-                    #' studies (e.g., geographic distance).
-                    site_contrasts = NULL,
-                    
-                    #' @field processing_flags (`list()`)\cr
-                    #' Stores information on processing that has occurred (e.g.,
-                    #' filtering data, adding data).
-                    processing_flags = NULL,
-
-
-                    # Executed when created
-                    #' @description
-                    #' Creates a new instance of this [R6][R6::R6Class] class.
-                    #' Note, this object is constructed via the [hib_create_db] and 
-                    #' [hib_update_db] functions found within this package.
-                    #' @param dataset_name (`character()`)\cr
-                    #'   Text indicating the dataset contributing to the database being created.
-                    #' @param paths (`list()`)\cr
-                    #'   List of paths to the 'species' and 'site' data to be loaded.
-                    initialize = function(dataset_name, paths){
-                      assertthat::assert_that(
-                        is.character(dataset_name), 
-                        is.list(paths)
-                        )
-
-                      message(crayon::green(paste0("\nInitialising HibDatabase using ", 
-                                                   dataset_name, " data ...\n")) )
-                      
-                      # %%%%%
-                      # Load species data
-                      assertthat::assert_that(
-                        assertthat::has_extension(paths$species, "rds")
-                        )
-
-                      species <- readr::read_rds(paths$species)
-
-                      species$Dataset_name <- dataset_name
-                      
-                      # If predicts2022 column names, rename to align with 2016...
-                      if ("Predominant_habitat" %in% colnames(species)){
-                        species <- species |>
-                          dplyr::rename(Predominant_land_use = Predominant_habitat)
-                      }
-                      if ("Source_for_predominant_habitat" %in% colnames(species)){
-                        species <- species |>
-                          dplyr::rename(Source_for_predominant_land_use = Source_for_predominant_habitat)
-                      }
-                      
-                      if ("Eco_region_distance_metres" %in% colnames(species)){
-                        species <- species |>
-                          dplyr::rename(Ecoregion_distance_metres = Eco_region_distance_metres)
-                      }
-                      if ("Max_linear_extent" %in% colnames(species)){
-                        species <- species |>
-                          dplyr::rename(Max_linear_extent_metres = Max_linear_extent)
-                      }
-                      
-                      
-                      # If available, load sites data
-                      if (paths$sites != ""){
-                        # ensure paths$sites is RDS
-                        assertthat::assert_that(
-                          assertthat::has_extension(paths$sites, "rds")
-                          )
-                      
-                        sites <- readr::read_rds(paths$sites)
-                        # dataset_name
-                        sites$Dataset_name <- dataset_name
-                        
-                        if ("N_samples" %in% colnames(sites)){
-                          if (inherits(sites$N_samples, "table")){
-                            sites$N_samples <- as.vector(sites$N_samples)
-                          }  
-                        }
-                        
-                        assertthat::assert_that(
-                          assertthat::has_name(sites, "Source_ID"),
-                          assertthat::has_name(sites, "SS"),
-                          assertthat::has_name(sites, "Diversity_metric"),
-                          assertthat::has_name(sites, "SSBS"),
-                          assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
-                          assertthat::has_name(sites, "Use_intensity")
-                        )
-                        
-                        # # Ensure that Predominant_land_use is present - for LUI
-                        # if (!"Predominant_land_use" %in% colnames(sites)){
-                        #   species <- species |>
-                        #     dplyr::mutate(Predominant_land_use = Predominant_habitat)
-                        # }
-                        
-                        # If predicts2022 column names, rename to align with 2016...
-                        if ("Predominant_habitat" %in% colnames(sites)){
-                          sites <- sites |>
-                            dplyr::rename(Predominant_land_use = Predominant_habitat)
-                        }
-                        if ("Source_for_predominant_habitat" %in% colnames(sites)){
-                          sites <- sites |>
-                            dplyr::rename(Source_for_predominant_land_use = Source_for_predominant_habitat)
-                        }
-                        
-                        if ("Eco_region_distance_metres" %in% colnames(sites)){
-                          sites <- sites |>
-                            dplyr::rename(Ecoregion_distance_metres = Eco_region_distance_metres)
-                        }
-                        if ("Max_linear_extent" %in% colnames(sites)){
-                          sites <- sites |>
-                            dplyr::rename(Max_linear_extent_metres = Max_linear_extent)
-                        }
-                      }
-                      
-                    
-                      # if site path missing, generate sites 
-                      if (paths$sites == ""){
-                        
-                        assertthat::assert_that(
-                          assertthat::has_name(species, "Sample_start_earliest"),
-                          assertthat::has_name(species, "Sample_end_latest"),
-                          assertthat::has_name(species, "Higher_taxon"),
-                          assertthat::has_name(species, "Predominant_land_use"),
-                          assertthat::has_name(species, "Use_intensity")
-                          )
-                        message(crayon::green("Generating sites dataframe...\n"))
-                        
-                        
-                        # if sample_midpoint not present and sample_strt/end are...
-                        if ((!"Sample_midpoint" %in% colnames(species) &
-                             "Sample_start_earliest" %in% colnames(species) & 
-                             "Sample_end_latest" %in% colnames(species))){
-                          species <- species |>
-                            dplyr::mutate(Sample_midpoint = Sample_start_earliest + floor((Sample_end_latest - Sample_start_earliest)/2))
-                        }
-                        
-                        site_specific_cols <- c("Source_ID", "Reference",                          
-                                                "Study_number", "Study_name",                             
-                                                "SS", "Diversity_metric",                       
-                                                "Diversity_metric_unit", 
-                                                "Diversity_metric_type",                  
-                                                "Diversity_metric_is_effort_sensitive",    
-                                                "Diversity_metric_is_suitable_for_Chao",
-                                                "Sampling_method","Sampling_effort_unit",                   
-                                                "Study_common_taxon", 
-                                                "Rank_of_study_common_taxon",
-                                                "Site_number", "Site_name",                              
-                                                "Block", "SSS",                                    
-                                                "SSB", "SSBS",                                   
-                                                "Sample_start_earliest", "Sample_end_latest",
-                                                "Sample_midpoint",
-                                                "Sample_date_resolution",                 
-                                                "Max_linear_extent", "Habitat_patch_area_square_metres",
-                                                "Sampling_effort", 
-                                                # "Rescaled_sampling_effort",       
-                                                "Habitat_as_described", 
-                                                "Predominant_land_use",                   
-                                                "Source_for_predominant_land_use",
-                                                "Use_intensity",  
-                                                # "Fragmentation_layout", 
-                                                "Km_to_nearest_edge_of_habitat",
-                                                "Years_since_fragmentation_or_conversion",
-                                                "Transect_details", "Coordinates_method",                     
-                                                "Longitude", "Latitude",                               
-                                                "Country_distance_metres", "Country",                                
-                                                "UN_subregion", "UN_region",                              
-                                                "Ecoregion_distance_metres", "Ecoregion",                              
-                                                "Biome", "Realm",                                  
-                                                "Hotspot", "Wilderness_area")
-                        
-                        # subset site_specific cols to those in species??
-                        site_specific_cols <- site_specific_cols[site_specific_cols %in% colnames(species)]
-                        
-                        # Summarise to site info
-                        sites <- species |>
-                          dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) |>
-                          dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
-                                           Sample_midpoint = Sample_midpoint[1], 
-                                           N_samples = dplyr::n()) |>
-                          dplyr::ungroup()
-                        
-                        # dataset_name
-                        sites$Dataset_name <- dataset_name
-                      }
-                      
-                      # %%%%%
-                      # Add LUI column - Only if no LUI already
-                      if (!"LUI" %in% colnames(sites)){
-                        sites <- sites |>
-                          dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
-                                                    sep = "_"))
-                      }
-                      if (!"LUI" %in% colnames(species)){
-                        species <- species |>
-                          dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
-                                                    sep = "_"))
-                      }
-                      
-                      # %%%%%
-                      
-                      # safely set NAs in Measurement to 0s
-                      if (sum(is.na(species$Measurement)) > 0){
-                        message(crayon::yellow("\nWarning: NAs detected in 'Measurement'. Setting NAs to zeros."))
-                        species$Measurement[is.na(species$Measurement)] <- 0
-                      }
-                      
-                      # And check 
-                      # Outsourced security checks
-                      self$checkself(sites, species)
-                      
-                      # Save inputs in list
-                      # dataset_name
-                      self$dataset_name <- dataset_name
-                      self$last_update <- lubridate::now()
-                      self$paths <- paths
-                      self$sites <- sites
-                      self$species <- species
-                      
-                      # Add some data processing flags
-                      self$processing_flags <- list(measures_effort_corrected = F,
-                                                    abundance_rescaled = F,
-                                                    filtering_steps = list(),
-                                                    database_updates = list(),
-                                                    joined_information = list(),
-                                                    lu_legend_source = "Original LU/I legend."
-                                                    )
-                    },
-                    
-                    #' @description
-                    #' Self check function to ensure that the site and species
-                    #' data.frames contain the correct columns and align in content.
-                    #'
-                    #' @param sites (`data.frame`).
-                    #' @param species (`data.frame`).
-                    #' @return (`NULL`).
-                    checkself = function(sites = self$sites, species = self$species){
-                      # ------ #
-                      # Security checks
-                      assertthat::assert_that(
-                        assertthat::has_name(sites, "Source_ID"),
-                        assertthat::has_name(sites, "SS"),
-                        assertthat::has_name(sites, "Diversity_metric"),
-                        
-                        # assertthat::has_name(sites, "Diversity_metric_type"), 
-                        assertthat::has_name(sites, "SSBS"),
-                        assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
-                        assertthat::has_name(sites, "Use_intensity"),
-                        # extra essential columns
-                        assertthat::has_name(sites, "SSB"), 
-                        assertthat::has_name(sites, "LUI"), 
-                        assertthat::has_name(sites, "Longitude"), 
-                        assertthat::has_name(sites, "Latitude"),
-
-                        # And the species data
-                        # Do we need Source_ID??
-                        assertthat::has_name(species, "Source_ID"),
-                        assertthat::has_name(species, "SS"),
-                        assertthat::has_name(species, "SSBS"),
-                        assertthat::has_name(species, "Best_guess_binomial"),
-                        assertthat::has_name(species, "Measurement"),
-                        # Predominant_land_use, Use_intensity, LUI - optional, if present in sites,
-                        # can be added from there... - could even be added later... via set_lu_legend
-                        
-                        # These aren't really needed 
-                        assertthat::has_name(species, "Predominant_land_use"),
-                        assertthat::has_name(species, "Use_intensity"),
-                        assertthat::has_name(species, "LUI"),
-
-                        # dataset_name ??
-
-                        assertthat::has_name(species, "Diversity_metric_type"), 
-                        # assertthat::has_name(species, "Diversity_metric_unit"), 
-                        assertthat::has_name(species, "Diversity_metric_is_effort_sensitive"), 
-                        assertthat::has_name(species, "Diversity_metric_is_suitable_for_Chao"), 
-
-                        assertthat::has_name(species, "Taxon_name_entered"), 
-                        assertthat::has_name(species, "Sampling_effort")
-                        
-                      )
-                      # Finally, check that all sites are in species
-                      # NOTE RC - source ID is just the paper... - change to SSBS
-                      assertthat::assert_that(
-                        nrow(sites) > 0, nrow(species) > 0,
-                        all( unique(sites$Source_ID) %in% unique(species$Source_ID) )
-                      )
-                      # Ensure no NAs in species$Measurement
-                      assertthat::assert_that(
-                        sum(is.na(species$Measurement)) == 0,
-                        is.numeric(species$Measurement)
-                      )
-                      invisible()
-                    },
-                    
-                    #' @description
-                    #' Base printout function presents core information about the 
-                    #' Database object.
-                    #'
-                    #' @return (`NULL`).
-                    print = function() {
-                      # Compute some stats
-                      
-                      # unique(colnames(self$site_contrasts)) 
-                      # Get rid of basic details, check for columns related to metrics...
-                      
-                      site_contrasts_poss <- c("LUI_contrast", 
-                                               "Geogr_dist_hav", "Geogr_dist_geod",
-                                               "Latitude_midpoint", "Longitude_midpoint",
-                                               "Env_dist")
-                      
-                      stats <- list(number_sites = nrow(self$sites),
-                                    number_lu = length( unique(self$sites$Predominant_land_use) ),
-                                    number_lui = length(unique(self$sites$Use_intensity)),
-                                    number_species = length( unique(self$species$Best_guess_binomial) ),
-                                    number_taxa = length( unique(self$species$Taxon_name_entered) ),
-                                    filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
-                                    # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
+                       # Public data objects and functions
+                       public = list(
+                         #' @field dataset_name (`character()`)\cr
+                         #' Identifies the dataset used.
+                         dataset_name = NULL,
+                         
+                         #' @field last_update (`character()`)\cr
+                         #' Identifies the most recent update to the Database (YYYY-MM-DD).
+                         last_update = NULL,
+                         
+                         #' @field paths (`list()`)\cr
+                         #' Identifies the files used to create the Database object.
+                         paths = NULL,
+                         
+                         #' @field sites (`data.frame`)\cr
+                         #' Stores information on the sites within the Database.
+                         sites = NULL,
+                         
+                         #' @field species (`data.frame`)\cr
+                         #' Stores information on the species within the Database.
+                         species = NULL,
+                         
+                         #' @field diversity_within (`tibble`)\cr
+                         #' Stores information on biodiversity metrics calculated for
+                         #' each site (i.e. alpha diversity).
+                         diversity_within = NULL,
+                         
+                         #' @field diversity_between (`tibble`)\cr
+                         #' Stores information on biodiversity metrics calculated 
+                         #' between sites, within studies (i.e. beta diversity).
+                         diversity_between = NULL,
+                         
+                         #' @field site_contrasts (`data.frame`)\cr
+                         #' Stores information on 'distances' between sites, within 
+                         #' studies (e.g., geographic distance).
+                         site_contrasts = NULL,
+                         
+                         #' @field processing_flags (`list()`)\cr
+                         #' Stores information on processing that has occurred (e.g.,
+                         #' filtering data, adding data).
+                         processing_flags = NULL,
+                         
+                         
+                         # Executed when created
+                         #' @description
+                         #' Creates a new instance of this [R6][R6::R6Class] class.
+                         #' Note, this object is constructed via the [hib_create_db] and 
+                         #' [hib_update_db] functions found within this package.
+                         #' @param dataset_name (`character()`)\cr
+                         #'   Text indicating the dataset contributing to the database being created.
+                         #' @param paths (`list()`)\cr
+                         #'   List of paths to the 'species' and 'site' data to be loaded.
+                         #'   
+                         #' @return (`HibDatabase`)\cr
+                         initialize = function(dataset_name, paths){
+                           assertthat::assert_that(
+                             is.character(dataset_name), 
+                             is.list(paths)
+                           )
+                           
+                           message(crayon::green(paste0("\nInitialising HibDatabase using ", 
+                                                        dataset_name, " data ...\n")) )
+                           
+                           # %%%%%
+                           # Load species data
+                           assertthat::assert_that(
+                             assertthat::has_extension(paths$species, "rds")
+                           )
+                           
+                           species <- readr::read_rds(paths$species)
+                           
+                           species$Dataset_name <- dataset_name
+                           
+                           # If predicts2022 column names, rename to align with 2016...
+                           if ("Predominant_habitat" %in% colnames(species)){
+                             species <- species |>
+                               dplyr::rename(Predominant_land_use = Predominant_habitat)
+                           }
+                           if ("Source_for_predominant_habitat" %in% colnames(species)){
+                             species <- species |>
+                               dplyr::rename(Source_for_predominant_land_use = Source_for_predominant_habitat)
+                           }
+                           
+                           if ("Eco_region_distance_metres" %in% colnames(species)){
+                             species <- species |>
+                               dplyr::rename(Ecoregion_distance_metres = Eco_region_distance_metres)
+                           }
+                           if ("Max_linear_extent" %in% colnames(species)){
+                             species <- species |>
+                               dplyr::rename(Max_linear_extent_metres = Max_linear_extent)
+                           }
+                           
+                           
+                           # If available, load sites data
+                           if (paths$sites != ""){
+                             # ensure paths$sites is RDS
+                             assertthat::assert_that(
+                               assertthat::has_extension(paths$sites, "rds")
+                             )
+                             
+                             sites <- readr::read_rds(paths$sites)
+                             # dataset_name
+                             sites$Dataset_name <- dataset_name
+                             
+                             if ("N_samples" %in% colnames(sites)){
+                               if (inherits(sites$N_samples, "table")){
+                                 sites$N_samples <- as.vector(sites$N_samples)
+                               }  
+                             }
+                             
+                             assertthat::assert_that(
+                               assertthat::has_name(sites, "Source_ID"),
+                               assertthat::has_name(sites, "SS"),
+                               assertthat::has_name(sites, "Diversity_metric"),
+                               assertthat::has_name(sites, "SSBS"),
+                               assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
+                               assertthat::has_name(sites, "Use_intensity")
+                             )
+                             
+                             # # Ensure that Predominant_land_use is present - for LUI
+                             
+                             # If predicts2022 column names, rename to align with 2016...
+                             if ("Predominant_habitat" %in% colnames(sites)){
+                               sites <- sites |>
+                                 dplyr::rename(Predominant_land_use = Predominant_habitat)
+                             }
+                             if ("Source_for_predominant_habitat" %in% colnames(sites)){
+                               sites <- sites |>
+                                 dplyr::rename(Source_for_predominant_land_use = Source_for_predominant_habitat)
+                             }
+                             
+                             if ("Eco_region_distance_metres" %in% colnames(sites)){
+                               sites <- sites |>
+                                 dplyr::rename(Ecoregion_distance_metres = Eco_region_distance_metres)
+                             }
+                             if ("Max_linear_extent" %in% colnames(sites)){
+                               sites <- sites |>
+                                 dplyr::rename(Max_linear_extent_metres = Max_linear_extent)
+                             }
+                           }
+                           
+                           
+                           # if site path missing, generate sites 
+                           if (paths$sites == ""){
+                             
+                             assertthat::assert_that(
+                               assertthat::has_name(species, "Sample_start_earliest"),
+                               assertthat::has_name(species, "Sample_end_latest"),
+                               assertthat::has_name(species, "Higher_taxon"),
+                               assertthat::has_name(species, "Predominant_land_use"),
+                               assertthat::has_name(species, "Use_intensity")
+                             )
+                             message(crayon::green("Generating sites dataframe...\n"))
+                             
+                             
+                             # if sample_midpoint not present and sample_strt/end are...
+                             if ((!"Sample_midpoint" %in% colnames(species) &
+                                  "Sample_start_earliest" %in% colnames(species) & 
+                                  "Sample_end_latest" %in% colnames(species))){
+                               species <- species |>
+                                 dplyr::mutate(Sample_midpoint = Sample_start_earliest + floor((Sample_end_latest - Sample_start_earliest)/2))
+                             }
+                             
+                             site_specific_cols <- c("Source_ID", "Reference",                          
+                                                     "Study_number", "Study_name",                             
+                                                     "SS", "Diversity_metric",                       
+                                                     "Diversity_metric_unit", 
+                                                     "Diversity_metric_type",                  
+                                                     "Diversity_metric_is_effort_sensitive",    
+                                                     "Diversity_metric_is_suitable_for_Chao",
+                                                     "Sampling_method","Sampling_effort_unit",                   
+                                                     "Study_common_taxon", 
+                                                     "Rank_of_study_common_taxon",
+                                                     "Site_number", "Site_name",                              
+                                                     "Block", "SSS",                                    
+                                                     "SSB", "SSBS",                                   
+                                                     "Sample_start_earliest", "Sample_end_latest",
+                                                     "Sample_midpoint",
+                                                     "Sample_date_resolution",                 
+                                                     "Max_linear_extent", "Habitat_patch_area_square_metres",
+                                                     "Sampling_effort", 
+                                                     # "Rescaled_sampling_effort",       
+                                                     "Habitat_as_described", 
+                                                     "Predominant_land_use",                   
+                                                     "Source_for_predominant_land_use",
+                                                     "Use_intensity",  
+                                                     # "Fragmentation_layout", 
+                                                     "Km_to_nearest_edge_of_habitat",
+                                                     "Years_since_fragmentation_or_conversion",
+                                                     "Transect_details", "Coordinates_method",                     
+                                                     "Longitude", "Latitude",                               
+                                                     "Country_distance_metres", "Country",                                
+                                                     "UN_subregion", "UN_region",                              
+                                                     "Ecoregion_distance_metres", "Ecoregion",                              
+                                                     "Biome", "Realm",                                  
+                                                     "Hotspot", "Wilderness_area")
+                             
+                             # subset site_specific cols to those in species??
+                             site_specific_cols <- site_specific_cols[site_specific_cols %in% colnames(species)]
+                             
+                             # Summarise to site info
+                             sites <- species |>
+                               dplyr::group_by(dplyr::across(dplyr::all_of(site_specific_cols))) |>
+                               dplyr::summarise(Higher_taxa = paste0(unique(Higher_taxon), collapse = ","),
+                                                Sample_midpoint = Sample_midpoint[1], 
+                                                N_samples = dplyr::n()) |>
+                               dplyr::ungroup()
+                             
+                             # dataset_name
+                             sites$Dataset_name <- dataset_name
+                           }
+                           
+                           # %%%%%
+                           # Add LUI column - Only if no LUI already
+                           if (!"LUI" %in% colnames(sites)){
+                             sites <- sites |>
+                               dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                                                         sep = "_"))
+                           }
+                           if (!"LUI" %in% colnames(species)){
+                             species <- species |>
+                               dplyr::mutate(LUI = paste(Predominant_land_use, Use_intensity,
+                                                         sep = "_"))
+                           }
+                           
+                           # %%%%%
+                           
+                           # safely set NAs in Measurement to 0s
+                           if (sum(is.na(species$Measurement)) > 0){
+                             message(crayon::yellow("\nWarning: NAs detected in 'Measurement'. Setting NAs to zeros."))
+                             species$Measurement[is.na(species$Measurement)] <- 0
+                           }
+                           
+                           # And check 
+                           # Outsourced security checks
+                           self$checkself(sites, species)
+                           
+                           # Save inputs in list
+                           # dataset_name
+                           self$dataset_name <- dataset_name
+                           self$last_update <- lubridate::now()
+                           self$paths <- paths
+                           self$sites <- sites
+                           self$species <- species
+                           
+                           # Add some data processing flags
+                           self$processing_flags <- list(measures_effort_corrected = F,
+                                                         abundance_rescaled = F,
+                                                         filtering_steps = list(),
+                                                         database_updates = list(),
+                                                         joined_information = list(),
+                                                         lu_legend_source = "Original LU/I legend."
+                           )
+                         },
+                         
+                         #' @description
+                         #' Self check function to ensure that the site and species
+                         #' data.frames contain the correct columns and align in content.
+                         #'
+                         #' @param sites (`data.frame`).
+                         #' @param species (`data.frame`).
+                         #' @return (`NULL`).
+                         checkself = function(sites = self$sites, species = self$species){
+                           # ------ #
+                           # Security checks
+                           assertthat::assert_that(
+                             assertthat::has_name(sites, "Source_ID"),
+                             assertthat::has_name(sites, "SS"),
+                             assertthat::has_name(sites, "Diversity_metric"),
+                             
+                             # assertthat::has_name(sites, "Diversity_metric_type"), 
+                             assertthat::has_name(sites, "SSBS"),
+                             assertthat::has_name(sites, "Predominant_land_use") || assertthat::has_name(sites, "Predominant_habitat"),
+                             assertthat::has_name(sites, "Use_intensity"),
+                             # extra essential columns
+                             assertthat::has_name(sites, "SSB"), 
+                             assertthat::has_name(sites, "LUI"), 
+                             assertthat::has_name(sites, "Longitude"), 
+                             assertthat::has_name(sites, "Latitude"),
+                             
+                             # And the species data
+                             # Do we need Source_ID??
+                             assertthat::has_name(species, "Source_ID"),
+                             assertthat::has_name(species, "SS"),
+                             assertthat::has_name(species, "SSBS"),
+                             assertthat::has_name(species, "Best_guess_binomial"),
+                             assertthat::has_name(species, "Measurement"),
+                             # Predominant_land_use, Use_intensity, LUI - optional, if present in sites,
+                             # can be added from there... - could even be added later... via set_lu_legend
+                             
+                             # These aren't really needed 
+                             assertthat::has_name(species, "Predominant_land_use"),
+                             assertthat::has_name(species, "Use_intensity"),
+                             assertthat::has_name(species, "LUI"),
+                             
+                             # dataset_name ??
+                             
+                             assertthat::has_name(species, "Diversity_metric_type"), 
+                             # assertthat::has_name(species, "Diversity_metric_unit"), 
+                             assertthat::has_name(species, "Diversity_metric_is_effort_sensitive"), 
+                             assertthat::has_name(species, "Diversity_metric_is_suitable_for_Chao"), 
+                             
+                             assertthat::has_name(species, "Taxon_name_entered"), 
+                             assertthat::has_name(species, "Sampling_effort")
+                             
+                           )
+                           # Finally, check that all sites are in species
+                           assertthat::assert_that(
+                             nrow(sites) > 0, nrow(species) > 0,
+                             all( unique(sites$Source_ID) %in% unique(species$Source_ID) )
+                           )
+                           # Ensure no NAs in species$Measurement
+                           assertthat::assert_that(
+                             sum(is.na(species$Measurement)) == 0,
+                             is.numeric(species$Measurement)
+                           )
+                           invisible()
+                         },
+                         
+                         #' @description
+                         #' Base printout function presents core information about the 
+                         #' Database object.
+                         #'
+                         #' @return (`NULL`).
+                         print = function() {
+                           # Compute some stats
+                           
+                           # unique(colnames(self$site_contrasts)) 
+                           # Get rid of basic details, check for columns related to metrics...
+                           
+                           site_contrasts_poss <- c("LUI_contrast", 
+                                                    "Geogr_dist_hav", "Geogr_dist_geod",
+                                                    "Latitude_midpoint", "Longitude_midpoint",
+                                                    "Env_dist")
+                           
+                           stats <- list(number_sites = nrow(self$sites),
+                                         number_lu = length( unique(self$sites$Predominant_land_use) ),
+                                         number_lui = length(unique(self$sites$Use_intensity)),
+                                         number_species = length( unique(self$species$Best_guess_binomial) ),
+                                         number_taxa = length( unique(self$species$Taxon_name_entered) ),
+                                         filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
+                                         # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") 
+                                         
+                                         joined_information = paste(self$processing_flags$joined_information, collapse = "; "),
+                                         lu_legend_source = self$processing_flags$lu_legend_source,
+                                         
+                                         div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
+                                         div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", "),
+                                         
+                                         site_contrast_metrics = paste(sort(unique(colnames(self$site_contrasts)[colnames(self$site_contrasts) %in% site_contrasts_poss])), 
+                                                                       collapse = ", "),
+                                         # TODO: updated information
+                                         database_updates = paste(self$processing_flags$database_updates, collapse = "; ")
+                           )  
+                           
+                           
+                           # Neaten diversity metrics formatting
+                           if (is.null(self$diversity_within)){
+                             stats$div_within_metrics <- "NA"
+                           }
+                           if (!is.null(self$diversity_within)){
+                             stats$div_within_metrics <- gsub("_", " ", stats$div_within_metrics)
+                             stats$div_within_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
+                                                              stats$div_within_metrics)
+                           }
+                           
+                           if (is.null(self$diversity_between)){
+                             stats$div_between_metrics <- "NA"
+                           }
+                           if (!is.null(self$diversity_between)){
+                             stats$div_between_metrics <- gsub("_", " ", stats$div_between_metrics)
+                             # stats$div_between_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
+                             #                           stats$div_between_metrics)
+                           }
+                           
+                           if (is.null(self$site_contrasts)){
+                             stats$site_contrast_metrics <- "NA"
+                           }
+                           if (!is.null(self$site_contrasts)){
+                             
+                             stats$site_contrast_metrics <- gsub("Geogr_dist_hav", "Geographic dist. (haversine)",
+                                                                 stats$site_contrast_metrics)
+                             stats$site_contrast_metrics <- gsub("Geogr_dist_geod", "Geographic dist. (geodesic)",
+                                                                 stats$site_contrast_metrics)
+                             stats$site_contrast_metrics <- gsub("Env_dist", "Environmental distance (Gower)",
+                                                                 stats$site_contrast_metrics)
+                             stats$site_contrast_metrics <- gsub("_", " ",
+                                                                 stats$site_contrast_metrics)
+                             message(stats$site_contrast_metrics)
+                           }
+                           
+                           # Neaten filtering formatting
+                           if (length(self$processing_flags$filtering_steps) == 0){
+                             stats$filters_applied <- "NA"
+                           }
+                           
+                           if (length(self$processing_flags$joined_information) == 0){
+                             stats$joined_information <- "NA"
+                           }
+                           
+                           if (length(self$processing_flags$database_updates) == 0){
+                             stats$database_updates <- "NA"
+                           }
+                           message(
+                             # dataset_name
+                             paste0("Hibiiscus database (including dataset/s: ", crayon::bold(self$dataset_name),")","\n",
+                                    "Last updated: ", crayon::green( self$last_update ),
+                                    "\n",
+                                    "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
+                                    "\t Number of species:             ", crayon::green(stats$number_species), "\n",
+                                    "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
                                     
-                                    joined_information = paste(self$processing_flags$joined_information, collapse = "; "),
-                                    lu_legend_source = self$processing_flags$lu_legend_source,
-
-                                    div_within_metrics = paste(sort(unique(self$diversity_within$Metric)), collapse = ", "),
-                                    div_between_metrics = paste(sort(unique(self$diversity_between$Metric)), collapse = ", "),
+                                    "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
+                                    crayon::green(stats$number_lui), "\n",
                                     
-                                    site_contrast_metrics = paste(sort(unique(colnames(self$site_contrasts)[colnames(self$site_contrasts) %in% site_contrasts_poss])), 
-                                                                  collapse = ", "),
-                                    # TODO: updated information
-                                    database_updates = paste(self$processing_flags$database_updates, collapse = "; ")
-                                    )  
-                      
-                      
-                      # Neaten diversity metrics formatting
-                      if (is.null(self$diversity_within)){
-                        stats$div_within_metrics <- "NA"
-                      }
-                      if (!is.null(self$diversity_within)){
-                        stats$div_within_metrics <- gsub("_", " ", stats$div_within_metrics)
-                        stats$div_within_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
-                                                         stats$div_within_metrics)
-                      }
-                      
-                      if (is.null(self$diversity_between)){
-                        stats$div_between_metrics <- "NA"
-                      }
-                      if (!is.null(self$diversity_between)){
-                        stats$div_between_metrics <- gsub("_", " ", stats$div_between_metrics)
-                        # stats$div_between_metrics <- gsub("Simpson diversity", "Simpson\'s diversity",
-                        #                           stats$div_between_metrics)
-                      }
-                      
-                      if (is.null(self$site_contrasts)){
-                        stats$site_contrast_metrics <- "NA"
-                      }
-                      if (!is.null(self$site_contrasts)){
-                        
-                        # stats$site_contrast_metrics <- gsub("lui_contrast", "LUI contrast",
-                        #                                  stats$site_contrast_metrics)
-                        stats$site_contrast_metrics <- gsub("Geogr_dist_hav", "Geographic dist. (haversine)",
-                                                            stats$site_contrast_metrics)
-                        stats$site_contrast_metrics <- gsub("Geogr_dist_geod", "Geographic dist. (geodesic)",
-                                                            stats$site_contrast_metrics)
-                        stats$site_contrast_metrics <- gsub("Env_dist", "Environmental distance (Gower)",
-                                                            stats$site_contrast_metrics)
-                        stats$site_contrast_metrics <- gsub("_", " ",
-                                                            stats$site_contrast_metrics)
-                        message(stats$site_contrast_metrics)
-                      }
-                      
-                      # Neaten filtering formatting
-                      if (length(self$processing_flags$filtering_steps) == 0){
-                        stats$filters_applied <- "NA"
-                      }
-
-                      if (length(self$processing_flags$joined_information) == 0){
-                        stats$joined_information <- "NA"
-                      }
-
-                      if (length(self$processing_flags$database_updates) == 0){
-                        stats$database_updates <- "NA"
-                      }
-                      message(
-                        # dataset_name
-                        paste0("Hibiiscus database (including dataset/s: ", crayon::bold(self$dataset_name),")","\n",
-                               "Last updated: ", crayon::green( self$last_update ),
-                               "\n",
-                               "\t Number of sites:               ", crayon::green(stats$number_sites), "\n",
-                               "\t Number of species:             ", crayon::green(stats$number_species), "\n",
-                               "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
-
-                               "\t Land use (class x intensity):  ", crayon::green(stats$number_lu), " x ",
-                                                                     crayon::green(stats$number_lui), "\n",
-
-                               "\t LU/I legend sourced from:      ", crayon::green(stats$lu_legend_source), "\n",
+                                    "\t LU/I legend sourced from:      ", crayon::green(stats$lu_legend_source), "\n",
+                                    
+                                    "\t Database updates:              ", crayon::green(stats$database_updates), "\n",
+                                    
+                                    "\n",
+                                    
+                                    "\t Effort-correction applied:     ", crayon::green(self$processing_flags$measures_effort_corrected), "\n",
+                                    
+                                    "\t Filtering conducted:           ", crayon::green(gsub("; ", 
+                                                                                             ";\n\t                                ",
+                                                                                             stats$filters_applied)), "\n",
+                                    
+                                    "\t Data columns added:            ", crayon::green(gsub("; ", 
+                                                                                             ";\n\t                                ",
+                                                                                             stats$joined_information)), "\n",
+                                    
+                                    "\n",
+                                    
+                                    "\t Within-site diversity metrics calculated:   ", crayon::green(stats$div_within_metrics), "\n",
+                                    "\t Between-site diversity metrics calculated:  ", crayon::green(stats$div_between_metrics), "\n",
+                                    "\t Site-site contrast metrics calculated:      ", crayon::green(stats$site_contrast_metrics), "\n"
+                             )
+                           )
+                           
+                         },
+                         
+                         #' @description
+                         #' Function to apply effort correction to the species data. 
+                         #' Uses a simple, linear scaling, such that sampling effort
+                         #' of a site is scaled relative to the maximum value per study,
+                         #' and multiplied by the original measure of diversity.
+                         #' 
+                         #' @references De Palma, A., Abrahamczyk, S., Aizen, M. et al. 
+                         #' Predicting bee community responses to land-use changes: 
+                         #' Effects of geographic and taxonomic biases. 
+                         #' Sci Rep 6, 31153 (2016). https://doi.org/10.1038/srep31153
+                         #'
+                         #' @return (`HibDatabase`).
+                         hib_effort_correction = function(){
+                           # Assume data is in self$species
+                           # Check that relevant columns are present
+                           assertthat::assert_that(
+                             assertthat::has_name(self$species, "Sampling_effort"),
+                             assertthat::has_name(self$species, "SS"),
+                             assertthat::has_name(self$species, "Measurement"),
+                             assertthat::has_name(self$species, "Diversity_metric_is_effort_sensitive")
+                           )
+                           
+                           # assert that sampling effort is numeric
+                           assertthat::assert_that(
+                             is.numeric(self$species$Sampling_effort)
+                           )
+                           
+                           message(crayon::green("\nCorrecting biodiversity measurements for sampling effort ...\n"))
+                           
+                           self$species <- self$species |>
+                             dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
+                                                                              T ~ Sampling_effort)) |>
+                             # assumes SS are not shared across database versions...
+                             dplyr::group_by(SS) |>
+                             dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort, na.rm = TRUE)) |>
+                             dplyr::ungroup() |>
+                             dplyr::mutate(Effort_corrected_measurement = dplyr::case_when(Diversity_metric_is_effort_sensitive == T ~ Measurement / Rescaled_sampling_effort,
+                                                                                           T ~ Measurement))
+                           # Add a flag to some background info - Measures are effort corrected = T
+                           self$processing_flags$measures_effort_corrected <- TRUE
+                           self$last_update <- lubridate::now()
+                           
+                           # Check that Effort_corrected_measurement has no NAs
+                           assertthat::assert_that(
+                             sum(is.na(self$species$Effort_corrected_measurement)) == 0,
+                             is.numeric(self$species$Effort_corrected_measurement)
+                           )
+                           
+                           self$checkself()
+                           
+                           invisible(self)
+                         } ,
+                         
+                         #' @description
+                         #' Function to generate figures summarising the site-level
+                         #' data present in the HibDatabase.
+                         #' 
+                         #' @param type (`character()`) Options are: "map-sites", 
+                         #' "map-studies", "biome-N", "ecoregion-N", "realm-N", "class-N".
+                         #' 
+                         #' @return (`ggplot`).
+                         plot = function(type = "map-sites"){
+                           # Figure options
+                           # - site map (map-sites)
+                           # - study map (map-studies)
+                           # - country heatmap - N sites (heatmap-sites-countries) - not currently avail
+                           # - country heatmap - N studies (heatmap-studies-countries) - not currently avail
+                           # - biome N (biome-N)
+                           # - ecoregion N (ecoregion-N)
+                           # - continent N - map/bar? (continent-N) ??  - not currently avail
+                           # - realm N (realm-N)
+                           # - class N (class-N)
+                           
+                           # TODO: within-site and between-site diversity metrics??
+                           
+                           # Assert that type arg matches one of...
+                           type <- match.arg(type,
+                                             c("map-sites", "map-studies", 
+                                               "biome-N", "ecoregion-N", "realm-N",
+                                               "class-N"),
+                                             several.ok = F)
+                           # Clr blind friendly...
+                           # black, orange, sky blue, bluish green, yellow, blue, vermillion, reddish purple
+                           # pal <- c("#000000", "#e69f00", "#56b4e9", "#009e73",
+                           #                   "#f0e442", "#0072b2", "#d55e00", "#cc79a7")
+                           
+                           basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
+                                                       axis.title = ggplot2::element_text(size = 20),
+                                                       plot.title = ggplot2::element_text(size = 20),
+                                                       plot.subtitle = ggplot2::element_text(size = 18),
+                                                       strip.text.x = ggplot2::element_text(size = 18),
+                                                       strip.text.y = ggplot2::element_text(size = 18),
+                                                       strip.background = ggplot2::element_blank(),
+                                                       legend.text = ggplot2::element_text(size = 16),
+                                                       legend.title = ggplot2::element_text(size = 18),
+                                                       legend.text.align = 0) 
+                           
+                           # combine similar plot types into one call
+                           # %%%%%
+                           if (type %in% c("map-sites", "map-studies")){
+                             
+                             # Assert that Lat and long are in sites
+                             assertthat::assert_that(
+                               assertthat::has_name(self$sites, "Latitude"),
+                               assertthat::has_name(self$sites, "Longitude")
+                             )
+                             # Just get a coarse-ish world map...
+                             tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
+                             
+                             if (type == "map-sites"){
+                               plt_df <- self$sites
+                             }
+                             if (type == "map-studies"){
+                               plt_df <- self$sites |>
+                                 dplyr::group_by(SS, Dataset_name) |>
+                                 dplyr::summarise(N_sites = dplyr::n(),
+                                                  Longitude = mean(Longitude, na.rm = T),
+                                                  Latitude = mean(Latitude, na.rm = T))
+                             }
+                             # Get x/y limits for sites...
+                             x_rng <- range(plt_df$Longitude, na.rm = T)
+                             y_rng <- range(plt_df$Latitude, na.rm = T)
+                             
+                             # buffer by 5 degrees?
+                             x_rng[1] <- round(x_rng[1] - 5, 2)
+                             x_rng[2] <- round(x_rng[2] + 5, 2)
+                             
+                             y_rng[1] <- round(y_rng[1] - 5, 2)
+                             y_rng[2] <- round(y_rng[2] + 5, 2)
+                             
+                             x_rng[1] <- max(c(-180, x_rng[1]))
+                             x_rng[2] <- min(c(180, x_rng[2]))
+                             
+                             y_rng[1] <- max(c(-90, y_rng[1]))
+                             y_rng[2] <- min(c(90, y_rng[2]))
+                             
+                             plt <- ggplot2::ggplot() +
+                               ggplot2::geom_sf(data = tmp,
+                                                fill = "lightgrey",
+                                                alpha = 0.4,
+                                                size = 0.1,
+                                                show.legend = F) +
+                               ggplot2::xlim(x_rng) +
+                               ggplot2::ylim(y_rng) +
+                               ggplot2::labs(colour = "Dataset", 
+                                             x = ggplot2::element_blank(),
+                                             y = ggplot2::element_blank()) +
+                               ggplot2::guides(colour = ggplot2::guide_legend(
+                                 override.aes=list(size = 3,
+                                                   alpha = 0.9))) +
+                               ggplot2::theme_bw() +
+                               basic_thm 
+                             
+                             if (type == "map-sites"){
+                               plt <- plt +
+                                 ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude, 
+                                                                  colour = Dataset_name),
+                                                     size = 0.15,
+                                                     alpha = 0.25,
+                                                     data = plt_df) +
+                                 ggplot2::labs(title = "Geographic distribution of sites")
                                
-                               "\t Database updates:              ", crayon::green(stats$database_updates), "\n",
-                               
-                               "\n",
-                               
-                               "\t Effort-correction applied:     ", crayon::green(self$processing_flags$measures_effort_corrected), "\n",
-                               
-                               "\t Filtering conducted:           ", crayon::green(gsub("; ", 
-                                                                                        ";\n\t                                ",
-                                                                                        stats$filters_applied)), "\n",
-
-                               "\t Data columns added:            ", crayon::green(gsub("; ", 
-                                                                                        ";\n\t                                ",
-                                                                                        stats$joined_information)), "\n",
-
-                               "\n",
-
-                               "\t Within-site diversity metrics calculated:   ", crayon::green(stats$div_within_metrics), "\n",
-                               "\t Between-site diversity metrics calculated:  ", crayon::green(stats$div_between_metrics), "\n",
-                               "\t Site-site contrast metrics calculated:      ", crayon::green(stats$site_contrast_metrics), "\n"
-                               )
-                        )
-                      
-                    },
-                    
-                    # #' @description
-                    # #' Function to save the Database object to the specified 
-                    # #' file-path ('output_path', must be '.rds').
-                    # #'
-                    # #' @param output_path (`character()`)
-                    # #' @return (`NULL`).
-                    # save_hib = function(output_path = NULL){
-                    #   # hib_save ??
-                    #   assertthat::assert_that(
-                    #     is.character(output_path)
-                    #   )
-                    #   # if (is.null(output_path)){
-                    #   #   output_path <- self$paths$path_output
-                    #   # }
-                      
-                    #   if(!assertthat::has_extension(output_path, "rds")){
-                    #     output_path <- paste0(output_path, ".rds")
-                    #   }
-                      
-                    #   if (!dir.exists(dirname(output_path))){
-                    #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                    #                                   "\n",
-                    #                                   "This folder will be created.\n")))
-                    #     dir.create(dirname(output_path), recursive = T)
-                    #   }
-                    #   if (file.exists(output_path)){
-                    #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                    #                                   "\n",
-                    #                                   "This file will be updated.\n")))
-                    #   }
-                      
-                    #   message(crayon::green(paste0("Saving HibDatabase to: '", output_path, "'\n")) )
-                      
-                    #   # Note: currently doesn't make the folder or check parent folders exist...
-                    #   # Could include - with a warning...
-
-                    #   saveRDS(self, output_path)
-                    #   assertthat::assert_that(file.exists(output_path),
-                    #                           msg = "Writing a copy of the database failed...")
-                    #   invisible()
-                    # },
-                    
-                    #' @description
-                    #' Function to apply effort correction to the species data. 
-                    #' Uses a simple, linear scaling, such that sampling effort
-                    #' of a site is scaled relative to the maximum value per study,
-                    #' and multiplied by the original measure of diversity.
-                    #'
-                    #' @return (`HibDatabase`).
-                    hib_effort_correction = function(){
-                      # Assume data is in self$species?
-                      # Check that relevant columns are present
-                      assertthat::assert_that(
-                        assertthat::has_name(self$species, "Sampling_effort"),
-                        assertthat::has_name(self$species, "SS"),
-                        assertthat::has_name(self$species, "Measurement"),
-                        assertthat::has_name(self$species, "Diversity_metric_is_effort_sensitive")
-                      )
-
-                      # assert that sampling effort is numeric
-                      assertthat::assert_that(
-                        is.numeric(self$species$Sampling_effort)
-                      )
-
-                      # add a message...
-                      message(crayon::green("\nCorrecting biodiversity measurements for sampling effort ...\n"))
-                      
-                      self$species <- self$species |>
-                        dplyr::mutate(Sampling_effort = dplyr::case_when(is.na(Sampling_effort) ~ 1,
-                                                                         T ~ Sampling_effort)) |>
-                        dplyr::group_by(SS) |>
-                        # TODO: above assumes SS are not shared across versions...
-                        dplyr::mutate(Rescaled_sampling_effort = Sampling_effort / max(Sampling_effort, na.rm = TRUE)) |>
-                        dplyr::ungroup() |>
-                        dplyr::mutate(Effort_corrected_measurement = dplyr::case_when(Diversity_metric_is_effort_sensitive == T ~ Measurement / Rescaled_sampling_effort,
-                                                                                      T ~ Measurement))
-                      # Add a flag to some background info - Measures are effort corrected = T
-                      self$processing_flags$measures_effort_corrected <- TRUE
-                      self$last_update <- lubridate::now()
-
-                      # Check that Effort_corrected_measurement has no NAs
-                      assertthat::assert_that(
-                        sum(is.na(self$species$Effort_corrected_measurement)) == 0,
-                        is.numeric(self$species$Effort_corrected_measurement)
-                      )
-
-                      self$checkself()
-
-                      invisible(self)
-                    } ,
-                    
-                    #' @description
-                    #' Function to generate figures summarising the data present
-                    #' in the HibDatabase.
-                    #' 
-                    #' @param type (`character()`) Options are: "map-sites", 
-                    #' "map-studies", "biome-N", "ecoregion-N", "realm-N", "class-N".
-                    #' @return (`ggplot`).
-                    plot = function(type = "map-sites"){
-                      # Figure options
-                      # - site map (map-sites)
-                      # - study map (map-studies)
-                      # - country heatmap - N sites (heatmap-sites-countries)
-                      # - country heatmap - N studies (heatmap-studies-countries)
-                      # - biome N (biome-N)
-                      # - ecoregion N (ecoregion-N)
-                      # - continent N - map/bar? (continent-N) ??
-                      # - realm N (realm-N)
-                      # - class N (class-N)
-                      
-                      # TODO: what about within-site and between-site diversity metrics??
-                      
-                      # Assert that type arg matches one of...
-                      type <- match.arg(type,
-                                        c("map-sites", "map-studies", 
-                                          "biome-N", "ecoregion-N", "realm-N",
-                                          "class-N"),
-                                        several.ok = F)
-                      # Clr blind friendly...
-                      # black, orange, sky blue, bluish green, yellow, blue, vermillion, reddish purple
-                      # pal <- c("#000000", "#e69f00", "#56b4e9", "#009e73",
-                      #                   "#f0e442", "#0072b2", "#d55e00", "#cc79a7")
-                                        
-                      basic_thm <- ggplot2::theme(axis.text = ggplot2::element_text(size = 16),
-                                         axis.title = ggplot2::element_text(size = 20),
-                                         plot.title = ggplot2::element_text(size = 20),
-                                         plot.subtitle = ggplot2::element_text(size = 18),
-                                         strip.text.x = ggplot2::element_text(size = 18),
-                                         strip.text.y = ggplot2::element_text(size = 18),
-                                         strip.background = ggplot2::element_blank(),
-                                         legend.text = ggplot2::element_text(size = 16),
-                                         legend.title = ggplot2::element_text(size = 18),
-                                         legend.text.align = 0) 
-                      
-                      # combine similar plot types into one call
-                      # %%%%%
-                      if (type %in% c("map-sites", "map-studies")){
-
-                        # Assert that Lat and long are in sites
-                        assertthat::assert_that(
-                          assertthat::has_name(self$sites, "Latitude"),
-                          assertthat::has_name(self$sites, "Longitude")
-                          )
-                        # Just get a coarse-ish world map...
-                        tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
-                        
-                        if (type == "map-sites"){
-                          plt_df <- self$sites
-                        }
-                        if (type == "map-studies"){
-                          plt_df <- self$sites |>
-                            dplyr::group_by(SS, Dataset_name) |>
-                            dplyr::summarise(N_sites = dplyr::n(),
-                                             Longitude = mean(Longitude, na.rm = T),
-                                             Latitude = mean(Latitude, na.rm = T))
-                        }
-                        # Get x/y limits for sites...
-                        x_rng <- range(plt_df$Longitude, na.rm = T)
-                        y_rng <- range(plt_df$Latitude, na.rm = T)
-                        
-                        # buffer by 5 degrees?
-                        x_rng[1] <- round(x_rng[1] - 5, 2)
-                        x_rng[2] <- round(x_rng[2] + 5, 2)
-                        
-                        y_rng[1] <- round(y_rng[1] - 5, 2)
-                        y_rng[2] <- round(y_rng[2] + 5, 2)
-                        
-                        x_rng[1] <- max(c(-180, x_rng[1]))
-                        x_rng[2] <- min(c(180, x_rng[2]))
-                        
-                        y_rng[1] <- max(c(-90, y_rng[1]))
-                        y_rng[2] <- min(c(90, y_rng[2]))
-                        
-                        plt <- ggplot2::ggplot() +
-                          ggplot2::geom_sf(data = tmp,
-                                  fill = "lightgrey",
-                                  alpha = 0.4,
-                                  size = 0.1,
-                                  show.legend = F) +
-                          ggplot2::xlim(x_rng) +
-                          ggplot2::ylim(y_rng) +
-                          ggplot2::labs(colour = "Dataset", #"PREDICTS\nversion",
-                               x = ggplot2::element_blank(),
-                               y = ggplot2::element_blank()) +
-                          ggplot2::guides(colour = ggplot2::guide_legend(
-                            override.aes=list(size = 3,
-                                              alpha = 0.9))) +
-                          ggplot2::theme_bw() +
-                          basic_thm 
-                        
-                        if (type == "map-sites"){
-                          plt <- plt +
-                            ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude, 
-                                           colour = Dataset_name),
-                                       size = 0.15,
-                                       alpha = 0.25,
-                                       data = plt_df) +
-                            ggplot2::labs(title = "Geographic distribution of sites")
-                          
-                        }
-                        if (type == "map-studies"){
-                          plt <- plt +
-                            ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude,
-                                           size = N_sites,
-                                           colour = Dataset_name),
-                                       alpha = 0.25,
-                                       data = plt_df) +
-                            ggplot2::labs(size = "No. studies",
-                                          title = "Geographic distribution of studies")
-                        }
-                      }
-                      # %%%%%
-                                            
-                      # Issue with country-level heatmap - names in predicts data
-                      # might not match those in natural earth data (admin/sovereignt)
-                      # - country heatmap - N sites (heatmap-sites-countries)
-                      # - country heatmap - N studies (heatmap-studies-countries)
-                      
-                      # %%%%%
-                      if (type %in% c("biome-N", "ecoregion-N", "realm-N")){
-                        var_ <- tools::toTitleCase(type) |> gsub("-N", "", .)
-                        title_ <- paste0("Number of sites per ", var_)
-                        # Assert that variable of interest is in sites
-                        assertthat::assert_that(
-                          assertthat::has_name(self$sites, var_)
-                          )
-                        
-                        count_df <- self$sites |>
-                          dplyr::group_by(!!sym(var_), Dataset_name) |>
-                          dplyr::summarise(Sites = dplyr::n_distinct(SS),
-                                           Studies = dplyr::n_distinct(SSBS)) |>
-                          tidyr::pivot_longer(c(Sites, Studies),
-                                              names_to = "dat_type",
-                                              values_to = "N")
-                        
-                        plt <- ggplot2::ggplot(count_df) +
-                          ggplot2::geom_bar(ggplot2::aes(x = !!sym(var_), y = N,
-                                       fill = Dataset_name),
-                                   # fill = "#009E73",
-                                   stat = "identity") +
-                          ggplot2::labs(x = var_,
-                               y = "N",
-                               fill = "Dataset", #"PREDICTS\nversion"
-                               title = title_
+                             }
+                             if (type == "map-studies"){
+                               plt <- plt +
+                                 ggplot2::geom_point(ggplot2::aes(x = Longitude, y  = Latitude,
+                                                                  size = N_sites,
+                                                                  colour = Dataset_name),
+                                                     alpha = 0.25,
+                                                     data = plt_df) +
+                                 ggplot2::labs(size = "No. studies",
+                                               title = "Geographic distribution of studies")
+                             }
+                           }
+                           # %%%%%
+                           
+                           # Issue with country-level heatmap - names in predicts data
+                           # might not match those in natural earth data (admin/sovereignt)
+                           # - country heatmap - N sites (heatmap-sites-countries)
+                           # - country heatmap - N studies (heatmap-studies-countries)
+                           
+                           # %%%%%
+                           if (type %in% c("biome-N", "ecoregion-N", "realm-N")){
+                             var_ <- tools::toTitleCase(type) |> gsub("-N", "", .)
+                             title_ <- paste0("Number of sites per ", var_)
+                             # Assert that variable of interest is in sites
+                             assertthat::assert_that(
+                               assertthat::has_name(self$sites, var_)
+                             )
+                             
+                             count_df <- self$sites |>
+                               dplyr::group_by(!!sym(var_), Dataset_name) |>
+                               dplyr::summarise(Sites = dplyr::n_distinct(SS),
+                                                Studies = dplyr::n_distinct(SSBS)) |>
+                               tidyr::pivot_longer(c(Sites, Studies),
+                                                   names_to = "dat_type",
+                                                   values_to = "N")
+                             
+                             plt <- ggplot2::ggplot(count_df) +
+                               ggplot2::geom_bar(ggplot2::aes(x = !!sym(var_), y = N,
+                                                              fill = Dataset_name),
+                                                 stat = "identity") +
+                               ggplot2::labs(x = var_,
+                                             y = "N",
+                                             fill = "Dataset",
+                                             title = title_
                                ) +
-                          ggplot2::facet_wrap(~dat_type,
-                                     scales = "free_y") +
-                          ggplot2::theme_bw() +
-                          basic_thm +
-                          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 
-                                                           hjust = 1, 
-                                                           vjust = 1))
-                        
-                        if (length(unique(count_df[[var_]])) > 20){
-                          plt <- plt +
-                            ggplot2::theme(axis.text.x = ggplot2::element_blank())
-                        }
-                      }
-                      # %%%%%
-                      
-                      # - class N (class-N)
-                      if (type == "class-N"){
-                        # Assert that Class is in sites
-                        assertthat::assert_that(
-                          assertthat::has_name(self$sites, "Class")
-                          )
-                        class_df <- self$species |>
-                          dplyr::group_by(Class, Dataset_name) |>
-                          dplyr::summarise(N_ = dplyr::n()) |>
-                          # dplyr::filter(N_ > 0) |>
-                          dplyr::filter(Class != "")
-                        
-                        plt <- ggplot2::ggplot(class_df) +
-                          ggplot2::geom_bar(ggplot2::aes(x = Class, y = N_,
-                                       fill = Dataset_name),
-                                   # fill = "#E69F00",
-                                   stat = "identity") +
-                          ggplot2::labs(x = "Class",
-                               y = "No. records",
-                               fill = "Dataset", #"PREDICTS\nversion"
-                               title = "Number of sites per Class"
+                               ggplot2::facet_wrap(~dat_type,
+                                                   scales = "free_y") +
+                               ggplot2::theme_bw() +
+                               basic_thm +
+                               ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 
+                                                                                  hjust = 1, 
+                                                                                  vjust = 1))
+                             
+                             if (length(unique(count_df[[var_]])) > 20){
+                               plt <- plt +
+                                 ggplot2::theme(axis.text.x = ggplot2::element_blank())
+                             }
+                           }
+                           # %%%%%
+                           
+                           # - class N (class-N)
+                           if (type == "class-N"){
+                             # Assert that Class is in sites
+                             assertthat::assert_that(
+                               assertthat::has_name(self$sites, "Class")
+                             )
+                             class_df <- self$species |>
+                               dplyr::group_by(Class, Dataset_name) |>
+                               dplyr::summarise(N_ = dplyr::n()) |>
+                               dplyr::filter(Class != "")
+                             
+                             plt <- ggplot2::ggplot(class_df) +
+                               ggplot2::geom_bar(ggplot2::aes(x = Class, y = N_,
+                                                              fill = Dataset_name),
+                                                 stat = "identity") +
+                               ggplot2::labs(x = "Class",
+                                             y = "No. records",
+                                             fill = "Dataset",
+                                             title = "Number of sites per Class"
                                ) +
-                          ggplot2::theme_bw() +
-                          basic_thm +
-                          ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 
-                                                           hjust = 1, 
-                                                           vjust = 1))
-                        
-                        if (length(unique(class_df$Class)) > 20){
-                          plt <- plt +
-                            ggplot2::theme(axis.text.x = ggplot2::element_blank())
-                        }
-                      }
-                      (plt)
-                    }
-                    # Filter database
-                    # TODO: put filter methods here...
-                    # by sites: "Country", "UN_subregion" , "UN_region",  "Ecoregion" , "Biome", "Realm"...
-                    # hib_filter_sites()
-                    
-                  ),
-                  # Private entries to be created
-                  private = list(
-                    siteids = list(),
-                    length = function() base::length(self$sites$SS)
-                  )
+                               ggplot2::theme_bw() +
+                               basic_thm +
+                               ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, 
+                                                                                  hjust = 1, 
+                                                                                  vjust = 1))
+                             
+                             if (length(unique(class_df$Class)) > 20){
+                               plt <- plt +
+                                 ggplot2::theme(axis.text.x = ggplot2::element_blank())
+                             }
+                           }
+                           (plt)
+                         }
+                         
+                       ),
+                       # Private entries to be created
+                       private = list(
+                         siteids = list(),
+                         length = function() base::length(self$sites$SS)
+                       )
 )
 

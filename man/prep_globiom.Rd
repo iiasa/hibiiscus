@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils-globiom.R
 \name{prep_globiom}
 \alias{prep_globiom}
-\title{Prepare GLOBIOM output for projection.}
+\title{prep_globiom: Prepare GLOBIOM output for projection.}
 \usage{
 prep_globiom(
   file_path,
@@ -13,22 +13,22 @@ prep_globiom(
 )
 }
 \arguments{
-\item{file_path}{A filepath in \code{\link{character}} pointing to a GLOBIOM output in netCDF format.}
+\item{file_path}{A filepath (\code{character}) pointing to a GLOBIOM output in netCDF format.}
 
-\item{out_as_rast}{A \code{\link{logical}} denoting if the output type should be a (list)
-of \code{\link{SpatRaster}}, or a \code{\link{stars}} object (default: \code{TRUE}, i.e. returns  \code{\link{SpatRaster}}).}
+\item{out_as_rast}{A \code{logical} denoting if the output type should be a (list)
+of \code{SpatRaster}, or a \code{stars} object (default: \code{TRUE}, i.e. returns  \code{SpatRaster}).}
 
 \item{incl_pixel_area}{A \code{\link{logical}} denoting if the output should include the
 'pixel_area_ha' variable (Default: \code{TRUE}).}
 
-\item{vars_to_include}{A \code{\link{character}} vector of variables to be extracted.
+\item{vars_to_include}{A \code{character} vector of variables to be extracted.
 If \code{NULL}, all variables will be extracted.}
 
-\item{vars_to_ignore}{A \code{\link{character}} vector of variables to be ignored
+\item{vars_to_ignore}{A \code{character} vector of variables to be ignored
 If \code{NULL}, all variables will be extracted - unless vars_to_include is not \code{NULL}.}
 }
 \value{
-A (list of) \code{\link{SpatRaster}} stack with the formatted GLOBIOM predictors.
+A (list of) \code{SpatRaster} stacks with the formatted GLOBIOM predictors.
 }
 \description{
 Function to format a prepared GLOBIOM netCDF file for use in
@@ -43,7 +43,7 @@ Likely of little use for anyone outside IIASA.
 \examples{
 \dontrun{
 # Expects a filename pointing to a globiom-netCDF file.
-globiom_rast <- prep_globiom(file_path)
+globiom_rast <- prep_globiom("path/to/globiom_data.nc")
 }
 
 }

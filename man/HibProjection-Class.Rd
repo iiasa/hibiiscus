@@ -73,8 +73,7 @@ The results of model projection.}
 
 \item{\code{backtransform}}{(\code{function} or \code{NULL})\cr
 Describes the backtransformation specified when
-making a model projection.
-relative to the baseline land-use class.}
+making a model projection.}
 
 \item{\code{rescale_specs}}{(\code{list})\cr
 List of specifications used for rescaling predictions.}
@@ -92,6 +91,9 @@ List of specifications used for brms models.}
 List of Area-of-Applicability results.}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+(\code{HibProjection})\cr
 }
 }
 \if{html}{\out{<hr>}}

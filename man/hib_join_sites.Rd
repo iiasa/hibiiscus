@@ -2,20 +2,29 @@
 % Please edit documentation in R/hib_joininfo.R
 \name{hib_join_sites}
 \alias{hib_join_sites}
-\title{Joins external site information to a HibDatabase object}
+\title{hib_join_sites: Join external site information to a HibDatabase object}
 \usage{
 hib_join_sites(obj, site_info)
 }
 \arguments{
-\item{obj}{A \code{\link{HibDatabase}} object.}
+\item{obj}{A \code{HibDatabase} object.}
 
-\item{site_info}{A \code{\link{data.frame}} or similar of categorical or numeric information
-to be added to the database. Must share atleast one column with obj$sites.}
+\item{site_info}{A \code{data.frame} or similar of categorical or numeric information
+to be added to the site dataframe within the \code{HibDatabase}.
+Must share at least one column with \code{HibDatabase$sites}, e.g., 'SSBS'.}
+}
+\value{
+HibDatabase
 }
 \description{
 This function joins external information to a \code{\link{HibDatabase}} object. Such
 information could be for example additional site-specific data that are not
 already present in the database.
+}
+\examples{
+\dontrun{
+  hib_db <- hib_join_sites(hib_db, new_site_data_df)
+} 
 }
 \keyword{database,}
 \keyword{external}

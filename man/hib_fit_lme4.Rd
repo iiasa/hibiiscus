@@ -2,7 +2,7 @@
 % Please edit documentation in R/hib_fit_lme4.R
 \name{hib_fit_lme4}
 \alias{hib_fit_lme4}
-\title{Fit an lme4 style mixed-effects model}
+\title{hib_fit_lme4: Fit an lme4 style mixed-effects model}
 \usage{
 hib_fit_lme4(
   obj,
@@ -22,16 +22,17 @@ hib_fit_lme4(
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object, or a list of databases.}
 
-\item{form}{A \code{\link{formula}} in the style of lme4 - including fixed and random
+\item{form}{Model formula in the style of lme4 - including fixed and random
 effects.}
 
-\item{family}{A \code{\link{family}} function, e.g. gaussian, poisson - as allowed by lme4}
+\item{family}{A \code{family} function, e.g. gaussian, poisson - as allowed by lme4.
+Dafault is 'gaussian'.}
 
-\item{REML}{A \code{\link{logical}} - if using a gaussian family, should model be fitted
-using REML (T) or ML (F) - as in lme4}
+\item{REML}{A \code{logical} - if using a gaussian family, should the model be fitted
+using restricted maximum likelihood (REML, T) or maximum likelihood (F) - as in \code{lme4::lmer()}.}
 
 \item{calc_CIs}{An indication of whether fixed effect confidence intervals (95\%)
-should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"}
+should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot".}
 
 \item{optimise_ranefs}{Not currently applicable - future dev}
 
@@ -39,35 +40,60 @@ should be calculated or not, and if so how - one of NULL, "Wald", "profile", "bo
 
 \item{model_average}{Not currently applicable - future dev}
 
-\item{weight_specs}{A \code{\link{list}} containing "weights" and "weight_type".
-weights is a \code{\link{numeric}} vector containing the relative weights to
-assign to each dataset/site, should sum to 1.
-weight_type is a \code{\link{character}}, specifying either "dataset" or "site" - i.e. should
+\item{weight_specs}{A named \code{list} containing "weights" and "weight_type". \cr
+\itemize{
+\item \code{weights}: a \code{numeric} vector containing the relative weights to
+assign to each dataset/site, should sum to 1. \cr
+\item \code{weight_type}: a \code{character}, specifying either "dataset" or "site" - i.e. should
 the weights argument assign relative weights to whole datasets, or for sites in
-each dataset.}
+each dataset. \cr
+}
 
-\item{scale_specs}{A \code{\link{list}} containing "covars_to_scale" and "scale_func".
-covars_to_scale is a \code{\link{character}} vector of numeric covariates that should be
+Only applicable if a list of \code{HibDatabase}s are provided. \cr
+The length of 'weights' should be equal to the number of \code{HibDatabase}s.}
+
+\item{scale_specs}{A named \code{list} containing "covars_to_scale" and "scale_func".
+\itemize{
+\item \code{covars_to_scale} is a \code{character} vector of numeric covariates that should be
 scaled prior to modelling.
-scale_func is a function that will be used to scale
-the specified covariates - if NULL, base::scale() will be used.}
+\item \code{scale_func} is a function that will be used to scale the specified
+covariates - if \code{NULL}, \code{base::scale()} will be used.
+}}
 
-\item{relevel_specs}{A named \code{\link{vector}} where each item is:
-"<covar_to_relevel_name>" = "<base_level>".}
+\item{relevel_specs}{A \code{vector} where each item is:
+\code{"<covar_to_relevel_name>" = "<base_level>"}.}
 
-\item{...}{Any other named arguments that can be passed to lme4::lmer()/lme4::glmer(), e.g., na.action}
+\item{...}{Any other named arguments that can be passed to \code{lme4::lmer()}/\code{lme4::glmer()},
+e.g., na.action}
+}
+\value{
+\code{HibModelLME4}
 }
 \description{
 This function fits an lme4 model using the supplied database, formula and other
-function arguments tuning the model fitting process
+function arguments tuning the model fitting process.
 }
 \details{
-Expects a database object and various other arguments.
+This function takes the supplied database object (and various other arguments),
+fits the specified model and returns a HibModelLME4 object.
 }
 \examples{
 \dontrun{
   mod <- hib_fit_lme4(obj, y ~ x + ( 1 | a ), ...)
 } 
+
+}
+\references{
+\itemize{
+\item Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker (2015). Fitting Linear
+Mixed-Effects Models Using lme4. Journal of Statistical Software, 67(1), 1-48.
+doi:10.18637/jss.v067.i01.
+}
+}
+\seealso{
+\link{HibModelLME4}
+\code{\link[lme4]{lmer}}
+\code{\link[lme4]{glmer}}
 }
 \keyword{fitting}
 \keyword{model,}

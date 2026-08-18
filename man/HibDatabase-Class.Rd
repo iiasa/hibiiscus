@@ -11,6 +11,12 @@ Functions are provided to prepare the data for modelling and visualise the data.
 \details{
 Template objects for databases
 }
+\references{
+De Palma, A., Abrahamczyk, S., Aizen, M. et al.
+Predicting bee community responses to land-use changes:
+Effects of geographic and taxonomic biases.
+Sci Rep 6, 31153 (2016). https://doi.org/10.1038/srep31153
+}
 \keyword{classes}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -81,6 +87,9 @@ List of paths to the 'species' and 'site' data to be loaded.}
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+(\code{HibDatabase})\cr
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibDatabase-checkself"></a>}}
@@ -139,8 +148,8 @@ and multiplied by the original measure of diversity.
 \if{html}{\out{<a id="method-HibDatabase-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-HibDatabase-plot}{}}}
 \subsection{Method \code{plot()}}{
-Function to generate figures summarising the data present
-in the HibDatabase.
+Function to generate figures summarising the site-level
+data present in the HibDatabase.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{HibDatabase$plot(type = "map-sites")}\if{html}{\out{</div>}}
 }

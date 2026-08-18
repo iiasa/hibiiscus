@@ -1,31 +1,55 @@
-#' Fit a brms style mixed-effects model
+#' hib_fit_brms: Fit a brms style mixed-effects model
 #' 
 #' @description 
 #' This function fits a brms model using the supplied database, formula and other
-#' function arguments tuning the model fitting process
+#' function arguments tuning the model fitting process.
+#' 
 #' @details 
-#' Expects a HibDatabase object...
+#' This function takes the supplied database object (and various other arguments),
+#' fits the specified model and returns a HibModelBRMS object.
 #' @param obj A [`HibDatabase`] object or a list of them.
-#' @param form A [`formula`] in the style of brms (as in lme4) - including fixed and random 
+#' @param form A `formula` in the style of `brms` (as in `lme4`) - including fixed and random 
 #' effects.
-#' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by brms
-#' @param weight_specs A [`list`] containing "weights" and "weight_type".
-#' weights is a [`numeric`] vector containing the relative weights to
-#' assign to each dataset/site, should sum to 1. 
-#' weight_type is a [`character`], specifying either "dataset" or "site" - i.e. should
+#' @param family A `family` function, e.g. gaussian, poisson - as allowed by brms
+#' @param weight_specs A named `list` containing "weights" and "weight_type". \cr
+#' - \code{weights}: a `numeric` vector containing the relative weights to
+#' assign to each dataset/site, should sum to 1. \cr
+#' - \code{weight_type}: a `character`, specifying either "dataset" or "site" - i.e. should
 #' the weights argument assign relative weights to whole datasets, or for sites in
-#' each dataset.
+#' each dataset. \cr
+#' 
+#' Only applicable if a list of `HibDatabase`s are provided. \cr
+#' The length of 'weights' should be equal to the number of `HibDatabase`s. \cr
 #' Note: if using this argument, the supplied formula should have a response of 
 #' the form `y | weights(data_weight) ~`.
 #' The data_weight variable will be generated within the function call.
-#' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
-#' covars_to_scale is a [`character`] vector of numeric covariates that should be 
-#' scaled prior to modelling. scale_func is a function that will be used to scale 
-#' the specified covariates - if NULL, base::scale() will be used.
-#' @param relevel_specs A named [`vector`] where each item is:
-#' "<covar_to_relevel_name>" = "<base_level>".
-#' @param ... Any other named arguments that can be passed to brms::brm(), e.g., prior, data2
+#' @param scale_specs A named `list` containing "covars_to_scale" and "scale_func". 
+#' - `covars_to_scale` is a `character` vector of numeric covariates that should be 
+#' scaled prior to modelling. 
+#' - `scale_func` is a function that will be used to scale the specified 
+#' covariates - if `NULL`, `base::scale()` will be used.
+#' @param relevel_specs A `vector` where each item is: 
+#' \code{"<covar_to_relevel_name>" = "<base_level>"}.
+#' @param ... Any other named arguments that can be passed to `brms::brm()`, e.g., prior, data2
+#' 
+#' @return `HibModelBRMS`
+#' 
+#' @references 
+#' * Paul-Christian Bürkner (2017). brms: An R Package for Bayesian Multilevel 
+#'   Models Using Stan. Journal of Statistical Software, 80(1), 1-28. 
+#'   doi:10.18637/jss.v080.i01
+#' * Paul-Christian Bürkner (2018). Advanced Bayesian Multilevel Modeling with 
+#'   the R Package brms. The R Journal, 10(1), 395-411. doi:10.32614/RJ-2018-017
+#' * Paul-Christian Bürkner (2021). Bayesian Item Response Modeling in R with 
+#'   brms and Stan. Journal of Statistical Software, 100(5), 1-54. 
+#'   doi:10.18637/jss.v100.i05
+#' 
 #' @keywords model, fitting
+#' 
+#' @seealso
+#' [HibModelBRMS]
+#' \code{\link[brms]{brm}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   mod <- hib_fit_brms(obj, y ~ x + ( 1 | a ), ...)
@@ -44,20 +68,17 @@ hib_fit_brms <- function(obj,
   
   if(!isNamespaceLoaded("brms")) { attachNamespace("brms");requireNamespace('brms') }
   
-  # Add assertions
+  # Check inputs
   assertthat::assert_that(
     inherits(obj, "HibDatabase") || ( is.list(obj) & all(unlist(lapply(obj, function(x){inherits(x, "HibDatabase")}))) ) , # obj is a hib database
-    # form can be a formula,
     inherits(form, "formula") || inherits(form, "brmsformula") || inherits(form, "mvbrmsformula"),
-    is.function(family) || is.character(family), # family is character or function
-    # is.numeric(dataset_weights) || is.null(dataset_weights),
-    is.list(weight_specs), #|| is.null(weight_specs)
+    is.function(family) || is.character(family), 
+    is.list(weight_specs),
     is.list(scale_specs),
     is.vector(relevel_specs) || is.null(relevel_specs)
   )
   
   message(crayon::green("\nCollating data for model fitting...\n"))
-  
   
   # Collate data from database - based on columns specified in the formula
   if (inherits(form, "formula")){
@@ -67,7 +88,6 @@ hib_fit_brms <- function(obj,
   
   
   if ((inherits(form, "brmsformula") | inherits(form, "mvbrmsformula"))){
-    # stop("use of mv/brmsformulas is in progress!!")
     # First, try to use brmsterms and allterms output
     tmp <- try(brms::brmsterms(form, resp_rhs_all = F))
     # If that breaks, just use the first formula, and get terms as above...
@@ -87,7 +107,6 @@ hib_fit_brms <- function(obj,
   
   
   # %%%%%
-  # TODO:
   # Check for covariance structures in model formula (mod_covars) and data2
   # if data2 exists, check the names
   # if names of data2 match something in mod_covars,  drop that value from mod_covars
@@ -100,7 +119,6 @@ hib_fit_brms <- function(obj,
   # %%%%%
   
   
-  # TODO:
   # What about a formula of the type 
   # y ~ 0 + Intercept + b
   # Intercept is an internally generated brms thing...
@@ -118,18 +136,6 @@ hib_fit_brms <- function(obj,
                             })
     
     # add weights
-    # for (i in 1:length(obj)){
-    #   mod_df_ls[[i]]$data_weight <- dataset_weights[i] / nrow(mod_df_ls[[i]])
-    #   # This seems wrong... - 
-    #   # For brms, weight is taken literally, minimum should be 1... maybe
-    #   # 3 (initial) possible approaches to deriving data-point weights
-    #   # - as above, sum to 1 over all datapoints
-    #   # - sum to total number of datapoints, assign p1 * N to data1 and p2 * N to data2
-    #   #   then divide these amounts by N_data_i - THIS SEEMS MOST APPROPRIATE
-    #   # - set baseline weight to 1 for lower weighted dataset..(or higher weighted dataset)
-    #   #   then adjust weights of other dataset/s accordingly...
-    # }
-    
     # %%%
     mod_df_ls <- weight_model_data(mod_df_ls,
                                    "brms",
@@ -138,7 +144,10 @@ hib_fit_brms <- function(obj,
     # %%%
     
     mod_df <- dplyr::bind_rows(mod_df_ls)
-    
+    # ensure that mod_df has >1 row of data!
+    assertthat::assert_that(
+      nrow(mod_df) > 1
+    )
     n_spp_taxa <- purrr::map2(.x = obj, 
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
@@ -155,6 +164,10 @@ hib_fit_brms <- function(obj,
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
+    # ensure that mod_df has >1 row of data!
+    assertthat::assert_that(
+      nrow(mod_df) > 1
+    )
     n_spp_taxa <- calc_N_spp(obj, mod_df, mod_resp)
     n_spp = n_spp_taxa$N_spp
     n_taxa = n_spp_taxa$N_taxa
@@ -177,10 +190,10 @@ hib_fit_brms <- function(obj,
                   family = family,
                   ...)
   
-  # backend = "cmdstanr" 
+  # backend = "cmdstanr"  - user can add
+  # TODO:
   # Do some checks - model convergence/model fitted
   # Rhat...
-  
 
   # Collate model coefs../metrics - AICc, Rsq ...
   message(crayon::green("Collating model details ..."))
@@ -214,3 +227,4 @@ hib_fit_brms <- function(obj,
   
   return(mod_obj)
 }
+

@@ -79,6 +79,9 @@ Indicates use of original mesh for spatial INLA models}
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+(\code{HibCV})\cr
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibCV-print"></a>}}

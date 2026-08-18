@@ -1,58 +1,105 @@
-#' Project a hib, mixed-effects model
+#' hib_project_model: Project a hibiiscus mixed-effects model
 #' 
 #' @description 
-#' This function projects a fitted hib model using the supplied model object and
-#' data to be used in projection - i.e., a dataframe/tibble or raster stack of covariates
+#' This function projects a fitted HibModelXXX using the supplied model object and
+#' data to be used in projection.
+#' 
 #' @details 
-#' Expects a HibModel object and data for use in a projection.
+#' Given a HibModelXXX, new data and specification, this function projects/predicts 
+#' modelled responses for each 'unit' of the new data. 
+#' Calculation of the 'Area-of-Applicability' of the model within the new data is 
+#' an optional addition.
+#' Specification arguments allow for customisation of the prediction type.
+#' If specifications are not provided, defaults will be used.
+#' Projections will be returned in the same format as the provided data.
+#' If data is provided as \code{SpatRaster}, a land-use variable should be included 
+#' as a single categorical layer, or as multiple, proportional layers, named to 
+#' align with the levels of the categorical variable.
+#' Currently, only a single 'categorical' variable can be provided in 
+#' 'proportional cover' format in a \code{SpatRaster}.
+#' 
+#' 
 #' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
-#' @param data Either a dataframe-like object or a raster stack that can be used
-#' to project onto - should contain x and y columns if a dataframe.
-#' @param backtransform A [`function`] that will backtransform the model response
-#' to the scale of the original variable, e.g., exp() as the inverse of log()
-#' @param rescale_specs A [`list`] containing details relevant to rescaling projections.
-#' Specifically, named items should consist of 'rescale' ([`logical`]), 
-#' 'baseline_covar' ([`data.frame`], or NULL), 'baseline_re_form' ([`formula`], [`NA`], or [`NULL`]).
+#' @param data A `data.frame`-like object, a \code{SpatRaster}, or a list of 
+#' \code{SpatRaster}.
+#' Should contain all fixed-effect variables used in the fitted model, and any 
+#' required random variables.
+#' If `data` is a `data.frame`, `x` and `y` columns should also be included.
+#' @param backtransform A `function` that will backtransform the model response
+#' to the scale of the original variable, e.g., `exp()` as the inverse of `log()`.
+#' Default is `NULL`, i.e., no backtransformation.
+#' @param rescale_specs A named `list` (or `NULL`) containing details relevant 
+#' to rescaling projections.
+#' Specifically, named items should consist of:
+#' - `rescale` (`logical`), 
+#' - `baseline_covar` (`data.frame`, or NULL), 
+#' - `baseline_re_form` (`formula`, `NA`, or `NULL`). \cr
+#' 
 #' In combination, these arguments determine if predictions will be rescaled or not 
-#' (based on value of $rescale), the covariate values used to generate the baseline
-#' against which other predictions are rescaled ($baseline_covar), and whether/how
-#' random effects should be incorporated in the generation of this baseline ($baseline_re_form, 
-#' see lme4/inla/brms_specs).
-#' If $rescale == TRUE, but no baseline_covar is provided, the intercept of the 
+#' (`rescale`), the covariate values used to generate the baseline against which 
+#' other predictions are rescaled (`baseline_covar`), and whether/how random 
+#' effects should be incorporated in the generation of this baseline (`baseline_re_form`, 
+#' see `re_form` in `lme4/inla/brms_specs` argument). \cr
+#' If `rescale == TRUE`, but no `baseline_covar` is provided, the intercept of the 
 #' model will be used as the baseline value.
-#' @param lme4_specs A [`list`] containing details relevant to projecting an lme4-style
-#' model. Specifically, named items should consist of 'bootstrap' ([`logical`]) and 
-#' 'n_boot' ([`numeric`]), indicating whether bootstrapped prediction intervals should be 
-#' estimated, and if so, how many bootstrap samples should be used.
-#' In addition, 'calc_se' ([`logical`]) is used to specify whether or not a standard
-#' error based uncertainty estimate (via marginaleffects) is calculated and used 
-#' to generate confidence intervals.
-#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
-#' generated via bootstrapping or the se-based approach. Values should fall between
+#' @param lme4_specs A named `list` (or `NULL`) containing details relevant to 
+#' projecting a `HibModelLME4`. \cr
+#' Named items should consist of:
+#' - `bootstrap` (`logical`), indicating whether bootstrapped prediction intervals 
+#' should be estimated. Can be slow for large models.
+#' - `n_boot` (`numeric`), how many bootstrap samples should be used to estimate
+#' prediction uncertainty.
+#' - `calc_se` (`logical`), specify whether or not a standard error based uncertainty 
+#' estimate (via [`marginaleffects::predictions`]) is calculated and used to generate prediction 
+#' intervals.
+#' - `conf_level` (`numeric`) is used to specify the confidence levels of intervals 
+#' generated via bootstrapping or the SE-based approach. Values should fall between
 #' 0 and 1, typically in the range 0.5 to 0.95.
-#' Additionally, 're_form', as 're.form' in [`predict.merMod()`], used to specify random
-#' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
-#' @param inla_specs A [`list`] containing details relevant to projecting an inla-style
-#' model.
-#' 're_form', as 're.form' in [`predict.merMod()`], used to specify random
-#' effects to condition on when predicting an inla model (formula, NULL, or NA).
-#' 'link_inverse' a function that is the invers of the link used to fit the model.
+#' Multiple values can be provided.
+#' - `re_form` (`formula`, `NULL`, or `NA`), as `re.form` in [`predict.merMod()`], 
+#' used to specify random effects to condition on when predicting.
+#' @param inla_specs A named `list` (or `NULL`) containing details relevant to 
+#' projecting a `HibModelINLA`. \cr
+#' - `re_form` (`formula`, `NULL`, or `NA`), as `re.form` in [`predict.merMod()`], 
+#' used to specify random effects to condition on when predicting.
+#' - `link_inverse` a `function` that is the inverse of the link used to fit the model.
 #' Used to backtranform the global intercept for use in rescaling predictions.
-#' @param brms_specs A [`list`] containing details relevant to projecting a brms-style
-#' model. Specifically, named item should consist of 'incl_obs_uncert' ([`logical`]) 
-#' to determine whether or not observation-level uncertainty is included in predictions.
-#' Setting this parameter to TRUE will produce predictions with larger uncertainty, using
-#' [`predict.brmsfit()`], setting to FALSE calls [`fitted.brmsfit()`] internally.
-#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
-#' generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95, 
-#' internally converted to quantiles and passed to the probs argument of [`predict.brmsfit()`]/
-#' [`fitted.brmsfit()`].
-#' Additionally, 're_form', as 're_formula' in [`predict.brmsfit()`], used to specify random
-#' effects to condition on when predicting a brms (formula, NULL, or NA).
-#' @param calc_aoa A [`logical`] to indicate whether or non the 'Area-of-applicability' 
-#' (AOA) should be estimated - following Meyer and Pebesma (2021)
+#' @param brms_specs A named `list` (or `NULL`) containing details relevant to 
+#' projecting a `HibModelBRMS`.
+#' Named items should consist of:
+#' - `incl_obs_uncert` (`logical`), to determine whether or not observation-level 
+#' uncertainty is included in predictions.
+#' Setting this parameter to `TRUE` will produce predictions using
+#' [`predict.brmsfit()`] (larger uncertainty), setting to `FALSE` calls 
+#' [`fitted.brmsfit()`] internally.
+#' - `conf_level` (`numeric`) is used to specify the confidence levels of intervals 
+#' generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95. 
+#' Internally converted to quantiles and passed to the `probs` argument of `predict.brmsfit()`/
+#' `fitted.brmsfit()`.
+#' - `re_form` (`formula`, `NULL`, or `NA`), as `re_formula` in `predict.brmsfit()`, 
+#' used to specify random effects to condition on when predicting.
+#' @param calc_aoa A `logical` to indicate whether or not the 'Area-of-Applicability' 
+#' (AOA) should be estimated - following Meyer and Pebesma (2021).
 #' @param cv_obj A [`HibCV`] object, used in AOA estimation.
+#' 
+#' @return HibProjection
+#' 
+#' @references 
+#' * Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
+#' area of applicability of spatial prediction models. 
+#' Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+#' * Meyer H, Milà C, Ludwig M, Linnenbrink J (2023). _CAST: 'caret' Applications 
+#' for Spatial-Temporal Models_. R package, <https://CRAN.R-project.org/package=CAST>.
+#' 
 #' @keywords model, projections
+#' 
+#' @seealso
+#' \code{\link{HibProjection}}
+#' \code{\link{hib_calc_aoa}}
+#' \code{\link[lme4]{predict.merMod}}
+#' \code{\link[brms]{fitted.brmsfit}}
+#' \code{\link[brms]{predict.brmsfit}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   proj <- hib_mod_project(hib_model, proj_data)
@@ -67,7 +114,6 @@ hib_project_model <- function(mod_obj,
                               brms_specs = NULL, #list(incl_obs_uncert = F, conf_level = 0.95, re_form = as lme4...)
                               calc_aoa = FALSE,
                               cv_obj = NULL){
-  # hib_mod_project
 
   # TODO: 
   # Better use of functions for model checking/predictions - minor diffs for df v rast
@@ -249,18 +295,17 @@ hib_project_model <- function(mod_obj,
                                        re.form = lme4_specs$re_form)) 
       colnames(pred_df) <- "prediction_mean" # prediction
       
-      # TODO: current approach to backtransforming/rescaling sd doesn't make sense...
+      # TODO: current approach to backtransforming/rescaling sd doesn't really make sense...
 
       # %%%
       # Use bootMer to get uncertainty
       if (lme4_specs$bootstrap == T){
-        # message(crayon::green("Bootstrapping model predictions..."))
         message(crayon::green(paste("\nGenerating bootstrapped prediciton intervals using",
                                 lme4_specs$n_boot, "bootstrap samples...")))
         boot_obj <- lme4::bootMer(mod_obj$model, 
                                   function(mod, df = data){
                                     stats::predict(mod, df, 
-                                                   type = "response", # lme4_specs$type,
+                                                   type = "response", 
                                                    re.form = lme4_specs$re_form)}, 
                                   nsim = lme4_specs$n_boot,
                                   .progress = "txt")
@@ -280,7 +325,6 @@ hib_project_model <- function(mod_obj,
         boot_quants <- boot_quants |>
           dplyr::rename(prediction_boot_median = prediction_boot_q50)
 
-        # pred_df$prediction_median <- apply(boot_obj$t, 2, function(x) as.numeric(stats::quantile(x, probs = 0.5, na.rm = TRUE)))
         boot_quants$prediction_boot_sd <- apply(boot_obj$t, 2, stats::sd)
 
         pred_df <- cbind(pred_df, boot_quants)
@@ -293,7 +337,7 @@ hib_project_model <- function(mod_obj,
 
       # se-based CIs... and conf level...
       if (lme4_specs$calc_se == T){
-        # print(lme4_specs$conf_level)
+        
         message(crayon::green("\nCalculating standard error of model predictions..."))
         # get conf level if specified - only one, or multiple
 
@@ -357,9 +401,8 @@ hib_project_model <- function(mod_obj,
     
     # Single raster object
     if (inherits(data, "SpatRaster")){
-      # print("running terra proj")
       data <- terra_proj(data, mod_obj, backtransform, 
-                         rescale_specs$rescale, baseline_val, # rescale_pred, base_val
+                         rescale_specs$rescale, baseline_val, 
                          fix_vars, rand_vars,
                          proj_specs = lme4_specs)
     }
@@ -371,13 +414,11 @@ hib_project_model <- function(mod_obj,
                          terra_proj,
                          obj = mod_obj, 
                          backtransform = backtransform, 
-                         rescale_pred = rescale_specs$rescale, #rescale_pred, 
-                         base_val = baseline_val, #base_val, 
+                         rescale_pred = rescale_specs$rescale, 
+                         base_val = baseline_val, 
                          fix_vars = fix_vars,
                          rand_vars = rand_vars,
                          proj_specs = lme4_specs)
-                         # lme4_boot = lme4_boot,
-                         # n_boot = n_boot)
     }
     
   } 
@@ -398,14 +439,12 @@ hib_project_model <- function(mod_obj,
     
     # message(crayon::yellow("Warning: INLA model detected! Projections are not yet supported...\n"))
     message(crayon::green("\nINLA model detected! Projection in progress..."))
-    # stop("In development")
     
     # %%%
-    # CHeck specs
+    # Check specs
     inla_specs <- check_proj_specs(inla_specs, "inla")
     
     # Get some basic info on model covars
-    # all_covars <- all.vars(formula(delete.response(terms(obj$inla_fitted_formula))))
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$user_formula$full))))
     # can ignore iid ranefs...
     # but covars are all needed... - can set to NA if missing though
@@ -426,16 +465,14 @@ hib_project_model <- function(mod_obj,
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
     # Get random vars
-    # names(mod_obj$model$summary.radom) 
     rand_vars <- all.vars(mod_obj$user_formula$random)
     # drop any vars that are in fix vars... (i.e random slopes..)
     rand_vars <- rand_vars[!rand_vars %in% fix_vars]
     # And re_form_vars
     re_form_vars <- NA
     if (inherits(inla_specs$re_form, "formula")){
-      # print("Checking random variables")
       re_form_vars <- all.vars(inla_specs$re_form)
-      # TODO: drop any vars that are in fix vars... (i.e random slopes..)
+      # drop any vars that are in fix vars... (i.e random slopes..)
       re_form_vars <- re_form_vars[!re_form_vars %in% fix_vars]
       
       assertthat::assert_that(all(re_form_vars %in% rand_vars),
@@ -457,7 +494,7 @@ hib_project_model <- function(mod_obj,
       if (is.null(rescale_specs$baseline_covar)){
         # get model intercept
         int_id <- which(grepl("intercept", rownames(mod_obj$model$summary.fixed), ignore.case = T))
-        # TODO: What if another covar also contains intercept...
+        # What if another covar also contains intercept...
         if (length(int_id) > 1){
           message(crayon::yellow("\nWarning: Multiple 'Intercept' coefficients found, selecting the first..."))
           int_id <- int_id[1]
@@ -499,7 +536,6 @@ hib_project_model <- function(mod_obj,
         }
 
         baseline_df <- rescale_specs$baseline_covar
-        # baseline_df$prediction_mean <- baseline_val
       }
     }
     # %%%%%
@@ -519,7 +555,6 @@ hib_project_model <- function(mod_obj,
                             fix_vars = fix_vars,
                             rand_vars = rand_vars, 
                             re_form_vars = re_form_vars) |>
-        # TODO: is ".," needed?
         # TODO: better term for id
         dplyr::bind_rows(.id = "Year")
     }
@@ -540,7 +575,6 @@ hib_project_model <- function(mod_obj,
       # or just recreate!
       site.spde <- INLA::inla.spde2.matern(mod_obj$inla_mesh, alpha = 2)
       
-      # TODO:
       # Need to verify that coords are present in data_df...
       # What if they are missing? - can I use NA
       coord_x_col <- c("longitude",
@@ -574,34 +608,13 @@ hib_project_model <- function(mod_obj,
 
       coords <- as.matrix(data_df[, c(coord_x_col, coord_y_col)])
 
-      # # A <- inla.spde.make.A(input_mesh, 
-      # #                       loc = coords)
       s.site <- INLA::inla.spde.make.index('s', n.spde = site.spde$n.spde)
-      # # Create A, X, stk for prediction of dropped pop - using same mesh and spde?
-      # if (("Longitude" %in% colnames(data_df)) &
-      #     ("Latitude" %in% colnames(data_df)) ){
-      #   coords <- as.matrix(data_df[,c("Longitude", "Latitude")])
-      # }
-      # if (("Longitude_midpoint" %in% colnames(data_df)) &
-      #     ("Latitude_midpoint" %in% colnames(data_df)) ){
-      #   coords <- as.matrix(data_df[,c("Longitude_midpoint", "Latitude_midpoint")])
-      # }
-      # if (("x" %in% colnames(data_df)) &
-      #     ("y" %in% colnames(data_df)) ){
-      #   coords <- as.matrix(data_df[,c("x", "y")])
-      # }
-      # if (("X" %in% colnames(data_df)) &
-      #     ("Y" %in% colnames(data_df)) ){
-      #   coords <- as.matrix(data_df[,c("X", "Y")])
-      # }
+      
       
       if (mod_obj$inla_mesh_settings$mesh_dim == "3d"){
         coords <- INLA::inla.mesh.map(coords,  
                                       projection = "longlat")
       }
-      # if (obj$inla_mesh_settings$mesh_dim == "2d"){
-      #   
-      # }
       
       pred_A <- INLA::inla.spde.make.A(mod_obj$inla_mesh,
                                        loc = coords)
@@ -612,12 +625,12 @@ hib_project_model <- function(mod_obj,
     #   make an A
     # If not ... predict without space? - how? set pred_A to 0?, have NA coords?
 
-    # TODO: do below data prep for baseline_covars
+    # do below data prep for baseline_covars
     if (is.data.frame(rescale_specs$baseline_covar)){
       covars_base <- all_covars[all_covars %in% colnames(rescale_specs$baseline_covar)]
 
       baseline_X <- rescale_specs$baseline_covar |>
-        dplyr::select(covars_base)
+        dplyr::select(dplyr::any_of(covars_base))
       if ( ("Intercept" %in% all_covars) &
            (!"Intercept" %in% covars_base)){
         baseline_X$Intercept <- 1
@@ -635,9 +648,8 @@ hib_project_model <- function(mod_obj,
       # if it is, check all data[,var] are in obj$data[,var
       check_covar_levels(mod_obj$model, baseline_X, fix_vars)
       
-      # TODO: also need to check any random vars - difference between fix_vars and all_vars
+      # also need to check any random vars - difference between fix_vars and all_vars
       if (inherits(rescale_specs$baselin_re_form, "formula")){
-          # print("Checking random variables")
           baseline_re_form_vars <- all.vars(rescale_specs$baselin_re_form)
           # drop any vars that are in fix vars... (i.e random slopes..)
           baseline_re_form_vars <- baseline_re_form_vars[!baseline_re_form_vars %in% fix_vars]
@@ -694,9 +706,6 @@ hib_project_model <- function(mod_obj,
           coords <- INLA::inla.mesh.map(coords,  
                                         projection = "longlat")
         }
-        # if (obj$inla_mesh_settings$mesh_dim == "2d"){
-        #   
-        # }
         
         baseline_A <- INLA::inla.spde.make.A(mod_obj$inla_mesh,
                                        loc = coords)
@@ -724,7 +733,7 @@ hib_project_model <- function(mod_obj,
     
 
     pred_X <- data_df |>
-      dplyr::select(covars_sub)
+      dplyr::select(dplyr::any_of(covars_sub))
     
     if ( ("Intercept" %in% all_covars) &
          (!"Intercept" %in% covars_sub)){
@@ -742,17 +751,14 @@ hib_project_model <- function(mod_obj,
     # if it is, check all data[,var] are in obj$data[,var
     check_covar_levels(mod_obj$model, pred_X, fix_vars)
     
-    # TODO: also need to check any random vars - difference between fix_vars and all_vars
+    # also need to check any random vars - difference between fix_vars and all_vars
     if (inherits(inla_specs$re_form, "formula")){
-        # print("Checking random variables")
-        
         # Need to set rand_vars that are non-re_form_vars to NA
         non_reform_rand <- rand_vars[!rand_vars %in% re_form_vars]
         pred_X[, non_reform_rand] <- NA
         check_covar_levels(mod_obj$model, pred_X, re_form_vars)
     }
     if (is.null(inla_specs$re_form)){
-        # print("Checking random variables")
         check_covar_levels(mod_obj$model, pred_X, re_form_vars)
     }
     if (is.na(re_form_vars)){
@@ -819,15 +825,6 @@ hib_project_model <- function(mod_obj,
     }
     # %%%%%
 
-    # m0 <- INLA::inla(formula = mod_obj$inla_fitted_formula,
-    #                  family = mod_obj$model$.args$family,
-    #                  data= INLA::inla.stack.data(comb_stk),
-    #                  control.fixed = list(expand.factor.strategy='inla'),
-    #                  # control.inla = list(strategy = "", int.strategy = ""), 
-    #                  control.compute = list(dic = TRUE, waic = TRUE),
-    #                  control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
-    #                  verbose = F)
-    
     # Get pred_stack index
     pred_idx <- INLA::inla.stack.index(comb_stk, tag = "pred")$data
     
@@ -919,8 +916,6 @@ hib_project_model <- function(mod_obj,
       pred_cols <- colnames(pred_df)[grepl("prediction_", colnames(pred_df))]
       pred_rescaled_df <- pred_df[,pred_cols] / baseline_val
       colnames(pred_rescaled_df) <- paste("rescaled", colnames(pred_rescaled_df), sep = "_")
-      # pred_rescaled_df <- pred_rescaled_df |>
-      #   dplyr::select(-rescaled_prediction_sd)
     }
     
     pred_df <- dplyr::bind_cols(pred_df, pred_rescaled_df)
@@ -1064,13 +1059,11 @@ hib_project_model <- function(mod_obj,
       # also need to check any random vars in brms_specs$re_form
       # Check they are present, and check they have the correct levels...
       if (inherits(brms_specs$re_form, "formula")){
-          # print("Checking random variables")
           re_form_vars <- all.vars(brms_specs$re_form)
           re_form_vars <- re_form_vars[!re_form_vars %in% fix_vars]
           
           assertthat::assert_that(all(re_form_vars %in% rand_vars), 
                                   msg = "Specified re_form structure contains variables not in the original model.")
-          # all.vars(brms_specs$re_form[[2]])
           check_covar_levels(mod_obj$model, data, re_form_vars)
       }
       if (is.null(brms_specs$re_form)){
@@ -1178,9 +1171,7 @@ hib_project_model <- function(mod_obj,
   }
   
   # create projection object - need model obj, projection output, and projection_specs (backrans, rescale)
-  # message(crayon::green"Creating projection object...\n"))
 
-  # if rescale_specs$rescale & is.data.frame(rescale_specs$baseline_covar)
   if (rescale_specs$rescale & 
     is.data.frame(rescale_specs$baseline_covar)){
     # update baseline_covar to baseline_df
@@ -1189,11 +1180,12 @@ hib_project_model <- function(mod_obj,
   } else {
     rescale_specs$baseline_df <- NA
   }
+  
+  # TODO: flag aoa calc
 
   proj <- HibProjection$new(obj = mod_obj,
                                  proj = data,
                                  backtransform = backtransform,
-                                 # rescale_pred = rescale_specs$rescale, # rescale_pred,
                                  rescale_specs = rescale_specs,
                                  lme4_specs = lme4_specs,
                                  inla_specs = inla_specs,
@@ -1202,34 +1194,46 @@ hib_project_model <- function(mod_obj,
   return(proj)
 }
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Internal helper functions for projection
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-#' A helper function to wrap the preparation of SpatRaster data, and then project 
-#' a hib, mixed-effects model - for lme4 and brms models
+#' terra_proj: A helper function to wrap the preparation of SpatRaster data, and 
+#' then project a hib, mixed-effects model - for lme4 and brms models only.
 #' 
 #' @description 
 #' This function projects a fitted hib model using the supplied model object and
-#' terra data to be used in projection
-#' @details 
-#' Expects a [`SpatRaster`].
-#' @param data A [`SpatRaster`] that can be used to project a model.
-#' @param obj One of; [`HibModelLME4`] or [`HibModelBRMS`].
-#' @param backtransform A [`function`] that will backtransform the model response
-#' to the scale of the original variable, e.g., exp() as the inverse of log()
-#' @param rescale_pred A [`logical`] value - should the predictions be rescaled relative
-#' to the model intercept (assumes intercept is for baseline environment/LU)
-#' @param base_val Model intercept, for use in rescaling predictions
-#' @param fix_vars Model fixed effects
-#' @param rand_vars Model random effects
-#' @param proj_specs A list containing details relevant to projecting the model,
+#' `SpatRaster` data to be used in projection.
+#' 
+#' @param data A `SpatRaster` that can be used in model projection/prediction.
+#' @param obj One of; `HibModelLME4` or `HibModelBRMS`.
+#' @param backtransform A `function` that will backtransform the model response
+#' to the scale of the original variable, e.g., `exp()` as the inverse of `log()`.
+#' @param rescale_pred A `logical` value - should the predictions be rescaled 
+#' relative to a baseline value.
+#' @param base_val A baseline value used in rescaling predictions.
+#' @param fix_vars A `character` vector of model fixed effects.
+#' @param rand_vars A `character` vector of model random effects.
+#' @param proj_specs A `list` containing details relevant to projecting the model,
 #' either lme4_specs, or brms_specs.
+#' 
+#' @return SpatRaster
+#' 
 #' @keywords model, projections
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#' 
 #' @examples 
 #' \dontrun{
-#'   tmp_proj <- terra_proj(obj, data, backtransform, rescale_pred, base_val, fix_vars)
+#'   tmp_proj <- terra_proj(data, obj, backtransform, rescale_pred, base_val, fix_vars, rand_vars, proj_specs)
 #' } 
 #' @noRd
-terra_proj <- function(data, obj, backtransform, 
-                       rescale_pred, base_val, 
+terra_proj <- function(data, 
+                       obj, 
+                       backtransform, 
+                       rescale_pred, 
+                       base_val, 
                        fix_vars,
                        rand_vars,
                        proj_specs = NULL
@@ -1259,7 +1263,7 @@ terra_proj <- function(data, obj, backtransform,
   if (is.null(proj_specs$re_form)){
     re_form_vars <- rand_vars
   }
-
+  # For categorical LUI rasters
   if (all(fix_vars %in% names(data))){
     # Covar checks
     check_covar_levels(obj$model, data, fix_vars)
@@ -1271,15 +1275,16 @@ terra_proj <- function(data, obj, backtransform,
     
     
     if (inherits(obj, "HibModelLME4")){
-      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, proj_specs)#lme4_boot, n_boot)
+      data_pred <- terra_proj_lme4_pred(obj$model, data, backtransform, proj_specs)
     }
 
     if (inherits(obj, "HibModelBRMS")){
-      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, proj_specs)#incl_obs_uncert)
+      data_pred <- terra_proj_brms_pred(obj$model, data, backtransform, proj_specs)
     }
     
     # %%%%
   } else {
+    # Categorical variable present as proportional cover ...
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
     # incl ranefs here -- either from re_form, or model
@@ -1320,7 +1325,6 @@ terra_proj <- function(data, obj, backtransform,
       # brms: @frame
       
       # lme4 fit data,
-      # merMod
       if (inherits(obj$model, "merMod")){
         fit_dat <- obj$model@frame
       }
@@ -1398,14 +1402,13 @@ terra_proj <- function(data, obj, backtransform,
       
       
       # %%%%%%%%%%%%%%%%%%%%
-      # TODO: - if there is a non_covar in rast that doesn't have a matching covar/lev
-      # should throw an error?
+      # If there is a non_covar in rast that doesn't have a matching covar/lev
+      # throw an error.
       # %%%%%%%%%%%%%%%%%%%%
-      # print(covars_not_in_rast)
-      # print(non_covars_in_rast)
+      
       # ID layers that are not within covariates required
       problem_layers <- non_covars_in_rast[!non_covars_in_rast %in% covars_not_in_rast$covar_levs_rast]
-      # print(problem_layers)
+      
       # Are there other situations where a problem layer could arise - or actualy not be a problem??
       # Note: extra layers in input that are not relevant to the model - eg a non-existent
       # covar level (Not Pasture) is simply ignored!
@@ -1474,7 +1477,6 @@ terra_proj <- function(data, obj, backtransform,
       # Could optionally exit here if prepping for inla...
       
     }
-    # Everything to here is also useful for inla...
     
     # check N layers of each
     # if n_prop_covar_lyrs > 1  - list of rasters - each named based on covar level
@@ -1488,7 +1490,6 @@ terra_proj <- function(data, obj, backtransform,
       tmp_pred_rast_ls <- vector("list", n_prop_covar_lyrs)
       names(tmp_pred_rast_ls) <- rep("", n_prop_covar_lyrs)
 
-      # TODO: print "Projecting model..." here, 
       # Optionally include se message 
       # Then per iter, print lyr i...
 
@@ -1507,7 +1508,7 @@ terra_proj <- function(data, obj, backtransform,
         )
         # If is a SpatRaser, use as is.
 
-        tmp_pred_rast_ls[[i]] <- tmp_ # c(tmp_pred_rast, tmp_bin_rast, tmp_prop_rast[[i]])[[1]]
+        tmp_pred_rast_ls[[i]] <- tmp_ 
         
         # Check all covars in new SpatRaster
         assertthat::assert_that(all(fix_vars %in% names(tmp_pred_rast_ls[[i]])))
@@ -1555,6 +1556,7 @@ terra_proj <- function(data, obj, backtransform,
       # Update - now that lmer predictions include sd, lo, hi, do below for lmer and brms
       pred_nms <- names(tmp_pred_rast_ls[[1]])
       
+      # Sum weighted predictions
       tmp_pred_rast_ls <- purrr::map(.x = pred_nms,
                                      function(.x, 
                                               terra_ls = tmp_pred_rast_ls){
@@ -1625,8 +1627,6 @@ terra_proj <- function(data, obj, backtransform,
     
     # Drop some brms estimates of error - doesn't make sens to scale these by baseline...
     # Or does it??
-    # data_pred_rescaled <- data_pred_rescaled[[names(data_pred_rescaled) != "prediction_error"]]
-    # data_pred_rescaled <- data_pred_rescaled[[names(data_pred_rescaled) != "prediction_Est.error"]]
     names(data_pred_rescaled) <- paste0("rescaled_", names(data_pred_rescaled))
   }
   
@@ -1641,32 +1641,42 @@ terra_proj <- function(data, obj, backtransform,
     terra::time(data) <- rep(t_orig, terra::nlyr(data))  
   }
   
-  # return SpatRaster or a list of SpatRasters
+  # return SpatRaster
   return(data)
 }
 
 
-#' A helper function to prepare SpatRaster data for projection
+#' terra_covar_prep: A helper function to prepare SpatRaster data for projection
 #' 
 #' @description 
 #' This function prepares the supplied SpatRaster to be ready for model projection
-#' @details 
-#' Expects a [`SpatRaster`].
-#' @param covar_nm A [`character`], the name of the model covariate 
-#' @param covar_df A [`data.frame`], with info on covariate, levels, and the associated
+#' @param covar_nm A `character`, the name of the model covariate 
+#' @param covar_df A `data.frame`, with info on covariate, levels, and the associated
 #' names present in the raster data
-#' @param data_rast A [`SpatRaster`] that can be used to project a model.
-#' @param mod_data A [`data.frame`], or list (inla), of the data used to fit the model
-#' @param input_type A [`character`], either "binary" or "non-binary", indicating 
-#' the type of data in the raster - i.e., is each grid cell only a single level of 
-#' a covariate, or can it contain proportions of multiple levels
+#' @param data_rast A[`SpatRaster` that can be used to project a model.
+#' @param mod_data A `data.frame`, or list (`INLA`), of the data used to fit the 
+#' model
+#' @param input_type A `character`, either "binary" or "non-binary", indicating 
+#' the type of data in the raster - i.e., is each 'grid cell' only a single level of 
+#' a covariate, or can it contain proportions of multiple levels.
+#' 
+#' @return SpatRaster
+#' 
 #' @keywords data, preparation, model, projection
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   r <- terra_covar_prep(covar_nm, covar_df, data_rast, mod_data, input_type = "binary")
 #' } 
 #' @noRd
-terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type = "binary"){
+terra_covar_prep <- function(covar_nm, 
+                             covar_df, 
+                             data_rast, 
+                             mod_data, 
+                             input_type = "binary"){
   # TODO: better term than binary
   
   # Assertions
@@ -1697,8 +1707,6 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
   # get variable level IDs
   # What if mod_data[[covar_nm]] is not a factor!!?? - manually set... 
   # - or, should this be dealt with previously! - i.e in hib_fit... - for brms
-  # unique(mod_data[[covar_nm]])
-  # 1:dplyr::n()
   fac_lev_df <- data.frame(ID = as.numeric(mod_data[[covar_nm]]),
                            category = mod_data[[covar_nm]]) |>
     unique()
@@ -1725,8 +1733,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     # terra::values(lyr) <- covar_level_numeric
     # Or, set all cells to that lyr value - and then rely on subsequent multiplication
     # to remove 0s and NAs...
-    
-    # TODO: is ".," needed in terra::categories ??
+
     if (input_type == "non-binary"){
       lyr <- lyr |>
         terra::as.factor() |>
@@ -1744,9 +1751,7 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
     r <- r |>
       max() |>
       terra::as.factor() |>
-      terra::categories(
-                        # layer = 0,
-                        value = fac_lev_df)
+      terra::categories(value = fac_lev_df)
     
   }
   
@@ -1757,35 +1762,48 @@ terra_covar_prep <- function(covar_nm, covar_df, data_rast, mod_data, input_type
 }
 
 
-#' A helper function to project a model using SpatRaster data
+#' terra_proj_lme4_pred: A helper function to project a model using SpatRaster data
 #' 
 #' @description 
-#' This function projects/predicts the supplied model using the SpatRaster 
-#' @details 
-#' Expects a fitted lme4 model and a [`SpatRaster`].
-#' @param mod A [`merMod`] object 
-#' @param data A [`SpatRaster`], prepared for projection
-#' @param backtransform A [`function`] that can backtransform the response variable
-#' to its original/natual scale.
-#' @param lme4_specs A list containing details relevant to projecting an lme4-style
-#' model. Specifically, named items should consist of 'bootstrap' [`logical`], and 
-#' 'n_boot' [`numeric`], indicating whether bootstrapped prediction intervals should be 
-#' estimated, and if so, how many bootstrap samples should be used.
-#' In addition, 'calc_se' ([`logical`]) is used to specify whether or not a standard
-#' error based uncertainty estimate (via marginaleffects) is calculated and used 
-#' to generate confidence intervals.
-#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
-#' generated via bootstrapping or the se-based approach. Values should fall between
+#' This function projects/predicts the supplied model using the SpatRaster
+#'  
+#' @param mod An `lme4::merMod` object 
+#' @param data A `SpatRaster`, prepared for projection
+#' @param backtransform A `function` (or `NULL`) that can backtransform the 
+#' response variable to its original/natual scale.
+#' @param lme4_specs A named `list` (or `NULL`) containing details relevant to 
+#' projecting a `HibModelLME4`. \cr
+#' Named items should consist of:
+#' - `bootstrap` (`logical`), indicating whether bootstrapped prediction intervals 
+#' should be estimated. Can be slow for large models.
+#' - `n_boot` (`numeric`), how many bootstrap samples should be used to estimate
+#' prediction uncertainty.
+#' - `calc_se` (`logical`), specify whether or not a standard error based uncertainty 
+#' estimate (via [`marginaleffects::predictions`]) is calculated and used to generate prediction 
+#' intervals.
+#' - `conf_level` (`numeric`) is used to specify the confidence levels of intervals 
+#' generated via bootstrapping or the SE-based approach. Values should fall between
 #' 0 and 1, typically in the range 0.5 to 0.95.
-#' Additionally, 're_form', as 're.form' in lme4:::predict.merMod(), used to specify random
-#' effects to condition on when predicting an lme4 model (formula, NULL, or NA).
+#' Multiple values can be provided.
+#' - `re_form` (`formula`, `NULL`, or `NA`), as `re.form` in [`predict.merMod()`], 
+#' used to specify random effects to condition on when predicting.
+#' 
+#' @return SpatRaster
+#' 
 #' @keywords model, projection
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#' 
 #' @examples 
 #' \dontrun{
-#'   pred <- terra_proj_lme4_pred(mod, data, backtransform)
+#'   pred <- terra_proj_lme4_pred(mod, data, backtransform, lme4_specs)
 #' } 
 #' @noRd
-terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_specs){
+terra_proj_lme4_pred <- function(mod, 
+                                 data, 
+                                 backtransform, 
+                                 lme4_specs){
               
   # TODO: silent/verbose arg - use if multiple layers in input raster, or a list...
 
@@ -1915,10 +1933,7 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_specs){
     
     data_pred <- backtransform(data_pred)
     p_gt_0_btr <- all(terra::values(data_pred, na.rm = T) > 0)
-    # print(p_gt_0_orig)
-    # print(p_gt_0_btr)
-    # print(data_pred)
-
+    
     if ((p_gt_0_orig & !p_gt_0_btr)){
       message(crayon::yellow("\nWarning: backtransformation of predictions introduced negative values!"))
     }
@@ -1930,34 +1945,46 @@ terra_proj_lme4_pred <- function(mod, data, backtransform, lme4_specs){
 
 
 # %%%%
-#' A helper function to project a model using SpatRaster data
+#' terra_proj_brms_pred: A helper function to project a model using SpatRaster data
 #' 
 #' @description 
 #' This function projects/predicts the supplied model using the SpatRaster 
-#' @details 
-#' Expects a fitted brms model and a [`SpatRaster`].
-#' @param mod A [`brmsfit`]  object 
-#' @param data A [`SpatRaster`], prepared for projection
-#' @param backtransform A [`function`] that can backtransform the response variable
-#' to its original/natual scale.
-#' @param brms_specs A [`list`] containing details relevant to projecting a brms-style
-#' model. Specifically, named item should consist of 'incl_obs_uncert' ([`logical`]) 
-#' to determine whether or not observation-level uncertainty is included in predictions.
-#' Setting this parameter to TRUE will produce predictions with larger uncertainty, using
-#' [`predict.brmsfit()`], setting to FALSE calls [`fitted.brmsfit()`] internally.
-#' 'conf_level' ([`numeric`]) is used to specify the confidence levels of intervals 
-#' generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95, 
-#' internally converted to quantiles and passed to the probs argument of [`predict.brmsfit()`]/
-#' [`fitted.brmsfit()`].
-#' Additionally, 're_form', as 're_formula' in [`predict.brmsfit()`], used to specify random
-#' effects to condition on when predicting a brms (formula, NULL, or NA).
+#'
+#' @param mod A `brms::brmsfit` object 
+#' @param data A `SpatRaster`, prepared for projection
+#' @param backtransform A `function` (or `NULL`) that can backtransform the 
+#' response variable to its original/natual scale.
+#' @param brms_specs A named `list` (or `NULL`) containing details relevant to 
+#' projecting a `HibModelBRMS`.
+#' Named items should consist of:
+#' - `incl_obs_uncert` (`logical`), to determine whether or not observation-level 
+#' uncertainty is included in predictions.
+#' Setting this parameter to `TRUE` will produce predictions using
+#' [`predict.brmsfit()`] (larger uncertainty), setting to `FALSE` calls 
+#' [`fitted.brmsfit()`] internally.
+#' - `conf_level` (`numeric`) is used to specify the confidence levels of intervals 
+#' generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95. 
+#' Internally converted to quantiles and passed to the `probs` argument of `predict.brmsfit()`/
+#' `fitted.brmsfit()`.
+#' - `re_form` (`formula`, `NULL`, or `NA`), as `re_formula` in `predict.brmsfit()`, 
+#' used to specify random effects to condition on when predicting.
+#' 
+#' @return SpatRaster
+#' 
 #' @keywords model, projection
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#' 
 #' @examples 
 #' \dontrun{
-#'   pred <- terra_proj_brms_pred(mod, data, backtransform)
+#'   pred <- terra_proj_brms_pred(mod, data, backtransform, brms_specs)
 #' } 
 #' @noRd
-terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
+terra_proj_brms_pred <- function(mod, 
+                                 data, 
+                                 backtransform, 
+                                 brms_specs){
   
   # TODO: silent/verbose arg - use if multiple layers in input raster, or a list...
 
@@ -1972,8 +1999,7 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   # %%%
   # Project
   # TODO: could also incl df.. - more general
-  
- 
+
   # %%%%%
   # %%%%%
 
@@ -1982,16 +2008,13 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
 
   message(crayon::green("\nProjecting model..."))
   if (brms_specs$incl_obs_uncert == T){
-  # if (incl_obs_uncert == T){
     mean_pred <- terra::predict(data,
                                 mod,
-                                # re_form = NA,
                                 re_form = brms_specs$re_form,
                                 probs = conf_quants,
                                 na.rm = T)
     med_pred <- terra::predict(data,
                                mod,
-                               # re_form = NA,
                                re_form = brms_specs$re_form,
                                robust = T,
                                na.rm = T)
@@ -2015,15 +2038,13 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   # And for incl_obs_uncert == F
   # Needs fitted, uses a df...
   if (brms_specs$incl_obs_uncert == F){
-  # if (incl_obs_uncert == F){
     tmp_df <- terra::as.data.frame(data, xy = T)
-    # brms::fitted.brmsfit
     mean_pred <- stats::fitted(mod, tmp_df, 
                         scale = "response", # brms_specs$scale
                         re_form = brms_specs$re_form,
                         probs = conf_quants) |>
       as.data.frame()
-    # brms::fitted.brmsfit
+
     median_pred <- stats::fitted(mod, tmp_df, 
                           scale = "response", # brms_specs$scale
                           re_form = brms_specs$re_form,
@@ -2064,29 +2085,33 @@ terra_proj_brms_pred <- function(mod, data, backtransform, brms_specs){
   return(data_pred)
 }
 
-
-# terra_proj_inla_pred <- function(obj, data, backtransform, rescal_pred){
+# TODO:
+# terra_proj_inla_pred <- function(obj, data, backtransform, rescale_pred){
 #   # Assertions...
 #   
 # }   
 
-#' A helper function to wrap the preparation of SpatRaster data and then return
-#' a dataframe - for use in inla model projections
+
+#' terra_to_df_inla: A helper function to wrap the preparation of SpatRaster data 
+#' and then return a dataframe - for use in INLA model projections
 #' 
 #' @description 
-#' This function prepares a terra rast for use in INLA projections
-#' Returns a dataframe
-#' @details 
-#' Expects a [`SpatRaster`].
-#' @param data A [`SpatRaster`] that can be used to project a model.
-#' @param obj A [`HibModelINLA`] object.
-#' @param fix_vars Model fixed effects
-#' @param rand_vars Model random effects
-#' @param re_form_vars Model random effects to condition upon when predicting
+#' This function prepares a SpatRaster for use in INLA projections
+#' 
+#' @param data A `SpatRaster` that can be used to project a model.
+#' @param obj A `HibModelINLA` object.
+#' @param fix_vars A `character` vector of model fixed effects.
+#' @param rand_vars A `character` vector of model random effects.
+#' @param re_form_vars A `character` of model random effects to condition upon 
+#' when predicting.
+#' 
+#' @return data.frame
+#' 
 #' @keywords model, projections
+#' 
 #' @examples 
 #' \dontrun{
-#'   tmp_df <- terra_to_df_inla(obj, data, fix_vars)
+#'   tmp_df <- terra_to_df_inla(obj, data, fix_vars, rand_vars, re_form_vars)
 #' } 
 #' @noRd
 terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
@@ -2103,10 +2128,8 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
   )
   # Covar checks
   
-  # TODO: What about non-fix (random) variables
-
   if (all(fix_vars %in% names(data))){
-    # TODO: also check for all ranefs... re_form_vars
+    # also check for all ranefs... re_form_vars
     if (all(re_form_vars %in% names(data))){
       # convert terra to df...
       data_df <- terra::as.data.frame(data, xy = T)
@@ -2131,7 +2154,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
   } else {
     # Any layer with a name in fix_vars is good to use 
     covars_in_rast <- names(data)[names(data) %in% fix_vars]
-    # TODO: also get ranefs. - assume not proportions/binary - as in model
+    # also get ranefs. - assume not proportions/binary - as in model
     if (!all(is.na(re_form_vars))){
       ranefs_in_rast <- names(data)[names(data) %in% re_form_vars]
       covars_in_rast <- c(covars_in_rast, ranefs_in_rast)
@@ -2146,12 +2169,11 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
     
     # any layer with a name not in fix_covars needs to be aligned to a var
     non_covars_in_rast <- names(data)[!names(data) %in% fix_vars]
-    # TODO: drop ranefs in data from non_covars_in_rast
+    # drop ranefs in data from non_covars_in_rast
     # Easy way to drop ranefs_in_rast 
     non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% covars_in_rast]
     # But, also want to drop ranefs that aren't in rast from non_covars_in_rast
     non_covars_in_rast <- non_covars_in_rast[!non_covars_in_rast %in% rand_vars]
-
 
     tmp_rast <- NULL
     if (length(non_covars_in_rast) > 0 ){
@@ -2166,15 +2188,13 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
       # for each covar, get unique levels (if factor in mod_df)
 
       # Use model-fitting data from obj$model...
-      # lmer: @frame
       # inla: $.args$data
-      # brms: @frame
       
       # inla fit data,
       if (inherits(obj$model, "inla")){
         fit_dat <- obj$model$.args$data
       }
-      # if (is.factor(fit_dat[[x]]))
+      
       covars_not_in_rast <- purrr::map_dfr(covars_not_in_rast,
                                            function(x){
                                              if (is.factor(fit_dat[[x]])){
@@ -2266,10 +2286,8 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
         n_prop_covar_lyrs <- dim(tmp_prop_rast)[3]
       }
       # Check tmp_prop_rast is a terra SpatRaster
-      # Could optionally exit here if prepping for inla...
       
     }
-    # Everything to here is also useful for inla...
     
     # check N layers of each
     # if n_prop_covar_lyrs > 1  - list of rasters - each named based on covar level
@@ -2283,7 +2301,7 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
       tmp_pred_df_ls <- vector("list", n_prop_covar_lyrs)
       names(tmp_pred_df_ls) <- rep("", n_prop_covar_lyrs)
       for (i in 1:n_prop_covar_lyrs){
-        # TODO: need to be careful combining these, if first item is null,
+        # need to be careful combining these, if first item is null,
         # output becomes a list of 1...
 
         # %%%
@@ -2328,7 +2346,6 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
         
         prop_df$prop_cover <- prop_df[[lyr_orig_nm]]
         # rename lyr_orig_nm as prop_cover
-
         tmp_pred_df_ls[[i]] <- dplyr::left_join(tmp_df, 
                                                 prop_df[,c("x", "y", "prop_cover")],
                                                 by = c("x", "y"))
@@ -2354,21 +2371,26 @@ terra_to_df_inla <- function(data, obj, fix_vars, rand_vars, re_form_vars){
 }
 
 
-#' An internal helper function to check that the data provided for the projection 
+#' check_covar_levels: An internal helper function to check that the data provided for the projection 
 #' does not contain any factor-levels that are not in the model fitting data.
 #' 
 #' @description 
 #' This function checks whether the supplied projection data is compatible with
-#' the supplied model
+#' the supplied model.
 #' Returns either nothing (NULL, input data passes checks), or throws an error 
 #' (input data fails checks)
 #' 
-#' @details 
-#' Expects a model object (lme4/brms/?inla?).
-#' @param mod A fitted model, either from lme4, inla or brms
+#' @param mod A fitted model, either from `lme4`, `INLA` or `brms`.
 #' @param proj_dat The prepared data used to predict from
 #' @param covars The fixed-effect covariates in the model # TODO: could also be ranefs
-#' @keywords model projections data checks
+#' 
+#' @return NULL
+#' 
+#' @keywords model projections, data checks
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   check_covar_levels(model, projection_df, fixed_covars)
@@ -2481,6 +2503,7 @@ check_covar_levels <- function(mod, proj_dat, covars){
     stop("Unknown covariate levels, see above.", call. = F)
   }
 }
+
 # compare data to use for projection with model fitting data - unique values of 
 # categorical covars
 # input1: fited model object (just model, not hib model object) (or just model fitting df)
@@ -2501,16 +2524,26 @@ check_covar_levels <- function(mod, proj_dat, covars){
 
 
 
-#' An internal helper function to convert confidence levels to associated quantiles.
+#' conf_level_to_quantiles: An internal helper function to convert confidence 
+#' levels to associated quantiles.
 #' 
 #' @description 
-#' This function converts onfidence levels to the associated quantiles. e.g., 
+#' This function converts confidence levels to the associated quantiles. e.g., 
 #' converting c(0.5, 0.9) to c(0.05 0.25 0.75 0.95)
 #' 
 #' @details 
 #' Expects a numeric vector
-#' @param x A numeric vector of confidence levels between 0 and 1, typically
+#' 
+#' @param x A `numeric` vector of confidence levels between 0 and 1, typically
 #' 0.5 to 0.95.
+#' 
+#' @return numeric
+#' 
+#' @keywords model projections, data checks
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   conf_level_to_quantiles(c(0.5, 0.9, 0.95))
@@ -2530,16 +2563,23 @@ conf_level_to_quantiles <- function(x){
 }
 
 
-#' An internal helper function to check model projection specs.
+#' check_proj_specs: An internal helper function to check model projection specs.
 #' 
 #' @description 
 #' This function checks and corrects model projection specs.
+#' If specifications are missing, default options are added.
 #' 
-#' @details 
-#' Expects a list of specs and a model type
-#' @param specs A list of model specs - for details see lme4_specs, inla_specs 
-#' and brms_specs arguments to hib_project_model.
-#' @param mod_type A character indicating the model type
+#' @param specs A named `list` of model specs - for details see `lme4_specs`, 
+#' `inla_specs` and `brms_specs` arguments to `hib_project_model.`
+#' @param mod_type A `character` indicating the model type.
+#' 
+#' @return list
+#' 
+#' @keywords model projections, data checks
+#' 
+#' @seealso 
+#' \code{\link{hib_project_model}}
+#'  
 #' @examples 
 #' \dontrun{
 #'   check_proj_specs(lme4_specs, "lme4")

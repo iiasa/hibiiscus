@@ -21,7 +21,7 @@ test_that("Check that hib_site_contrasts works as expected.", {
                                                    "geogr_dist_hav", "geogr_dist_geod",
                                                    "geogr_midpoint"),
                                        baseline_lui = "Primary"),
-               regexp = "baseline_lui")
+               regexp = "baseline not in LUI column")
   
   # -Incorrect metric input
   expect_error(hib_calc_site_contrasts(tmp_db,

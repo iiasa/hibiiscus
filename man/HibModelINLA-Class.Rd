@@ -4,7 +4,7 @@
 \alias{HibModelINLA}
 \title{HibModelINLA}
 \description{
-This is the template object for an \link[R6:R6Class]{R6} INLA model class.
+This is the template object for an \link[R6:R6Class]{R6} \link{INLA} model class.
 It contains functions for summarising and visualising the model results.
 }
 \details{
@@ -24,7 +24,7 @@ Identifies the most recent update to the object (YYYY-MM-DD).}
 The data used in model fitting.}
 
 \item{\code{model}}{(\code{inla})\cr
-The inla model object.}
+The \code{INLA::inla} model object.}
 
 \item{\code{processing_flags}}{(\code{list()})\cr
 Identifies the processing steps used for the HibDatabase
@@ -140,7 +140,9 @@ Number of species contributing to the fitted model.}
 Number of orignal taxa names contributing to the fitted model.}
 
 \item{\code{n_sites}}{(\code{integer})\cr
-Number of sites contributing to the fitted model.}
+Number of sites contributing to the fitted model.
+
+@return (\code{HibModelINLA})}
 
 \item{\code{metr_ls}}{(\code{list})\cr
 The list of model performance metrics.}

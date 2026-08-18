@@ -1,4 +1,4 @@
-#' Internal function to create dummy data for PREDICTS style models
+#' create_dummy_data: Internal function to create dummy data for PREDICTS-style models
 #' 
 #' @description
 #' The package itself should not contain or reference any external datasets
@@ -20,14 +20,20 @@
 #' dummy data.
 #' @param ui_legend [`character`] of the use-intensity legend to be generated for the 
 #' dummy data.
+#' 
+#' @return data.frame
+#' 
 #' @examples
 #' \dontrun{
 #'   out <- create_dummy_data()
 #'   # Save in hibiscus data folder (lazy loading enabled)
 #'   save(out, "data/dummy_data.rda")
 #' }
+#' 
 #' @import stringi 
+#' 
 #' @keywords internal
+#' 
 #' @author Martin Jung
 #' @noRd
 create_dummy_data <- function(what = "sites",
@@ -140,7 +146,6 @@ create_dummy_data <- function(what = "sites",
     # %%%%%%%%%%
 
   } else {
-    # stop("Not yet implemented!")
     # %%%%%%%%%%%%%%%%
     # for dev testing
     # n_studies <- 20
@@ -206,7 +211,6 @@ create_dummy_data <- function(what = "sites",
                               dplyr::rename(Latitude = Y,
                                             Longitude = X))
     # %%%%%%%%%%
-    # TODO
     # Intersect each data point with the map (and get country, +)
     # continent, region_un, formal_en, admin
 
@@ -217,7 +221,7 @@ create_dummy_data <- function(what = "sites",
       apply(1, which)
       
     # Extract some geographic info, note that region_un and subregion are not 
-    # qute aligned with UN_region/UN_subregion
+    # quIte aligned with UN_region/UN_subregion
     extra_dat <- as.data.frame(map)[map_samp_idx,
                                     c(#"continent", 
                                       "region_un", 
@@ -233,7 +237,6 @@ create_dummy_data <- function(what = "sites",
 
     out <- dplyr::bind_cols(out,
                             extra_dat)
-    # message(head(out))
     # %%%%%%%%%%
     
     # spp abund sampling...

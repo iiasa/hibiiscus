@@ -1,48 +1,61 @@
-
-#' Cross-validate a fitted hib mixed-effects model
+#' hib_cv_model: Cross-validate a fitted hibiiscus mixed-effects model
 #' 
 #' @description 
-#' This function re-fits models on different subsets of the data, so that subsequent 
-#' evaluation of model performance can take place.
+#' This function re-fits models on different subsets of the data, and estimates 
+#' a range of error metrics allowing for evaluation of model predictive performance.
+#' 
 #' @details 
-#' Expects a HibModel.
+#' This function allows for model evaluation using multiple cross-validation 
+#' strategies, and multiple random effects structures.
+#' It returns a HibCV object, which includes the original model, insample and CV 
+#' performance for multiple evaluation metrics, model coefficients estimated per
+#' cross-validation fold.
+#' 
 #' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
-#' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
-#' sources, a list of database objects
-#' @param fold_type A [`character`] indicating the type of cross-validation; one
+#' @param db_obj A [`HibDatabase`] object, or, if the above model used multiple 
+#' data sources, a `list` of `HibDatabase` objects.
+#' @param fold_type A `character` indicating the type of cross-validation; one
 #' of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", 
-#'     "Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom"
-#' @param custom_col A [`character`] indicating the column in the model data to 
-#' use to define cross-validation folds, when fold_type == "Custom"
-#' @param random_seed A [`numeric`] indicating the random seed used to define
-#' random cross-validation folds - only used if 'Random-X' in fold_type
+#'     "Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom".
+#' @param custom_col A `character` indicating the column in the model data (`sites` 
+#' data.frame) to use to define cross-validation folds, when `fold_type == "Custom"`.
+#' @param random_seed A `numeric` indicating the random seed used to define
+#' random cross-validation folds - only used if 'Random-X' in `fold_type`.
 #' @param backtransform A function to convert the model prediction back to the original
-#' scale of interest
-#' @param re_form A [`list`] indicating the random effects variables to be
+#' scale of interest. The inverse of any transformation used in model fitting.
+#' @param re_form A `list` indicating the random effects variables to be
 #' included in the cross-validation/insample predicitons - if multiple items supplied,
-#' each option will be used in a separate cv prediction.
-#' Values can be either NA (no random effects), NULL (all random effects), or a
-#' rhs formula specifying particular random effects to include.
+#' each option will be used in a separate cross-validated prediction.
+#' Values can be either `NA` (no random effects), `NULL` (all random effects), or a
+#' rhs `formula` specifying particular random effects to include. \cr
 #' Note: only test set data points with random-effect values present in the 
-#' training data will have predictions if re_form is not NA.
-#' @param use_original_mesh A logical value indicating whether cross-validation
-#' of spatial INLA models should use the original mesh for all cv folds. Computationally
-#' this is slightly more efficient, but may affect cv performance metrics - witheld
+#' training data will have predictions if `re_form` is not `NA`.
+#' @param use_original_mesh A `logical` value indicating whether cross-validation
+#' of spatial `INLA` models should use the original mesh for all CV folds. Computationally
+#' this is slightly more efficient, but will impact CV performance metrics as 'withheld'
 #' sites will still exist in the mesh. 
+#' 
+#' @returns HibCV
+#' 
 #' @keywords model, evaluation
+#'
+#' @seealso
+#' [HibCV]
+#' 
 #' @examples 
 #' \dontrun{
-#'   cv_out <- hib_mod_cv(mod_obj, db_obj, fold_type = "UN_region")
+#'   cv_out <- hib_cv_model(mod_obj, db_obj, fold_type = "Random-10")
 #' } 
+#' 
 #' @export
-hib_cv_model <- function(mod_obj, db_obj, fold_type, 
-                       custom_col = NULL,
-                       random_seed = NULL,
-                       re_form = list(NA),
-                       backtransform = NULL,
-                       use_original_mesh = NULL){
-  # hib_mod_cv
-  # TODO: option to just use original mesh for inla cv - override mesh_source
+hib_cv_model <- function(mod_obj, 
+                         db_obj, 
+                         fold_type, 
+                         custom_col = NULL,
+                         random_seed = NULL,
+                         re_form = list(NA),
+                         backtransform = NULL,
+                         use_original_mesh = NULL){
   # TODO: custom_error_func = list(NA)
   # should be a named list list("Metric_name" = function)
 
@@ -62,7 +75,6 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
   # Align input args with available options
   fold_type <- match.arg(fold_type,
                          c("Random-2", "Random-3", "Random-5", "Random-10", 
-                           # "Random",
                            "Source_ID", "SS", #"SSBS",
                            "Country", "UN_subregion", "UN_region",
                            "Biome", "Realm",
@@ -70,8 +82,7 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
                          several.ok = T)
   fold_type <- unique(fold_type)
   
-  # print(grepl("Random-", fold_type))
-  # print(random_seed)
+  
   if ((any(grepl("Random-", fold_type)) & is.null(random_seed)) ){
     random_seed <- 123
   }
@@ -152,7 +163,7 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
   }
 
   mod_specs <- get_model_info(mod_obj, re_form, use_original_mesh)
-  # print(mod_specs)
+  
   # Update within-function vars based on mod_specs
   rand_vars <- mod_specs$rand_vars
   re_form_vars <- mod_specs$re_form_vars
@@ -168,15 +179,13 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
                                  rand_seed = random_seed,
                                  re_f = re_form,
                                  backtr = backtransform,
-                                 # orig_mesh = use_original_mesh,
                                  mod_specs_ = mod_specs){
                           hib_cv_mod_inner(mod_, db_, fold_type, fold_col, 
-                                           rand_seed, re_f, backtr, #orig_mesh,
+                                           rand_seed, re_f, backtr, 
                                            mod_specs_)
                         })
   
   # TODO: drop cv item if n_folds == 1
-  # cv_out[[i]]n_folds
   cv_idx <- purrr::map(cv_out,
                        function(x){
                          x$n_folds > 1
@@ -193,7 +202,6 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
 
   if (inherits(mod_obj, "HibModelLME4")){
     # In-sample preds
-    # orig_form <- stats::formula(mod_obj$model)
     orig_form <- mod_specs$lme4_specs$orig_form
 
     for (i in seq_along(re_form)){
@@ -211,7 +219,6 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
     # message(crayon::yellow("Warning: INLA insample prediction in development, current output is preliminary!"))
     
     # In-sample preds
-    # insample_df <- mod_obj$data
     insample_df_ls <- vector("list", length(re_form))
 
     # Need orig_form (user supplied$response_fixed) to edit/backtransform response 
@@ -222,12 +229,7 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
     fitted_form_ <- mod_obj$inla_fitted_formula
     orig_fam <- mod_obj$model$.args$family
 
-    # ??: use mod_specs$inla_specs
-    # orig_form <- mod_specs$inla_specs$orig_form
-    # fixed_covars <- all.vars(orig_form[3])
-    # fitted_form_ <- mod_specs$inla_specs$fitted_form_
-    # orig_fam <- mod_specs$inla_specs$orig_fam
-    
+  
     stk_te_ls <- vector("list", length(re_form))
     # Make a new inla stack for test predictions
     stk_te <- mod_obj$inla_stack
@@ -255,22 +257,8 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
       tmp_df <- mod_obj$data
       tmp_df$Random_effect_form <- as.character(re_form[i])
       insample_df_ls[[i]] <- tmp_df
-    }
+    }    
 
-      # X_te <- dplyr::bind_rows(pred_df_ls)
-    
-    
-    # stk_te_ls
-    # # Drop iid random effects
-    # # rand_vars <- all.vars(mod_obj$user_formula$random)
-    
-    # # TODO: what about incl some based on a re_form arg??
-    # # for (i in seq_along(re_form){stk_te_i <- ...}
-
-    # stk_te$effects$data <- stk_te$effects$data |> 
-    #   dplyr::mutate_at(rand_vars, ~ NA)
-
-    # print(head(stk_te$effects$data))
     # Combine stacks - does this work?
     comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
                                  stk_te_ls[[1]])
@@ -280,9 +268,6 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
                                    stk_te_ls[[i]])
       }
     }
-    
-    # comb_stk <- INLA::inla.stack(mod_obj$inla_stack,
-    #                              unlist(stk_te_ls))
     
     if (length(fixed_covars) > 0){
       check_flag <- 0
@@ -312,7 +297,7 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
     }
     
     
-    # TODO
+    
     for (i in seq_along(re_form)){
       tag_ <- paste0("te__", paste(re_form_vars[[i]], collapse = "_"))
 
@@ -331,9 +316,10 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
 
     insample_df <- dplyr::bind_rows(insample_df_ls)
     # %%%%%
-    # # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
   }
   
+
   if (inherits(mod_obj, "HibModelBRMS")){
     # In-sample preds
     orig_form <- mod_obj$model$formula$formula
@@ -377,9 +363,6 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
               tmp
               }) |> 
     dplyr::bind_rows()
-  # insample_metrics <- calc_cv_metrics(insample_df$prediction, 
-  #                                     insample_df$y, 
-  #                                     insample_df$error)
   
   insample_res = list(insample_pred_df = insample_df, 
                       insample_metrics = insample_metrics)
@@ -405,7 +388,7 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
   }
   # %%%
   
-  # Return a cv object.. - incl original model? + df of cv predictions 
+  # Return a cv object.. - incl original model + df of cv predictions 
   # initialise cv_output...
   message(crayon::green("\nCollating cross-validation output ..."))
   
@@ -419,38 +402,41 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
   return(cv_obj)
 }
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-#' Cross-validate a fitted hib_XX_model
+#' hib_cv_mod_inner: Cross-validate a fitted HibModelXXX - internal function
 #' 
 #' @description 
-#' This function re-fits the model on different subsets of the data, so that subsequent 
-#' evaluation of model performance can take place.
+#' This function re-fits the provided model on different subsets of the data, 
+#' so that subsequent evaluation of model performance can take place.
+#' 
 #' @details 
-#' Expects a HibModel object.
+#' Runs the cross-validation of a model.
+#' 
 #' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
 #' @param db_obj A [`HibDatabase`] object, or, if modelling used multiple data-
 #' sources, a list of database objects
-#' @param fold_type A [`character`] indicating the type of cross-validation; one
+#' @param fold_type A `character` indicating the type of cross-validation; one
 #' of: "Random-2", "Random-3", "Random-5", "Random-10", "Source_ID", "SS", "SSBS",
 #' "Country", "UN_subregion", "UN_region", "Biome", "Realm", "Custom".
-#' @param fold_col A [`character`] indicating the column in the model data to 
-#' use to define cross-validation folds
-#' @param random_seed A [`numeric`] indicating the random seed used to define
+#' @param fold_col A `character` indicating the column in the model data (or sites
+#' data.frame) to use to define cross-validation folds.
+#' @param random_seed A `numeric` indicating the random seed used to define
 #' random cross-validation folds - only used if 'Random-X' in fold_type
 #' @param backtransform A function to convert the model prediction back to the original
 #' scale of interest
-#' @param re_form A [`list`] indicating the random effects variables to be
+#' @param re_form A `list` indicating the random effects variables to be
 #' included in the cross-validation/insample predicitons - if multiple items supplied,
 #' each option will be used in a separate cv prediction.
-#' Values can be either NA (no random effects), NULL (all random effects), or a
-#' rhs formula specifying particular random effects to include.
+#' Values can be either `NA` (no random effects), `NULL` (all random effects), or a
+#' rhs `formula` specifying particular random effects to include.
 #' Note: only test set data points with random-effect values present in the 
-#' training data will have predictions if re_form is not NA.
-#' @param use_original_mesh A logical value indicating whether cross-validation
-#' of spatial INLA models should use the original mesh for all cv folds. Computationally
-#' this is slightly more efficient, but may affect cv performance metrics - witheld
-#' sites will still exist in the mesh. - NO LONGER USED
+#' training data will have predictions if `re_form` is not `NA.`
+#' 
+#' @return list
+#' 
 #' @keywords model, evaluation
+#' 
 #' @examples 
 #' \dontrun{
 #'   cv_out <- hib_cv_mod_inner(mod_obj, db_obj, 
@@ -458,12 +444,13 @@ hib_cv_model <- function(mod_obj, db_obj, fold_type,
 #'                          fold_col  = "Source_ID")
 #' } 
 #' @noRd
-hib_cv_mod_inner <- function(mod_obj, db_obj, 
-                             fold_type, fold_col,
+hib_cv_mod_inner <- function(mod_obj, 
+                             db_obj, 
+                             fold_type, 
+                             fold_col,
                              random_seed = NULL,
                              re_form = list(NA),
                              backtransform = NULL,
-                             # use_original_mesh = NULL, # TODO: drop - now in mod_specs
                              mod_specs = NULL){
   
   # Assertion checks 
@@ -475,7 +462,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     is.numeric(random_seed) || is.null(random_seed),
     is.list(re_form),
     is.function(backtransform) || is.null(backtransform),
-    # is.logical(use_original_mesh) || is.null(use_original_mesh),
     is.list(mod_specs)
   )
   
@@ -534,11 +520,16 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     }
     if ("SSBS1" %in% colnames(mod_obj$data)){
       set.seed(random_seed)
-      fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1))  
+      # fold_df <- data.frame(SSBS = sample(mod_obj$data$SSBS1))  
       # TODO: is this a good idea? - maybe should sample from SSBS1_SSBS2 - to 
       # properly "split" data
       # Especially as SSBS1 will be duplicated many times in data - mostly going
       # to be primary sites - this random sampling could be messy
+
+      # Update: sample rows of mod_obj$data[, SSBS1, SSBS2]
+      idx <- sample(1:nrow(mod_obj$data), nrow(mod_obj$data), replace = F)
+      fold_df <- mod_obj$data[idx, c("SSBS1", "SSBS2")]
+
     }
     
     n_rows <- nrow(mod_obj$data)
@@ -594,20 +585,29 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       cv_data <- orig_data
     }
     if (!fold_col %in% colnames(orig_data)){
-      cv_data <- dplyr::left_join(orig_data,
-                                  fold_df,
-                                  by = c("SSBS1" = "SSBS"))
+      # If random, koin by ssbs1/ssbs2, 
+      if (fold_type %in% c("Random-2", "Random-3", "Random-5", "Random-10")) {
+          cv_data <- dplyr::left_join(orig_data,
+                                      fold_df,
+                                      by = c("SSBS1", "SSBS2"))
+        } else {
+          # otherwise join by ssbs1 = ssbs
+          cv_data <- dplyr::left_join(orig_data,
+                                      fold_df,
+                                      by = c("SSBS1" = "SSBS"))
+        }
+      
     }
   }
   
   fold_ids <- unique(cv_data |> dplyr::pull(!!fold_col))
   n_folds <- length(fold_ids)
-  # print(n_folds)
+  
   # Make a list to store output - length = length(unique(new_df[,fold_var]))
   cv_out_ls <- vector("list", n_folds)
   coef_out_ls <- vector("list", n_folds)
   
-  # TODO: if only one fold !! - need to note this...
+  # if only one fold !! - need to note this...
   if (n_folds == 1){
     message(crayon::yellow(paste0("Warning: ", fold_type_msg, " has only 1 fold... Cross-validation for this specification will not be run.\n")))
     
@@ -624,11 +624,9 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   
   message(crayon::green(paste0("\tTotal number of folds: ", n_folds, "\n\n\tProgress")))
   
-  # TODO: this is only really good for LME4 models, unless we make brms/inla
-  # silent
+  # this is only really good for LME4 models, unless we make brms/inla silent
   if ( (inherits(mod_obj, "HibModelLME4")) | 
         (inherits(mod_obj, "HibModelINLA")) ){
-    # print("WOOP - lme4/inla")
     pb <- utils::txtProgressBar(min = 1, max = max(2, n_folds), style = 3)
   }
   # Get orig_form as a local var..
@@ -638,7 +636,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     orig_form <- mod_specs$lme4_specs$orig_form
   }
   if (inherits(mod_obj, "HibModelINLA")){
-    # incl_weights <- mod_specs$lme4_specs$incl_weights
     incl_weights <- FALSE
     orig_form <- mod_specs$inla_specs$orig_form
     use_original_mesh <- mod_specs$inla_specs$use_original_mesh
@@ -779,12 +776,10 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       # %%%%%%%%%%
       
       # Make X_tr and X_te
-      # print(head(tr))
       X_tr <- tr |> 
         dplyr::select(-y)
       
       # Drop iid random effects from te - where appropriate
-      # rand_vars <- all.vars(orig_form_user_ls$random)
     
       # loop through pred_df_ls, set col to na if not in re_form_vars, but in rand_vars
       for (j in seq_along(re_form)){
@@ -831,8 +826,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
       # If spatial, make and generate mesh...
       if (mod_specs$inla_specs$orig_incl_spatial_term == TRUE){
         
-        # print(orig_mesh_settings)
-        # print()
         # Get lat/long
         if (("Longitude" %in% colnames(X_tr)) &
             ("Latitude" %in% colnames(X_tr)) ){
@@ -862,7 +855,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
             message(crayon::green("Building mesh from original settings.\n"))
             # Need to re-build a mesh - based only on tr points
             # Spatial settings
-            # orig_mesh
             # orig_mesh_settings
             if (mod_specs$inla_specs$orig_mesh_settings$mesh_dim == "3d"){
               # print("Building 3d mesh...")
@@ -969,7 +961,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
         pred_idx <- INLA::inla.stack.index(comb_stk, tag = "te")$data
         tmp_pred <- tmp_m$summary.fitted.values[pred_idx,]
         
-        # X_te <- dplyr::bind_cols(tmp_pred[,c("mean", "0.025quant", "0.975quant")])
         X_te$prediction <- tmp_pred$mean
         X_te$prediction_q2.5 <- tmp_pred$`0.025quant`
         X_te$prediction_q97.5 <- tmp_pred$`0.975quant`
@@ -1034,7 +1025,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     
     if ( (inherits(mod_obj, "HibModelLME4")) |
          (inherits(mod_obj, "HibModelINLA")) ){
-      # print("PROGRESS UPDATE")
+      
       utils::setTxtProgressBar(pb, i)
     }
   }
@@ -1047,6 +1038,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
   cv_out_df <- dplyr::bind_rows(cv_out_ls)
   coef_out_df <- dplyr::bind_rows(coef_out_ls)
   
+  
   # Collate cv outputs
   
   
@@ -1057,7 +1049,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     rand_num <- NA
   }
   
-  # TODO: check nrow of cv_out_df, if 0, skip, return NULL for 
+  # check nrow of cv_out_df, if 0, skip, return NULL for 
   if (nrow(cv_out_df) == 0){
 
     message(crayon::yellow(paste0("Warning: Due to combination of cross-validation approach ( ", 
@@ -1077,6 +1069,20 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     ))
   }
   
+  # check nrow(cv_out_df) == nrow(orig_data) - would this ever not be the case?
+  if (nrow(cv_out_df) != nrow(orig_data)){
+
+    message(crayon::yellow(paste0("Warning: For combination of cross-validation approach ( ", 
+                                  fold_type_msg, 
+                                  " ) and re_form options specified ( ",
+                                  as.character(re_form), 
+                                  " ), total number of out-of-sample predictions )", 
+                                  nrow(cv_out_df),
+                                  ") is different to number of in-sample predictions (", 
+                                  nrow(orig_data),
+                                  ").\n")))
+  }
+  
   # backtransform prediction, y as resp term, 
   if (!is.null(backtransform)){
     cv_out_df <- cv_out_df |>
@@ -1093,7 +1099,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
     dplyr::mutate(error = y - prediction)
   
   # cv metrics
-  # TODO:
   # per Random_effect_form/re_form
   cv_metrics <- purrr::map(as.character(re_form),
             function(x, df = cv_out_df, fld_typ = fold_type_msg){
@@ -1116,6 +1121,7 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
               tmp
             }) |> 
     dplyr::bind_rows()
+
   cv_fold_metrics <- purrr::map(as.character(re_form),
             function(x, df = cv_out_df){
               df_sub <- df |>
@@ -1131,16 +1137,6 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
               tmp
             }) |> 
     dplyr::bind_rows()
-
-  # cv_metrics <- calc_cv_metrics(cv_out_df$prediction, 
-  #                               cv_out_df$y, 
-  #                               cv_out_df$error)
-  
-  # cv_fold_metrics <- calc_per_fold_cv_metrics(cv_out_df$prediction, 
-  #                                             cv_out_df$y, 
-  #                                             cv_out_df$error,
-  #                                             cv_out_df$fold_id)
-  
   
   
   return(list(cv_pred_df  = cv_out_df, 
@@ -1155,17 +1151,20 @@ hib_cv_mod_inner <- function(mod_obj, db_obj,
 }
 
 
-#' Calculate a range of metrics using cross-validation outputs
+#' calc_cv_metrics: Calculate a range of metrics using cross-validation outputs
 #' 
 #' @description 
 #' This function calculates a range of regression-focussed metrics to evaluate 
 #' model performance on cross-validation output
-#' @details 
-#' Expects vectors of predictions, observations, and error
-#' @param pred A [`numeric`] vector of predicted values obtained via cross-validation.
-#' @param obs A [`numeric`] vector of observed values use in model-fitting
-#' @param error A [`numeric`] vector of error (obs - pred)
+#' 
+#' @param pred A `numeric` vector of predicted values obtained via cross-validation.
+#' @param obs A `numeric` vector of observed values use in model-fitting
+#' @param error A `numeric` vector of error `(obs - pred)`
+#'  
+#' @return data.frame
+#' 
 #' @keywords model, evaluation
+#' 
 #' @examples 
 #' \dontrun{
 #'   cv_metrics <- calc_cv_metrics(predictions, observations, error)
@@ -1178,7 +1177,6 @@ calc_cv_metrics <- function(pred, obs, error){
   # nrmse (what base for normalisation??, sd)
   
   # checks - any nas...
-  # align metrics with possible metrics..
 
   # NOTE: relative metrics here use mean of obs or similar as a benchmark
   # but this is the mean over all data and all cv-folds... - may be more appropriate to calc 
@@ -1222,15 +1220,13 @@ calc_cv_metrics <- function(pred, obs, error){
   
   mae <- mean(ae, na.rm = T)
   
-  # %%%%%
-  # 20240214: Update included metrics, reduce reduncancy and add some new ones.
   # medae
   medae <- stats::median(ae, na.rm = T)
 
   # nmae
   # # nmae <- mae / obs_mean
 
-  # rae (equivalent to mase - as formulted here) - done
+  # rae (equivalent to mase - as formulated here) - done
   rae <- sum(ae, na.rm = T) / sum(abs(obs_minus_obs_mean), na.rm = T)
 
   # mrae (mean)
@@ -1283,9 +1279,8 @@ calc_cv_metrics <- function(pred, obs, error){
   mape <- mean( abs( error / obs), na.rm = T ) * 100
 
   # smape <- mean( (ae / ( (pred + obs) / 2) ), na.rm = T ) * 100 OLD version
-  # TODO: update smape to 0-100 scale
+  # smape on 0-100 scale
   smape <- mean( (ae / ( abs(pred) + abs(obs) ) ), na.rm = T ) * 100
-  
   # TODO: if pred_i == obs_i == 0, need to set term i to 0...
   # Currently such an error is ignored (NA rm), but incl it would lead to smaller
   # error!
@@ -1294,6 +1289,7 @@ calc_cv_metrics <- function(pred, obs, error){
   # if (length(idx_00) > 0){ appo[idx_00] <- 1}
   # smape <- mean( (ae /  appo )  ) * 100
 
+  
   # nrmse_sd <- rmse / sd(pred, na.rm = T) OLD version - but maybe better?!
   # Alternative
   # nrmse <- rmse / obs_mean
@@ -1310,7 +1306,7 @@ calc_cv_metrics <- function(pred, obs, error){
   rmsle <- sqrt(mean( ( log(obs + 1) - log(pred + 1) )^2 , na.rm = T))
   
   rse <- sum(error^2, na.rm = T) / sum( obs_minus_obs_mean^2 , na.rm = T)
-  # This is a bit different to sum(error^2 / obs_minus_obs_mean^2) - but still okay??
+  # This is a bit different to sum(error^2 / obs_minus_obs_mean^2) - but still okay
 
   # Can sqrt rse to get back on scale of obs
   # - rrse 
@@ -1370,18 +1366,7 @@ calc_cv_metrics <- function(pred, obs, error){
   N_p_no_NA <- sum(!is.na(pred))
 
   # Make metr into a df
-  
-  # TO ADD
-  # "Median_absolute_error"
-  # "Mean_relative_absolute_error"
-  # "Normalised_mean_squared_error"
-  # "Normalised_root_mean_squared_error_sd"
-  # "Relative_root_mean_squared_error"
-  # "Log_relative_root_mean_squared_error"
-
-  # TO DROP
-  # "Mean_absolute_scaled_error"
-
+  # TODO: make below neater!
   metr_df <- data.frame(Metric = c("Correlation",
                                    "Correlation_squared",
                                    "Mean_error", 
@@ -1488,27 +1473,30 @@ calc_cv_metrics <- function(pred, obs, error){
                                                  "Predictive~R^2")),
       N = N_p_no_NA)
   
-  
   return(metr_df)
 }
 
 
 # %%%%
-#' Calculate a range of per-fold metrics using cross-validation outputs
+#' calc_per_fold_cv_metrics: Calculate a range of per-fold metrics using cross-validation outputs
 #' 
 #' @description 
-#' This function calculates a range of  metrics to evaluate 
-#' model performance on cross-validation output
-#' @details 
-#' Expects vectors of predictions, observations, error, and fold_id
-#' @param pred A [`numeric`] vector of predicted values obtained via cross-validation.
-#' @param obs A [`numeric`] vector of observed values use in model-fitting
-#' @param error A [`numeric`] vector of error (obs - pred)
-#' @param fold_id A [`numeric`] vector of error (obs - pred)
+#' This function calculates a range of metrics to evaluate model performance on 
+#' cross-validation output.
+#' Largely replicates above function to calculate overal metrics.
+#' 
+#' @param pred A `numeric` vector of predicted values obtained via cross-validation.
+#' @param obs A `numeric` vector of observed values use in model-fitting
+#' @param error A `numeric` vector of error `(obs - pred)`
+#' @param fold_id A vector of fold identities
+#' 
+#' @return data.frame
+#' 
 #' @keywords model, evaluation
+#' 
 #' @examples 
 #' \dontrun{
-#'   cv_metrics <- calc_cv_metrics(predictions, observations, error)
+#'   cv_metrics_fold <- calc_per_fold_cv_metrics(predictions, observations, error, fold_vec)
 #' } 
 #' @noRd
 calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
@@ -1592,9 +1580,6 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
                      N = sum(!is.na(pred))
                      ) |>
     dplyr::select(-c(pred_mean, obs_mean)) |>
-    # dplyr::select(fold_id, N, cor_out, cor_sq, me, mede, mae, mape, smape, mse, rmse, nrmse,
-    #               rrmse, rmsle,
-    #               rae, rse, rsq) |> # N
     tidyr::pivot_longer(!c(fold_id, N), 
                         names_to = "Metric_shrt", 
                         values_to = "Metric_val") |>
@@ -1684,21 +1669,23 @@ calc_per_fold_cv_metrics <- function(pred, obs, error, fold_id){
 # %%%%
 
 
-#' Helper function to generate roughly evenly sized random folds
+#' get_rand_fold_id: Helper function to generate roughly evenly sized random folds
 #' 
 #' @description 
 #' This function returns a vector of length n_obs with the values 1:n_folds
-#' @details 
-#' Expects numeric inputs
-#' @param n_obs A [`numeric`] value indicating the number of data points
-#' @param n_folds A [`numeric`] value indicating the number of folds required
+#' 
+#' @param n_obs A `numeric` value indicating the number of data points.
+#' @param n_folds A `numeric` value indicating the number of folds required.
+#' 
+#' @return numeric
 #' @keywords model, evaluation
 #' @examples 
 #' \dontrun{
 #'   fold_ids <- get_rand_fold_id(nrow(df), 5)
 #' } 
 #' @noRd
-get_rand_fold_id <- function(n_obs, n_folds){
+get_rand_fold_id <- function(n_obs, 
+                             n_folds){
   assertthat::assert_that(
     is.numeric(n_obs),
     length(n_obs) == 1,
@@ -1719,26 +1706,29 @@ get_rand_fold_id <- function(n_obs, n_folds){
 }
 
 
-
-
-#' Helper function to collate information about fitted model
+#' get_model_info: Helper function to collate information about fitted model
 #' 
 #' @description 
 #' This function returns a list of model-specific information
-#' @details 
-#' Expects numeric inputs
+#' 
 #' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
-#' @param re_form A [`list`] indicating the random effects variables to be
-#' included in the cross-validation/insample predicitons.
+#' @param re_form A `list` indicating the random effects variables to be
+#' included in the cross-validation/insample predictions.
 #' @param use_original_mesh A logical value indicating whether cross-validation
-#' of spatial INLA models should use the original mesh for all cv folds.
+#' of spatial INLA models should use the original mesh for all CV folds.
+#' 
+#' @return list
+#' 
 #' @keywords model, evaluation, processing
+#' 
 #' @examples 
 #' \dontrun{
 #'   model_info <- get_model_info(mod_lme4_obj, list(NA, ~ (1|SS)))
 #' } 
 #' @noRd
-get_model_info <- function(mod_obj, re_form, use_original_mesh){
+get_model_info <- function(mod_obj, 
+                           re_form, 
+                           use_original_mesh){
   
   # Assertion checks 
   assertthat::assert_that(
@@ -1776,7 +1766,7 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
              out
            })
   
-  # TODO: check for re_form_vars duplicates
+  # check for re_form_vars duplicates
   # How do drop... - just take the first...
   # Message user...
   re_form_usr <- re_form
@@ -1791,13 +1781,11 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
                                   paste(as.character(re_form), collapse = ", "), ")")))
   }
 
-
   mod <- mod_obj$model
   orig_data <- mod_obj$data
   
   # fixed_factor_vars
   # need to get... from fixeff
-  
 
   incl_weights <- FALSE
   if ("data_weight" %in% colnames(orig_data)){
@@ -1949,8 +1937,6 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
     unlist()
   fix_fact_vars <- fix_vars[fix_fact_vars_idx]
   
-  # print(fix_vars)
-  # print(fix_fact_vars)
   
   return(list(mod = mod,
               orig_data = orig_data,
@@ -1968,18 +1954,26 @@ get_model_info <- function(mod_obj, re_form, use_original_mesh){
 }
 
 
-#' Helper function to predict fitted lme4/brms model
+#' predict_lme4_brms_cv: Helper function to predict fitted lme4/brms model
 #' 
 #' @description 
 #' This function returns a df of cross-validated predictions
-#' @details 
-#' Expects numeric inputs
-#' @param mod An [`g/lmerMod`] or [`brmsfit`] object.
-#' @param pred_df_ls A list of 'test' data to make predictions for - each item in
-#' list corresponds to an item in re_form.
-#' @param re_form A [`list`] indicating the random effects variables to be
-#' included in the cross-validation/insample predicitons.
+#' 
+#' @param mod An `g/lmerMod` or `brmsfit` object.
+#' @param pred_df_ls A `list` of 'test' data to make predictions for - each item in
+#' list corresponds to an item in `re_form.`
+#' @param re_form A `list` indicating the random effects variables to be
+#' included in the cross-validation/insample predictions.
+#' 
+#' @return data.frame
+#' 
 #' @keywords model, evaluation, prediction
+#' 
+#' @seealso 
+#' \code{\link[lme4]{lmer}}
+#' \code{\link[lme4]{glmer}}
+#' \code{\link[brms]{brm}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   preds <- predict_lme4_cv(mod_lme4_obj, pred_df_ls, list(NA, ~ (1|SS)))
@@ -2008,6 +2002,7 @@ predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
       )
 
       if (inherits(mod, "brmsfit")){
+        # Always predict on response scale
         tmp_pred <- stats::fitted(mod, pred_df_ls[[i]], 
                           scale = "response", # brms_specs$type, ??
                           re_form = re_form[[i]]) |>
@@ -2016,8 +2011,6 @@ predict_lme4_brms_cv <- function(mod, pred_df_ls, re_form){
           pred_df_ls[[i]]$prediction_q2.5 <- tmp_pred$Q2.5
           pred_df_ls[[i]]$prediction_q97.5 <- tmp_pred$Q97.5
       } else {
-        # print(head(pred_df_ls[[i]]))
-        # print(lme4::fixef((mod)))
         pred_df_ls[[i]]$prediction <- stats::predict(mod, pred_df_ls[[i]], 
                                               type = "response", # lme4_specs$type, ??
                                               re.form = re_form[[i]])

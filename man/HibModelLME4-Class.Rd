@@ -103,7 +103,9 @@ Number of species contributing to the fitted model.}
 Number of orignal taxa names contributing to the fitted model.}
 
 \item{\code{n_sites}}{(\code{integer} or \code{list})\cr
-Number of sites contributing to the fitted model.}
+Number of sites contributing to the fitted model.
+
+@return (\code{HibModelLME4})}
 }
 \if{html}{\out{</div>}}
 }
@@ -147,7 +149,7 @@ Function to generate figures summarising the model.
 \if{html}{\out{<a id="method-HibModelLME4-check_model"></a>}}
 \if{latex}{\out{\hypertarget{method-HibModelLME4-check_model}{}}}
 \subsection{Method \code{check_model()}}{
-Function to assess the model.
+Function to assess the model using the performance package.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{HibModelLME4$check_model()}\if{html}{\out{</div>}}
 }

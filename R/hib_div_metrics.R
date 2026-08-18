@@ -1,12 +1,4 @@
-# TODO: recalculate arg - recalculates metrics specified - over-rules dropping of
-# previously calculated metrics - e.g if re-filtering DB...
-# TODO: check whether or not to use N_spp calculations per site/total 
-# Best_guess_binomial isn't always useful in PREDICTS - e.g. if only a higher 
-# taxonomic level is recorded...
-# TODO: add unequalness 
-# TODO: Hill numbers of various powers? -  
-# TODO: check limits of metric outputs: none should be negative, many should be <=1, 
-# others have a specific max
+# Internal functions used to estimate a range of diversity metrics
 
 
 #' get_n_spp_taxa
@@ -156,6 +148,7 @@ hib_calc_ta <- function(spp_df, measure_var){
 #' 
 #' @description 
 #' This function calculates species richness for each site.
+#'
 #' @details 
 #' Species richness is the number of species (or taxonomic entities) that are 
 #' present in a site.
@@ -243,8 +236,8 @@ hib_calc_sr <- function(spp_df, measure_var){
 #' @return tibble
 #'
 #' @references 
-#' "Simpson, E. H. (1949). Measurement of Diversity. 
-#' Nature, 163(4148), 688–688. https://doi.org/10.1038/163688a0"
+#' Simpson, E. H. (1949). Measurement of Diversity. 
+#' Nature, 163(4148), 688–688. https://doi.org/10.1038/163688a0
 #'
 #' @keywords database, processing, diversity
 #'
@@ -293,15 +286,11 @@ hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
   simp_df$Simpson_diversity[simp_df$Simpson_diversity < 0] <- 0
   simp_df$Simpson_diversity[simp_df$Simpson_diversity > 1] <- 1
   
-  # Above is 'Simpson's Index of Diversity' - 0 = no div, 1 = max div
+  # Above is 'Simpson's Index of Diversity'; 0 = no div, 1 = max div
   # Also known as uncorrected PIE and the Gini-Simpson Index
 
-  # Std Simpson index is...
-  # sum( ( !!dplyr::sym(measure_var) / sum(!!dplyr::sym(measure_var)) )^2 )
-  # 1 = no div, 0 = max div
-
-  # Note: If total abundance == 0 - Simpson will be undefined - should it be set to 0??
-  # But, if only 1 species, index value is 0 - i.e no diversity if all one species...
+  # Note: If total abundance == 0, Simpson will be undefined
+  # If only 1 species, index value is 0 - i.e no diversity if all one species...
   # NaN for empty community seems acceptable 
 
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
@@ -338,8 +327,9 @@ hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
 #' @return tibble
 #' 
 #' @references 
-#' "Chao, A. (1987). Estimating the Population Size for Capture-Recapture Data 
-#' with Unequal Catchability. Biometrics, 43(4), 783–791. https://doi.org/10.2307/2531532"
+#' * Chao, A. (1987). Estimating the Population Size for Capture-Recapture Data 
+#' with Unequal Catchability. Biometrics, 43(4), 783–791. https://doi.org/10.2307/2531532
+#' * https://github.com/timnewbold/predicts-demo/blob/master/predictsFunctions/R/SiteMetrics.R
 #' 
 #' @keywords database, processing, diversity
 #' 
@@ -348,7 +338,7 @@ hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
 #' 
 #' @examples 
 #' \dontrun{
-#'   tib <- hib_calc_chao1(spp_df, measure_var)
+#'   out <- hib_calc_chao1(spp_df, measure_var)
 #' } 
 #' 
 #' @noRd
@@ -374,7 +364,7 @@ hib_calc_chao1 <- function(spp_df, measure_var){
   spp_df <- spp_df |>
     dplyr::filter(Diversity_metric_type == "Abundance" &
                     Diversity_metric_is_suitable_for_Chao) |>
-    # TODO, should this group_by SSBS - if some sites within a study are suitable, why exclude all
+    # Could this group_by SSBS - if some sites within a study are suitable, why exclude all
     dplyr::group_by(SS) |>
     dplyr::filter(all(floor(!!dplyr::sym(measure_var)) == !!dplyr::sym(measure_var))) |>
     dplyr::ungroup() 
@@ -420,6 +410,9 @@ hib_calc_chao1 <- function(spp_df, measure_var){
 #' 
 #' @return tibble
 #'
+#' @references 
+#' https://github.com/timnewbold/predicts-demo/blob/master/predictsFunctions/R/SiteMetrics.R
+#' 
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
@@ -434,11 +427,9 @@ hib_calc_chao1 <- function(spp_df, measure_var){
 hib_calc_rsr <- function(spp_df, measure_var){
   # min_N_samp = 10, N_iter = 100
 
-  # TODO: alternative min N to sample - 10? or min(c(min_TA, min_N))
-  # min_N_samp
+  # TODO: alternative min N to sample (min_N_samp) - 10? or min(c(min_TA, min_N))
   # TODO: alternative (N_iter) - default to 100, but could do 1000? - user specified - store
   
-
   # Assertion checks
   assertthat::assert_that(
     is.data.frame(spp_df),
@@ -460,8 +451,7 @@ hib_calc_rsr <- function(spp_df, measure_var){
   rarefy_comm <- function(abund_distr, N){
     comm <- rep(as.character(1:length(abund_distr)), abund_distr)
     samp <- sample(comm, N)
-    # sr <- length(table(samp))
-    sr <- length(unique(samp)) # more efficient
+    sr <- length(unique(samp))
     return(sr)
   }
   
@@ -499,8 +489,7 @@ hib_calc_rsr <- function(spp_df, measure_var){
     dplyr::group_by(SSBS, SS) |>
     dplyr::summarise(Rarefied_species_richness = mean(sr),
                      min_abund = min_abund[1])
-  # min_N_samp
-  # N_iter
+
   close(pb)
   
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
@@ -758,7 +747,6 @@ hib_calc_shannon <- function(spp_df, measure_var, msg = TRUE){
   # Get N species used
   spp_info <- get_n_spp_taxa(spp_df, measure_var)
 
-  # Store in obj$diversity
   out_tib <- dplyr::tibble(Metric = "Shannon_diversity",
                            Data = list(div_df),
                            N_species_total = spp_info$N_spp,
@@ -766,8 +754,6 @@ hib_calc_shannon <- function(spp_df, measure_var, msg = TRUE){
   
   return(out_tib)
 }
-
-
 
 
 #' hib_calc_pie
@@ -832,7 +818,6 @@ hib_calc_pie <- function(spp_df, measure_var){
     dplyr::filter(Diversity_metric_type == "Abundance") 
   
   # If non-counts in abundance - warning / flag in output
-  # if (measure_var == "Effort_corrected_measurement"){
   if (any(spp_df[,measure_var] %% 1 != 0, na.rm = TRUE)){
     message(crayon::yellow("Warning: use of non-count abudance data could lead to issues calculating PIE..."))
   }
@@ -919,7 +904,6 @@ hib_calc_pie <- function(spp_df, measure_var){
 }
 
 
-
 #' get_eq_ev
 #'
 #' @description 
@@ -935,10 +919,10 @@ hib_calc_pie <- function(spp_df, measure_var){
 #'
 #' @return numeric
 #'
-#' @references "H-R Gregorius, EM Gillet. 2024.
+#' @references H-R Gregorius, EM Gillet. 2024.
 #' On the diversity-based measures of equalness and evenness.
 #' Methods in Ecology and Evolution,
-#' https://doi.org/10.1111/2041-210X.14265"
+#' https://doi.org/10.1111/2041-210X.14265
 #' 
 #' @seealso
 #' [hib_calc_equalness()], [hib_calc_div_within()]
@@ -1000,11 +984,6 @@ get_eq_ev <- function(f, q = 1){
     }
   }
 
-  # out <- data.frame(N = n,
-  #                   div_freq = vf,
-  #                   div_step = vh,
-  #                   ev = ef,
-  #                   eq = eh)
   out <- eh
   return(out)
 }
@@ -1041,7 +1020,7 @@ get_eq_ev <- function(f, q = 1){
 #' @noRd
 hib_calc_equalness <- function(spp_df, measure_var){
   
-  # NOTE: could use evenness from Gregorious? - similar to mine, but - 1 in 
+  # NOTE: could use evenness from Gregorious? - similar to default here, but - 1 in 
   # numerator and denominator
   
   # Assertion checks
@@ -1110,7 +1089,7 @@ hib_calc_equalness <- function(spp_df, measure_var){
 #'  
 #' @export
 hib_calc_div_within <- function(obj, metrics){
-  # hib_db?
+  
   # Assertions
   assertthat::assert_that(
     inherits(obj, "HibDatabase"),
@@ -1122,7 +1101,6 @@ hib_calc_div_within <- function(obj, metrics){
     is.character(metrics)
   )
 
-  # Also need "Diversity_metric" ?
   # TODO:
   # Custom metric - 
   # use "custom_metric" in metrics vec
@@ -1251,8 +1229,6 @@ hib_calc_div_within <- function(obj, metrics){
                          }
                          # TODO:
                          # Alternative evenness? - (1/Simpson)/SR
-                         # Effective N spp (Shannon) - exp(Shannon) ?? - Hill-Shannon
-                         # Effective N spp (Simpson) - 1/Simpson
                          # Coverage-based richness - N spp if 80% of comm sampled
                          
                          # %%%
@@ -1270,7 +1246,6 @@ hib_calc_div_within <- function(obj, metrics){
                          }
                          
                          # Hill-Simpson: 1/simpson 
-                         # TODO: why is my Simpson, 1 - x... - i.e. PIE
                          if (metric == "hillsimpson_diversity"){
                            message(crayon::white("\tHill-Simpson diversity ...\n"))
 
@@ -1369,8 +1344,6 @@ hib_calc_veg <- function(spp_site_data,
                       several.ok = FALSE)
   
   # TODO: NA checks...
-  # if binary
-  # # if !binary, filter to Abundance Diversity_metric_type - then drop col
 
   if (rel_abund){
     row_abund <- rowSums(spp_site_data, na.rm = TRUE)
@@ -1430,13 +1403,75 @@ hib_calc_veg <- function(spp_site_data,
   # Ideally, if rescale is T and max_dist is NA, edit rescale to be F in output
   
   # TODO: if as_sim, convert to similarity score (not possible for unscaled distances...)
-  
-  # TODO: if binary is false, and div_metr_type is Occurrence
-  # Set to NAs?
 
   return(dist_df)
 }
 
+
+#' calc_hypervolume
+#' 
+#' @description 
+#' Calculate hypervolume-based dissimilarity/beta-diversity given two communities.
+#' 
+#' @details 
+#' Expects two vectors, one each for the abundance/occurence of species at two sites
+#' assuming that values at the same index (e.g., x[i], y[i]) correspond to the 
+#' same species/taxonomic entity.
+#' Output is the normalised hypervolume.
+#' 
+#' Internal function for use in `hib_calc_nonveg()`, called in turn by `hib_calc_div_between()`.
+#' 
+#' @param spp_site_matrix Numeric matrix containing abundance/occurence of species 
+#' at two sites. Sites are rows, species are columns.
+#' 
+#' @return numeric
+#' 
+#' @references 
+#' Song, Chuliang, Muyang Lu, Joseph R. Bennett, Benjamin Gilbert, Marie-Josée 
+#' Fortin, and Andrew Gonzalez (2025). A Geometric Approach to Beta Diversity. 
+#' Ecological Monographs 95(1): e70008. https://doi.org/10.1002/ecm.70008
+#'
+#' @keywords database, processing, diversity
+#' 
+#' @seealso
+#' [hib_calc_div_between()], [hib_calc_nonveg()] 
+#' 
+#' @examples 
+#' \dontrun{
+#'   hypervolume <- calc_hypervolume(spp_site_matrix)
+#' }
+#'  
+#' @noRd
+calc_hypervolume <- function(spp_site_matrix){
+  assertthat::assert_that(
+    is.data.frame(spp_site_matrix)
+  )
+
+  spp_site_matrix <- t(spp_site_matrix)
+    
+  # d <- min(dim(spp_site_matrix))
+
+  # add origin to data
+  spp_site_matrix <- rbind(spp_site_matrix,
+                         rep(0, ncol(spp_site_matrix)))
+
+  vol <- tryCatch(
+    {
+      geometry::convhulln(spp_site_matrix, 
+                          output.options = TRUE)$vol
+    },
+    error = function(e) {
+      # TODO: Would NA be a better error value??
+      0
+    }
+  )
+  
+  # Scale based on min(Nspp, Ncomm) - assume to be 2. 
+  # If only 1 species, will return 0 anyway
+  vol <- sqrt(vol)
+
+  return(vol)
+}
 
 
 #' calc_cosine_sim 
@@ -1690,9 +1725,6 @@ hib_calc_nonveg <- function(spp_site_data,
     is.logical(rel_abund) || is.null(rel_abund),
     is.logical(rescale) || is.null(rescale),
     is.character(div_metric_type)
-    # assertthat::has_name(spp_site_data, "SSBS"),
-    # assertthat::has_name(spp_site_data, "Taxon_name_entered"),
-    # assertthat::has_name(spp_site_data, "Measurement")
   )
   
   metric <- match.arg(metric, 
@@ -1728,41 +1760,15 @@ hib_calc_nonveg <- function(spp_site_data,
 
   # Calculate hypervolume
   if (metric == "hypervolume"){
-    # Should really always use relative abundance! - raw abundance doesn't make sense
-    # transpose site_spp_data for use in convhulln (M rows of N dimensions)
-    spp_site_data <- t(spp_site_data)
-    
-    # add origin to spp_site_data
-    spp_site_data <- rbind(spp_site_data,
-                           rep(0, ncol(spp_site_data)))
+    # Should really always use relative abundance! (or binary) - raw abundance doesn't make sense
+    # TODO: add a warning if binary == F and rel_abund == F
 
-    # 0 should be vol if either site has 0 total abund
-    # And technically if both comms are 0..
-    vol <- tryCatch(
-      {
-        geometry::convhulln(spp_site_data, 
-                            output.options = TRUE)$vol
-      },
-      error = function(e) {
-        # TODO: Would NA be a better error value??
-        # NA # ??
-        0
-      }
-    )
-    
-    # Scale based on min(Nspp, Ncomm) - generally assume to be 2. 
-    # If only 1 species, will return an error?
-    vol <- sqrt(vol)
-    #  - theor. max is 1 in paper, not 0.5
+    # # In Song et al, vol is further rescaled by min(Nspp, Ncomm) - not done here
+    # # We simply return normalised hypervolume - implicitly has max of 1. 
+    # What about max for binary inputs?? 
 
-    # In Song et al, vol is further rescaled by min(Nspp, Ncomm) - not done here
-    # We simply return normalised hypervolume - implicitly has max of 1.
-    
-    
-    # if (rescale & rel_abund){
-    #   vol <- vol / 0.5
-    # }
-    
+    vol <- calc_hypervolume(spp_site_data)
+
     out <- data.frame("Hypervolume" = vol)
   }
   
@@ -1865,6 +1871,7 @@ hib_calc_nonveg <- function(spp_site_data,
   return(out)
 }
 
+
 #' Calculate between-site (within study) diversity metrics
 #' 
 #' @description 
@@ -1960,11 +1967,6 @@ hib_calc_div_between <- function(obj,
     assertthat::has_name(obj$species, "Measurement"),
     assertthat::has_name(obj$species, "Diversity_metric_type"),
     
-    # assertthat::has_name(obj$species, "Predominant_land_use"),
-    # assertthat::has_name(obj$species, "Use_intensity"),
-    # assertthat::has_name(obj$species, "LUI"),
-    # TODO: if not present, they have to be in obj$sites, hib_create...
-    # Can left join in - LUI is essential
     assertthat::has_name(obj$species, "Taxon_name_entered"),
     assertthat::has_name(obj$species, "Best_guess_binomial"),
     
@@ -1985,7 +1987,6 @@ hib_calc_div_between <- function(obj,
                        "baselga_bray_balanced", "baselga_bray_gradient",
                        "baselga_ruzicka_balanced", "baselga_ruzicka_gradient",
                        "horn_dissim", "normalised_euclidean")
-  # "baselga_bray","baselga_ruzicka",
   # "baselga_jaccard", "baselga_sorensen")
   
   metrics_ <- c(veg_metrics, non_veg_metrics)
@@ -2053,19 +2054,15 @@ hib_calc_div_between <- function(obj,
   # If metrics do not use abundance data, these contrasts are filtered out later.
   
   spp_tmp <- obj$species |>
-    dplyr::filter(#!is.na(Predominant_land_use) & # ?? - drop this
-                  Diversity_metric_type %in% c("Abundance",
+    dplyr::filter(Diversity_metric_type %in% c("Abundance",
                                                "Occurrence")) |>
     
     dplyr::group_by(SS) |>
-    dplyr::mutate(#n_sample_effort = dplyr::n_distinct(Sampling_effort),
-                  # Taxon_name_entered v best_guess_binomial ??
+    dplyr::mutate(# Taxon_name_entered v best_guess_binomial ??
                   n_species = dplyr::n_distinct(Taxon_name_entered)) |>
     dplyr::ungroup() |>
-    dplyr::filter(#n_sample_effort == 1 &
-                    n_species > 1)
+    dplyr::filter(n_species > 1)
   
-  # print(metrics_spec_df)
   if (all(metrics_spec_df$binary == FALSE)){
     spp_tmp <- spp_tmp |>
       dplyr::filter(Diversity_metric_type == "Abundance")
@@ -2078,7 +2075,6 @@ hib_calc_div_between <- function(obj,
   }
 
   
-  # print(unique(spp_tmp$Diversity_metric_type))
   if (!is.null(baseline_lui)){
     
     # Better appr is to first get site data..., (subset to spp_tmp_SSBS) 
@@ -2088,13 +2084,12 @@ hib_calc_div_between <- function(obj,
     site_tmp <- obj$sites |>
       dplyr::filter(SSBS %in% unique(spp_tmp$SSBS),
                     !is.na(LUI))
-    # TODO: filter for !is.na(LUI) here!
 
     if (nrow(site_tmp) == 0){
       stop("\nError: no site comparisons possible. Check your data and the metric specifications.", call. = F)
     }
     # %%%%%
-    # TODO: allow for multiple baseline_lui
+    # Allow for multiple baseline_lui
     if (!all(baseline_lui %in% unique(site_tmp$LUI))){
       missing_baseline <- baseline_lui[!baseline_lui %in% unique(site_tmp$LUI)]
       baseline_lui <- baseline_lui[baseline_lui %in% unique(site_tmp$LUI)]
@@ -2116,10 +2111,6 @@ hib_calc_div_between <- function(obj,
 
     site_tmp$base_lui <- site_tmp$LUI %in% baseline_lui
     # %%%%%
-    # assertthat::assert_that(baseline_lui %in% unique(site_tmp$LUI),
-    #                         msg = "baseline_lui is not present in the site data that can be used for comparisons. \n      Consider changing your data and/or the metric specifications.")
-
-    # site_tmp$base_lui <- site_tmp$LUI == baseline_lui
     
     site_tmp <- site_tmp |>
       dplyr::group_by(SS) |>
@@ -2129,21 +2120,6 @@ hib_calc_div_between <- function(obj,
       droplevels()
     # %%%%
 
-    # This is an issue if LUI updates have only been added to the site, not spp data!!
-    
-    # spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
-    
-    # spp_tmp <- spp_tmp |>
-    #   dplyr::group_by(SS) |>
-    #   dplyr::mutate(n_base_lui = sum(base_lui)) |>
-    #   dplyr::filter(n_base_lui > 0) |>
-    #   dplyr::ungroup()
-    
-    # site_tmp <- obj$sites |>
-    #   dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-    #   dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")]),
-    #                     by = "SSBS") |>
-    #   droplevels()
     
   } else if (is.null(baseline_lui)){
     site_tmp <- obj$sites |>
@@ -2152,7 +2128,6 @@ hib_calc_div_between <- function(obj,
       droplevels()
   }
   
-  # print(unique(site_tmp$Diversity_metric_type))
 
   n_spp <- spp_tmp |>
     dplyr::select(Best_guess_binomial) |>
@@ -2162,11 +2137,7 @@ hib_calc_div_between <- function(obj,
     dplyr::select(Best_guess_binomial) |>
     dplyr::n_distinct()
 
-  # TODO: n_spp_abund, n_spp_abund_occ
-
-  # TODO: n taxa ?
-  # TODO: drop this info (spp/taxa) here ? - not really useful??  
-
+  
   # TODO: set any NA measures to 0 for safety
   if (sum(is.na(spp_tmp$Measurement)) > 0){
     message(crayon::yellow(paste0("\nWarning: NAs detected in 'Measurement'.  Setting NAs to zeros.")))
@@ -2177,8 +2148,7 @@ hib_calc_div_between <- function(obj,
     sum(is.na(spp_tmp$Measurement)) == 0,
     is.numeric(spp_tmp$Measurement)
   )
-  # spp_tmp$Measurement[is.na(spp_tmp$Measurement)] <- 0
-
+  
   # Need to get combinations of data... - s1, s2, ...
   # %%%
   # From https://adrianadepalma.github.io/BII_tutorial/bii_example.html
@@ -2265,9 +2235,9 @@ hib_calc_div_between <- function(obj,
 
 
   # Some checks of metric specs and diversity data types available
-  # print(unique(site_comp_df$Diversity_metric_type))
+  
   un_div <- unique(site_comp_df$Diversity_metric_type) |> as.character()
-  # TODO: if all binary are false, / 
+  # if all binary are false, / 
   # if some binary are false, but only occurrence in site_comp_df, warning and drop metrics
   # if all binary and only only occurrence in site_comp_df - drop all metrics warning/stop
   if ((all(metrics_spec_df$binary == F)) &
@@ -2295,7 +2265,7 @@ hib_calc_div_between <- function(obj,
   }
 
 
-    # split to veg and non_veg spec dfs
+  # split to veg and non_veg spec dfs
   veg_metrics_df <- subset(metrics_spec_df,
                            metric %in% veg_metrics)
   non_veg_metrics_df <- subset(metrics_spec_df,
@@ -2348,7 +2318,6 @@ hib_calc_div_between <- function(obj,
                                    )
 
                                    # TODO: check at least 2 species are present (i.e 2 cols or more)
-                                   # TODO: return max_dist value - if NA, set rescale to F...
                                    # Depending on metric_vec values, calc metrics of interest
                                    # %%%
                                    out_df <- purrr::pmap(.l = metric_df,
@@ -2364,7 +2333,6 @@ hib_calc_div_between <- function(obj,
                                                                            rel_abund,
                                                                            rescale,
                                                                            div_metric_type)
-                                                              # Could return null if !binary and Occurrence...
                                                             }) |>
                                      dplyr::bind_rows()
                                    # %%%
@@ -2385,7 +2353,7 @@ hib_calc_div_between <- function(obj,
   }
   # %%%
   
-  # do other metrics...
+  # do other, non-vegan metrics...
   non_veg_df <- NULL
   
   if (nrow(non_veg_metrics_df) > 0){
@@ -2408,14 +2376,12 @@ hib_calc_div_between <- function(obj,
                                   # pull out the site name, species name and abundance information
                                   dplyr::select(SSBS, Taxon_name_entered, Measurement) |>
                                   # pivot so that each column is a species and each row is a site
-                                  # TODO: could consider Diversity_metric_type here...!
-                                     # pass to hib_calc_nonveg...
                                   tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
                                                      values_fill = 0) |>
                                   # set the rownames to the SSBS and then remove that column
                                   tibble::column_to_rownames("SSBS")
-                                
-                                # Get Diversity metric_type of each SSBS
+                                # TODO: Set row 1 to s1 (i.e. baseline, or control site)
+                                # Only needed if metric is directional...
 
                                 ss <- spp_data |>
                                   # filter out the SSBS that matches the pair of sites we're interested in
@@ -2426,13 +2392,13 @@ hib_calc_div_between <- function(obj,
                                 out_df <- data.frame(SSBS1 = s1, 
                                                      SSBS2 = s2,
                                                      SS    = ss)
-                                
+
+                                # Get Diversity metric_type
                                 div_metr_type <- spp_data |>
                                      dplyr::filter(SS == ss) |>
                                      dplyr::pull(Diversity_metric_type) |>
                                      unique() |> as.character()
 
-                               
                                 assertthat::assert_that(
                                   length(div_metr_type) == 1
                                 )
@@ -2471,7 +2437,6 @@ hib_calc_div_between <- function(obj,
     veg_df <- non_veg_df
   }
   
-  # convert to long tibble...
   # add processing flags per metric -  
 
   # Calc is_empty flags once and add to each sub df?
@@ -2484,7 +2449,6 @@ hib_calc_div_between <- function(obj,
     tibble::column_to_rownames("SSBS") 
     # %%%%%
 
-  # TODO: ignore NAs 
   empty_sites1$SSBS1_is_empty <- rowSums(empty_sites1, na.rm = T) == 0
 
   empty_sites1 <- empty_sites1 |>
@@ -2592,9 +2556,7 @@ hib_calc_div_between <- function(obj,
       veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
     }
   }
-  # if (rel_abund == T){
-  #   veg_max_df$Theoretical_max[veg_max_df$Metric == "Euclidean"] <- sqrt(2)
-  # }
+
   # Max gower dist for 2 sites is 1, rel_abund or not...
   # ...  sum (diff_i / diff_i) / N
   # if diff_i != 0, ratio is 1, 
@@ -2605,7 +2567,7 @@ hib_calc_div_between <- function(obj,
   # c("hypervolume", "cosine", "theta",
                         # "baselga_bray_balanced", "baselga_bray_gradient", 
                         # "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")
-  # hypervol = NA, or 0.5 if rel_abund
+  # hypervol = NA, or 1 if rel_abund
   # cosine = 0-1 (set 1 as max, convert to dissim)
   # theta  = pi/2
   # all others, 0-1 - check with baselga...
@@ -2626,9 +2588,7 @@ hib_calc_div_between <- function(obj,
       non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 1
     }
   }
-  # if (rel_abund == T){
-  #   non_veg_max_df$Theoretical_max[non_veg_max_df$Metric == "Hypervolume"] <- 0.5
-  # }
+
 
   max_df <- dplyr::bind_rows(veg_max_df,
                              non_veg_max_df)

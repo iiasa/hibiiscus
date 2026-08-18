@@ -2,7 +2,8 @@
 % Please edit documentation in R/hib_site_contrasts.R
 \name{hib_calc_site_contrasts}
 \alias{hib_calc_site_contrasts}
-\title{Calculate measures of dissimilarity (wrapper) between sites}
+\title{hib_calc_site_contrasts: Calculate differences between sites for a range of
+environmental variables.}
 \usage{
 hib_calc_site_contrasts(
   obj,
@@ -15,41 +16,58 @@ hib_calc_site_contrasts(
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{metrics}{A \code{\link{character}} vector of 'distance' metrics. Current options are;
+\item{metrics}{A \code{character} vector of 'distance' metrics. Current options are;
 "lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint", "env_dist".}
 
-\item{custom_metric_specs}{A named \code{\link{list}} with each named item containing the
-specifications for the named custom metric. Custom metrics must be based on
-\code{vegdist} distance metrics.
+\item{custom_metric_specs}{A named \code{list} (or \code{NULL}) with each named item
+containing the specifications for the named custom metric.
+At present, custom metrics must be based on \code{vegdist} distance metrics.  \cr
 Essential named values within the specifications of a custom metric are:
-\code{dist_metr} - a character indicating the metric of choice;
-\code{vars} - a character vector indicating the site variables to use when calculating
-the distance metric.
-For example: \code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1", "env2", "env3")),
-                        Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))}
+\itemize{
+\item \code{dist_metr} - a character indicating the metric of choice;
+\item \code{vars} - a character vector indicating the site variables to use when calculating
+the distance metric. \cr
+}
+
+For example: \cr
+\code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1", "env2", "env3")),
+           Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))} \cr
 Metric names (as specified in the name of the sub-lists) will be converted to
 sentence-case in the output data.}
 
-\item{baseline_lui}{A \code{\link{character}} or NULL, indicating the baseline LUI/s against
-which dis/similarity is calculated per study - should match the value/s used
-when calculating compositional dis/similarity (hib_calc_div_between)}
+\item{baseline_lui}{A \code{character} (can be multiple entries) or \code{NULL},
+indicating the baseline LUI/s against which differences are calculated per study.
+Value/s provided should match the value/s used when calculating compositional
+dis/similarity (\code{\link{hib_calc_div_between}}).}
 
-\item{overwrite}{A \code{\link{logical}} indicating whether or not any current site contrast
-data should be over-written.}
+\item{overwrite}{A \code{logical} indicating whether or not any current site contrast
+data should be over-written. Default value is \code{FALSE}.}
+}
+\value{
+HibDatabase
 }
 \description{
-This function calculates dissimilarity measures between sites within a study,
-for use as covariates in models of compositional dis/similarity
+This function calculates measures of differences between sites within a study,
+which can then be used as covariates in models of compositional dis/similarity.
+A \code{data.frame} (named \code{site_contrasts}) containing the site-contrast pairs
+(\code{SSBS1}, \code{SSBS2}) and the associated 'differences' is added to the provided
+\code{HibDatabase}.
 }
 \details{
-Expects a \code{\link{HibDatabase}} object.
+The function currently returns \code{site1-site2} contrasts for all within-study contrasts
+where \code{site1} has the \code{baseline_lui}. Subsequent, filtering to ensure contrasts
+are based on the same effort level is recommended and may be incrporated in
+future releases.
 }
 \examples{
 \dontrun{
   obj <- hib_calc_site_contrasts(obj, 
-                              c("lui_contrast", "geogr_dist_hav"),
-                              "Primary vegetation_Minimal use")
+                                 c("lui_contrast", "geogr_dist_hav"),
+                                 baseline_lui = "Primary vegetation_Minimal use")
 } 
+}
+\references{
+https://adrianadepalma.github.io/BII_tutorial
 }
 \keyword{database,}
 \keyword{processing}

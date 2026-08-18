@@ -1,41 +1,63 @@
-#' Fit an lme4 style mixed-effects model
+#' hib_fit_lme4: Fit an lme4 style mixed-effects model
 #' 
 #' @description 
 #' This function fits an lme4 model using the supplied database, formula and other
-#' function arguments tuning the model fitting process
+#' function arguments tuning the model fitting process.
+#' 
 #' @details 
-#' Expects a database object and various other arguments.
+#' This function takes the supplied database object (and various other arguments),
+#' fits the specified model and returns a HibModelLME4 object.
+#' 
 #' @param obj A [`HibDatabase`] object, or a list of databases.
-#' @param form A [`formula`] in the style of lme4 - including fixed and random 
+#' @param form Model formula in the style of lme4 - including fixed and random 
 #' effects.
-#' @param family A [`family`] function, e.g. gaussian, poisson - as allowed by lme4
-#' @param REML A [`logical`] - if using a gaussian family, should model be fitted 
-#' using REML (T) or ML (F) - as in lme4
+#' @param family A `family` function, e.g. gaussian, poisson - as allowed by lme4.
+#' Dafault is 'gaussian'.
+#' @param REML A `logical` - if using a gaussian family, should the model be fitted 
+#' using restricted maximum likelihood (REML, T) or maximum likelihood (F) - as in `lme4::lmer()`.
 #' @param calc_CIs An indication of whether fixed effect confidence intervals (95%) 
-#' should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot"
+#' should be calculated or not, and if so how - one of NULL, "Wald", "profile", "boot".
 #' @param optimise_ranefs Not currently applicable - future dev
 #' @param model_dredge Not currently applicable - future dev
 #' @param model_average Not currently applicable - future dev
-#' @param weight_specs A [`list`] containing "weights" and "weight_type".
-#' weights is a [`numeric`] vector containing the relative weights to
-#' assign to each dataset/site, should sum to 1. 
-#' weight_type is a [`character`], specifying either "dataset" or "site" - i.e. should
+#' @param weight_specs A named `list` containing "weights" and "weight_type". \cr
+#' - \code{weights}: a `numeric` vector containing the relative weights to
+#' assign to each dataset/site, should sum to 1. \cr
+#' - \code{weight_type}: a `character`, specifying either "dataset" or "site" - i.e. should
 #' the weights argument assign relative weights to whole datasets, or for sites in
-#' each dataset.
-#' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
-#' covars_to_scale is a [`character`] vector of numeric covariates that should be 
+#' each dataset. \cr
+#' 
+#' Only applicable if a list of `HibDatabase`s are provided. \cr
+#' The length of 'weights' should be equal to the number of `HibDatabase`s.
+#' @param scale_specs A named `list` containing "covars_to_scale" and "scale_func". 
+#' - `covars_to_scale` is a `character` vector of numeric covariates that should be 
 #' scaled prior to modelling. 
-#' scale_func is a function that will be used to scale 
-#' the specified covariates - if NULL, base::scale() will be used.
-#' @param relevel_specs A named [`vector`] where each item is:
-#' "<covar_to_relevel_name>" = "<base_level>".
-# TODO: add ... for other params in lmer/glmer
-#' @param ... Any other named arguments that can be passed to lme4::lmer()/lme4::glmer(), e.g., na.action
+#' - `scale_func` is a function that will be used to scale the specified 
+#' covariates - if `NULL`, `base::scale()` will be used.
+#' @param relevel_specs A `vector` where each item is: 
+#' \code{"<covar_to_relevel_name>" = "<base_level>"}.
+#' @param ... Any other named arguments that can be passed to `lme4::lmer()`/`lme4::glmer()`, 
+#' e.g., na.action
+#' 
+#' @return `HibModelLME4`
+#' 
+#' @references 
+#' * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker (2015). Fitting Linear 
+#' Mixed-Effects Models Using lme4. Journal of Statistical Software, 67(1), 1-48. 
+#' doi:10.18637/jss.v067.i01.
+#' 
 #' @keywords model, fitting
+#' 
+#' @seealso
+#' [HibModelLME4]
+#' \code{\link[lme4]{lmer}}
+#' \code{\link[lme4]{glmer}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   mod <- hib_fit_lme4(obj, y ~ x + ( 1 | a ), ...)
 #' } 
+#' 
 #' @export
 hib_fit_lme4 <- function(obj, 
                          form,
@@ -59,10 +81,11 @@ hib_fit_lme4 <- function(obj,
   # Add functionality to return averaged model output
   
   # Check whether lme4 package is available
-  # TODO: figure out check_package...
   # check_package('lme4')
-  if(!isNamespaceLoaded("lme4")) { attachNamespace("lme4");requireNamespace('lme4') }
-  
+  if (!isNamespaceLoaded("lme4")) { 
+    attachNamespace("lme4")
+    requireNamespace('lme4') 
+  }
   # file.path("lme4")
   # rcmdcheck::rcmdcheck(path = "lme4",
   #                      libpath = .libPaths())
@@ -74,10 +97,9 @@ hib_fit_lme4 <- function(obj,
     is.function(family) || is.character(family), # family is character or function
     is.logical(REML), # REML is bool
     is.null(calc_CIs) || is.character(calc_CIs),   # calc_CIs is null or chr
-    # is.null(dataset_weights) || is.numeric(dataset_weights),
     is.list(scale_specs),
     is.vector(relevel_specs) || is.null(relevel_specs),
-    is.list(weight_specs) #|| is.null(weight_specs)
+    is.list(weight_specs)
   )
 
 
@@ -100,7 +122,7 @@ hib_fit_lme4 <- function(obj,
                             })
     
     # %%%
-    # TODO : call weight calc function
+    # call weight calc function
     mod_df_ls <- weight_model_data(mod_df_ls,
                                    "lme4",
                                    weight_specs$weights,
@@ -108,12 +130,15 @@ hib_fit_lme4 <- function(obj,
     
     mod_df <- dplyr::bind_rows(mod_df_ls,
                               .id = "dataset_modelling_id")
-    # TODO: ensure that mod_df has >1 row of data!
+    # ensure that mod_df has >1 row of data!
+    assertthat::assert_that(
+      nrow(mod_df) > 1
+    )
     n_spp_taxa <- purrr::map2(.x = obj, 
                          .y = mod_df_ls, 
                          .f = function(.x, .y, resp = mod_resp){
                            calc_N_spp(.x, .y, resp)
-                         }) #|> unlist()
+                         }) 
     n_spp = lapply(n_spp_taxa, function(x){x$N_spp})
     n_taxa = lapply(n_spp_taxa, function(x){x$N_taxa})
     # no need to unlist
@@ -125,7 +150,11 @@ hib_fit_lme4 <- function(obj,
     mod_df <- get_model_data(obj,
                              mod_resp,
                              mod_covars)
-    # TODO: ensure that mod_df has >1 row of data!
+    # ensure that mod_df has >1 row of data!
+    assertthat::assert_that(
+      nrow(mod_df) > 1
+    )
+
     n_spp_taxa <- calc_N_spp(obj, mod_df, mod_resp)
     n_spp = n_spp_taxa$N_spp
     n_taxa = n_spp_taxa$N_taxa
@@ -133,8 +162,6 @@ hib_fit_lme4 <- function(obj,
     n_sites <- calc_N_sites(mod_df)
   }
 
-  # print(n_spp)
-  # print(n_taxa)
   # %%%
   mod_df <- prep_model_data(mod_df,
                             mod_covars,
@@ -143,15 +170,13 @@ hib_fit_lme4 <- function(obj,
                             names(relevel_specs),
                             unname(relevel_specs))
   # %%%
-  # print(head(mod_df))
   # get_all_vars(test_formula)
   # rlang::f_lhs(test_formula)
   # rlang::f_rhs(test_formula)
   
-  # Specify lmer v glmer
   message(crayon::green("Fitting model (this may take some time) ...\n"))
   
-  
+  # Specify lmer v glmer
   # first, check if family is a function or character...
   if (is.character(family)){
     if (family == "gaussian"){
@@ -221,9 +246,9 @@ hib_fit_lme4 <- function(obj,
   }
   
 
-  # Do some checks - model convergence/model fitted
+  # TODO: Do some checks - model convergence/model fitted
   
-  # class(m0)
+
   # Collate model coefs../metrics - AICc, Rsq ...
   message(crayon::green("Collating model details ...\n"))
   
@@ -231,7 +256,6 @@ hib_fit_lme4 <- function(obj,
   colnames(fixef_df) <- "Coefficient_value"
   fixef_df <- tibble::rownames_to_column(fixef_df, "Coefficient_name")
   
-  # print(calc_CIs)
   if (!is.null(calc_CIs)){
     message(crayon::green("\tGetting confidence intervals ..."))
     confint_df <- lme4::confint.merMod(m0, parm = "beta_", method = calc_CIs)
@@ -251,7 +275,7 @@ hib_fit_lme4 <- function(obj,
     ci_type_ <- NA
   }
 
-  # instantiate an lme4_mod class
+  # instantiate an HibModelLME4 object
   mod_obj <- HibModelLME4$new(
     db_obj = obj, 
     mod_df = mod_df,
@@ -265,8 +289,8 @@ hib_fit_lme4 <- function(obj,
   )
   
   return(mod_obj)
-  # 
   
+  # Future dev
   # Optional... extra wrappers...
   # If optimise_ranefs == F, fit m with ML
   # If optimise_ranefs == T, fit m with REML to first compare ranefs
@@ -277,17 +301,24 @@ hib_fit_lme4 <- function(obj,
 }
 
 
-#' Collate model data for mod_df
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Internal helper functions for data preparation
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#' get_model_data: Collate model data from a HibDatabase
 #' 
 #' @description 
 #' This function collects the data needed for the model fitting process, based on 
-#' the supplied response and covariables
-#' @details 
-#' Expects a HibDatabase object...
-#' @param obj A [`HibDatabase`] object.
-#' @param mod_resp A [`character`] indicating the response variable.
-#' @param mod_covars A [`character`] indicating the model covariates.
+#' the supplied response and covariates
+#' 
+#' @param obj A `HibDatabase` object.
+#' @param mod_resp A `character` indicating the response variable.
+#' @param mod_covars A `character` indicating the model covariates.
+#' 
+#' @return data.frame
+#' 
 #' @keywords data processing
+#' 
 #' @examples 
 #' \dontrun{
 #'   mod_df <- get_model_data(obj, "Total_abundance", c("LUI"))
@@ -312,32 +343,23 @@ get_model_data <- function(obj,
     unlist() |>
     unique() 
   
+  # Get data for within-site/alpha diversity models.
   if (mod_resp %in% within_site_resp){
     
     # If not all covars are in obj$sites, as in a possible phylogenetically corr
-    # brms model, this will fail!!
-    # Could subset to those covars available in sites - as in INLA
-    # And throw a warning?!
-    # TODO: - only include available columns!!!
-    # 
+    # brms model, subset to those covars available in sites and throw a warning
     all_covars <- unique(c(mod_covars, "SSBS"))
     missing_covars <- all_covars[!all_covars %in% colnames(obj$sites)]
     if (length(missing_covars) > 0){
       message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
                                     "formula are missing; ",
-                                    # from HibDatabase$sites
                                     paste(missing_covars, colapse = ", "),
                                     "\n")))
     }
     all_covars_sub <- all_covars[all_covars %in% colnames(obj$sites)]
     mod_df <- obj$sites[,all_covars_sub]
 
-    # mod_df <- obj$sites[,unique(c(mod_covars, c("SS", "SSB", "SSBS")))]
-    # find relevant obj$diversity$Data[[i]] 
-
-    # TODO: BUG, Shannon_diversity, and Simpson_diversity also match HillXXX
-    # Need to check for exact matches, not grepl matches
-    # grepl(paste0("^", resp, "$"), tmp) ??
+    # find relevant obj$diversity$Data[[i]]   
     div_data_idx <- which(unlist(lapply(obj$diversity_within$Data,
                                         function(x, resp){
                                           tmp <- colnames(x)
@@ -354,6 +376,7 @@ get_model_data <- function(obj,
       dplyr::left_join(obj$diversity_within$Data[[div_data_idx]][,c(mod_resp, "SSBS")],
                       by = "SSBS")
     
+    # Get data for between-site/beta diversity models.
   } else if (mod_resp %in% between_site_resp){
 
     all_covars <- unique(c(mod_covars, c("SSBS1", "SSBS2") ))
@@ -370,7 +393,6 @@ get_model_data <- function(obj,
     if (length(missing_covars) > 0){
       message(crayon::yellow(paste0("Warning: covariates specified in the model ", 
                                     "formula are missing; ",
-                                    # from HibDatabase$site_contrasts
                                     paste(missing_covars, colapse = ", "),
                                     "\n")))
     }
@@ -383,13 +405,11 @@ get_model_data <- function(obj,
         dplyr::left_join(obj$sites[, c("SSBS", "Dataset_name")], 
                          by = c("SSBS1" = "SSBS"))
     }
-    # mod_df <- obj$site_contrasts[,unique(c(mod_covars, c("SSBS1", "SSBS2", "SS", "SSB")))]
     
     # find relevant obj$diversity$Data[[]] - which one contains the response...
     div_data_idx <- which(unlist(lapply(obj$diversity_between$Data,
                                         function(x, resp){
                                           tmp <- colnames(x)
-                                          # any(grepl(resp, tmp))
                                           any(grepl(paste0("^", resp, "$"), tmp))
                                         },
                                         resp = mod_resp)))
@@ -406,20 +426,9 @@ get_model_data <- function(obj,
     stop()
   }
   
+  # Drop rows with any NAs
   mod_df <- stats::na.omit(mod_df)
   
-  # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
-  # Do this in prep_model_data
-  # chr_cols_idx <- purrr::map(mod_covars, 
-  #                        function(x, df = mod_df){
-  #                          is.character(df[[x]])}) |> 
-  #   unlist()
-  # chr_cols <- mod_covars[chr_cols_idx]
-  # # print(chr_cols)
-  # for (c in chr_cols){
-  #   mod_df[[c]] <- as.factor(mod_df[[c]])
-  # }
-
   return(mod_df)
   
 }
@@ -427,25 +436,27 @@ get_model_data <- function(obj,
 
 
 
-# Prep data -scale options, relevel factor columns
 
-#' Prepare model data for modelling
+#' prep_model_data: Prepare data for modelling
 #' 
 #' @description 
 #' This function prepares the data for the model fitting based on user supplied
-#' flags indicating the scaling of continuous variables and/or the releveling
-#' of categroical covariates
-#' @details 
-#' Expects a dataframe object...
-#' @param df A [`dataframe`].
-#' @param mod_covars A [`character`] vector indicating the model covariates.
-#' @param covars_to_scale A [`character`] vector indicating the response variables to scale.
-#' @param scale_func A [`function`] to scale specified continuous variables.
-#' @param covars_to_relevel A [`character`] vector containing categorical variables
+#' flags indicating the scaling of continuous variables and/or the re-leveling
+#' of categorical covariates
+#' 
+#' @param df A `data.frame` to be used in model fitting.
+#' @param mod_covars A `character` vector indicating the model covariates.
+#' @param covars_to_scale A `character` vector indicating the response variables to scale.
+#' @param scale_func A `function` to scale specified continuous variables.
+#' @param covars_to_relevel A `character` vector containing categorical variables
 #' to relevel.
-#' @param base_levels A [`character`] vector containing baseline levels - in same
+#' @param base_levels A `character` vector containing baseline levels - in same
 #' order as the variables in covars_to_relevel.
+#' 
+#' @return data.frame
+#' 
 #' @keywords data processing
+#' 
 #' @examples 
 #' \dontrun{
 #'   mod_df <- prep_model_data(mod_df, 
@@ -536,29 +547,25 @@ prep_model_data <- function(df,
   
 }
 
-# prep_model_data(tmp_db$sites[,c("LUI", "Sampling_effort")],
-#                 c("Sampling_effort"),
-#                 scale,
-#                 c("LUI"), 
-#                 c("Cropland_Intense_use"))
 
 
-# TODO
-#' Calculate weights for use in integrated modelling
+#' weight_model_data: Calculate weights for use in integrated modelling
 #' 
 #' @description 
 #' This function calculates and assigns weights to rows in the modelling data
 #' based on the provided arguments
-#' @details 
-#' Expects a list of dataframes
-#' @param df_ls A list of [`dataframes`], each associated with a biodiversity dataset.
-#' @param model_spec A [`character`] indicating if the model type is 'lme4', or 'brms'.
-#' TODO: need to add and check INLA options
-#' @param weights A [`numeric`] vector indicating the 'weights' the user wants to 
+#' 
+#' @param df_ls A list of `data.frames`, each associated with a biodiversity dataset.
+#' @param model_spec A `character` indicating if the model type is 'lme4', or 'brms'.
+#' @param weights A `numeric` vector indicating the 'weights' the user wants to 
 #' link to each dataset.
-#' @param weight_type A [`character`] specifying the form of weighting. Either 
-#' "dataset" or "site". 
+#' @param weight_type A `character` specifying the form of weighting. Either 
+#' 'dataset' or 'site'. 
+#' 
+#' @return list
+#' 
 #' @keywords data processing
+#' 
 #' @examples 
 #' \dontrun{
 #'   mod_ls <- weight_model_data(df_ls, weights = c(0.5,0.5), weight_type = "dataset") 
@@ -568,6 +575,9 @@ weight_model_data <- function(df_ls,
                               model_spec,
                               weights,
                               weight_type){
+
+  # TODO: need to add and check INLA options
+
   assertthat::assert_that(
     is.list(df_ls),
     is.character(model_spec),
@@ -589,14 +599,14 @@ weight_model_data <- function(df_ls,
   
   # TODO: assert that model_spec is within the potential model options
   # "lme4", "brms", ?"inla"?
-  # TODO: check weight_type - NULL, dataset, site
+  # check weight_type - NULL, dataset, site
   if (is.null(weight_type)){
     message(crayon::yellow("Warning: weight_type missing, setting to 'dataset'."))
     weight_type <- "dataset"
   }
   weight_type <- match.arg(weight_type, c("dataset", "site"), several.ok = F)  
   
-  # TODO: check weights - NULL, numeric,.
+  # check weights - NULL, numeric,.
   if (is.null(weights)){
     weights = rep(1, length(df_ls))
     message(crayon::yellow(paste0("Warning: weights not specified, using equal weight per ",
@@ -604,7 +614,7 @@ weight_model_data <- function(df_ls,
   }
   
   
-  # TODO: need to know model type... - 
+  # Need to know model type... - 
   # LME4 - weights sum to 1
   # BRMS - weights sum to N data points
   
@@ -650,6 +660,22 @@ weight_model_data <- function(df_ls,
 }
 
 
+#' calc_N_sites: Calculate number of sites contributing to model data.frame
+#' 
+#' @description
+#' This function calculates the total number of unique sites in a model data.frame
+#' 
+#' @param df A `data.frame`.
+#' 
+#' @return numeric
+#' 
+#' @keywords data processing
+#' 
+#' @examples
+#' \dontrun{
+#'   N_site <- calc_N_sites(df)
+#' }
+#' @noRd
 calc_N_sites <- function(df){
   if ("SSBS" %in% colnames(df)){
     n_sites <- length(unique(df$SSBS))
@@ -659,44 +685,3 @@ calc_N_sites <- function(df){
   return(n_sites)                
 }
 
-# # %%%%%%
-# df_ls_1 <- list(df1 = data.frame(x = runif(100)),
-#                 df2 = data.frame(x = runif(200)),
-#                 df3 = data.frame(x = runif(50)))
-# 
-# df_ls_2 <- list(df1 = data.frame(x = runif(100)),
-#                 df2 = data.frame(x = runif(400)),
-#                 df3 = data.frame(x = runif(60)))
-# 
-# test_1 <- weight_model_data(df_ls_1,
-#                             c(0.5,0.5,0.5),
-#                             "dataset")
-# 
-# 
-# test_1.1 <- weight_model_data(df_ls_1,
-#                             c(0.5,1,0.5),
-#                             "site")
-# 
-# test_2 <- weight_model_data(df_ls_2,
-#                             c(1,0.5,0.5),
-#                             "dataset")
-# 
-# 
-# test_2.1 <- weight_model_data(df_ls_2,
-#                               c(0.5,1,2),
-#                               "site")
-# 
-# lapply(test_1, function(x){sum(x$data_weight)}) |> unlist() |> sum()
-# lapply(test_1, function(x){x$data_weight[1]}) |> unlist() 
-# 
-# lapply(test_1.1, function(x){sum(x$data_weight)}) |> unlist() |> sum()
-# lapply(test_1.1, function(x){x$data_weight[1]}) |> unlist() 
-# 
-# 
-# lapply(test_2, function(x){sum(x$data_weight)}) |> unlist() |> sum()
-# lapply(test_2, function(x){x$data_weight[1]}) |> unlist() 
-# 
-# lapply(test_2.1, function(x){sum(x$data_weight)}) |> unlist() |> sum()
-# lapply(test_2.1, function(x){x$data_weight[1]}) |> unlist() 
-# c(0.000877193, 0.001754386, 0.003508772 ) / max(c(0.000877193, 0.001754386, 0.003508772 ) ) 
-# # %%%%%%

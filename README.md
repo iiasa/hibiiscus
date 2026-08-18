@@ -18,7 +18,7 @@ coverage](https://codecov.io/gh/iiasa/hibiiscus/graph/badge.svg)](https://app.co
 [![R-CMD-check](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-\<Text to be written!\>
+<!--<Text to be written!> -->
 
 ## Installation
 
@@ -33,13 +33,31 @@ devtools::install_github("IIASA/hibiiscus")
 install.packages("hibiiscus", repos = "https://iiasa.r-universe.dev")
 ```
 
-## Example
+## Overview
 
-This is a basic example which shows you how to solve a common problem:
+**hibiiscus** is an `R` package for conducting ecological impact
+analyses with hierarchical data. It allows for reproducible workflows
+spanning data preparation, through model fitting, impact estimation to
+model projection on new covariates. It incorporates functionality for
+estimating a range of ecological/biodiversity indicators (taxonomic
+diversity), fitting frequentist and Bayesian models, and model
+evaluation (including cross-validation, and area-of-applicability, Meyer
+and Pebesma, 2021).
+
+**hibiiscus** is based on R6 Classes (objects) with data components
+internally stored as `data.frame`/`tibble` or **terra** `SpatRaster`.
+
+## Using hibiiscus
+
+This package is designed to help with processing and modelling
+PREDICTS-like data. All standalone functions have the prefix `hib_`, and
+modify the focal R6 object. A brief example of how to load and process
+the data is shown below. Further examples can be found in the vignettes.
+Please check the reference section for full details of functionality.
 
 ## Citation
 
-<code> Cornford, R & Jung, Martin (2022). hibiiscus - Modelling
+<code> Cornford, R & Jung, Martin (2026). hibiiscus - Modelling
 framework for hierachical ecological impact analysis. R package version
 0.1, <https://github.com/iiasa/hibiiscus>. </code>
 

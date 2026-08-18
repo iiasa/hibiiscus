@@ -2,14 +2,18 @@
 % Please edit documentation in R/hib_filter.R
 \name{hib_filter_species}
 \alias{hib_filter_species}
-\title{Filter the database object by species or groups of species}
+\title{hib_filter_species: Filter the database object by species-linked features.}
 \usage{
 hib_filter_species(obj, condition)
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{condition}{An expression identifying how to filter the species dataframe}
+\item{condition}{An expression identifying how to filter the species data.frame,
+as would be passed to \code{dplyr::filter}.}
+}
+\value{
+\code{HibDatabase}
 }
 \description{
 This function returns a database object containing only species (and associated
@@ -17,7 +21,7 @@ sites) whose characteristics are retained.
 }
 \examples{
 \dontrun{
-  hib_filter_species(hib_obj, Class == "Insecta")
+  hib_obj <- hib_filter_species(hib_obj, Class == "Insecta")
 }
 }
 \keyword{database,}

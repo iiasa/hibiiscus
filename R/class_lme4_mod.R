@@ -1,14 +1,14 @@
 #' Template object for lme4 model 
 #' @title HibModelLME4
 #' @description 
-#' This is the template object for an [R6][R6::R6Class] lme4 model class.
+#' This is the template object for an [R6][R6::R6Class] `lme4` model class.
 #' It contains functions for summarising and visualising the model results. 
 #' @keywords classes
 #' @import R6
 #' @rdname HibModelLME4-Class
 #' @export
-HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
-                    
+HibModelLME4 <- R6Class("HibModelLME4",
+                        
                     # Public data objects and functions
                     public = list(
                       #' @field dataset_name (`character`)\cr
@@ -77,7 +77,9 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                       #'   Number of orignal taxa names contributing to the fitted model.
                       #' @param n_sites (`integer` or `list`)\cr
                       #'   Number of sites contributing to the fitted model.
-                      initialize = function(db_obj, # ??
+                      #'   
+                      #'   @return (`HibModelLME4`)
+                      initialize = function(db_obj, 
                                             mod_df,
                                             lme4_obj,
                                             fixef_df,
@@ -86,13 +88,10 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                                             n_spp,
                                             n_taxa,
                                             n_sites
-                                            # set_up_specs
-                                            # spp df?
                                             ){
                         # - some assertion checks
                         assertthat::assert_that(
                           # Check database obj
-                          # db_obj$checkself(),
                           inherits(db_obj, "HibDatabase") || ( is.list(db_obj) & all(unlist(lapply(db_obj, function(x){inherits(x, "HibDatabase")}))) ), 
                           # Check model data
                           is.data.frame(mod_df),
@@ -121,10 +120,10 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         self$fixedef_coefficients <- fixef_df
                         # Set metrics as metr_vec
                         self$metrics <- metr_vec
-                        
+                        # Set ci type
                         self$ci_type <- ci_type
                         
-                        # Incl processing flags from hib_db
+                        # Incl processing flags from HibDatabase
                         # if list, get from each...
                         if (inherits(db_obj, "HibDatabase")){
                           self$processing_flags <- db_obj$processing_flags
@@ -142,19 +141,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         }
                         
                         
-                        # Calc n sites/species used in  model - need to calc spp with div metrics!!
-                        # N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                        
-                      
-                        # if ("SSBS" %in% colnames(mod_df)){
-                        #   self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                        # } else if ("SSBS1" %in% colnames(mod_df)){
-                        #   # print("SSBS1 found")
-                        #   self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
-                        # }
-                        
-                        # self$processing_flags$N_spp <- n_spp
-                        
+                        # Extract location data
                         if (inherits(db_obj, "HibDatabase")){
                           self$dataset_name <- db_obj$dataset_name  
                           loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
@@ -178,8 +165,6 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         self$last_update <- lubridate::now()
                         
                         # %%%%%%%%%%%%%%%
-                        
-                        
                         
                       },
                       # Functions
@@ -234,13 +219,6 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                                         number_species = self$processing_flags$N_spp,
                                         number_taxa = self$processing_flags$N_taxa)
                         }
-                        # stats <- list(number_sites = self$processing_flags$N_sites,
-                        #               # number_lu = length( unique(self$data$Predominant_land_use) ),
-                        #               # number_lui = length(unique(self$data$Use_intensity)),
-                        #               number_species = paste(self$processing_flags$N_spp, collapse = ", ") ) #,
-                        #               # filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
-                        #               # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
-    
                         
                         message(
                           paste0("Hibiiscus fitted model (lme4)\n",
@@ -252,14 +230,13 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                                  # crayon::green(stats$number_lui), "\n",
                                  "\t Number of species:             ", crayon::green(stats$number_species), "\n",
                                  "\t Number of taxa (orig. names):  ", crayon::green(stats$number_taxa), "\n",
-                                 # n_taxa
                                  "\n",
                                  "--------------------\n\n",
                                  "Summary of fitted model\n"
                                  # "Fixed effects:"
                           )
                         )
-                        # print(self$fixedef_coefficients)
+                        
                         print(summary(self$model))
                         metr <- pad_fn(self$metrics, 3, F)
                         names(metr) <- names(self$metrics)
@@ -277,54 +254,16 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         
                       },
                       
-                      # #' @description
-                      # #' Function to save the object to the specified file-path 
-                      # #' ('output_path', must be '.rds').
-                      # #'
-                      # #' @param output_path (`character()`)
-                      # #' @return (`NULL`).
-                      # save_hib = function(output_path = NULL){
-                      #   assertthat::assert_that(
-                      #     is.null(output_path) || is.character(output_path)
-                      #   )
-
-                      #   if(!assertthat::has_extension(output_path, "rds")){
-                      #     output_path <- paste0(output_path, ".rds")
-                      #   }
-                        
-                      #   if (!dir.exists(dirname(output_path))){
-                      #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                      #                                   "\n",
-                      #                                   "This folder will be created.\n")))
-                      #     dir.create(dirname(output_path), recursive = T)
-                      #   }
-                        
-                      #   if (file.exists(output_path)){
-                      #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                      #                                   "\n",
-                      #                                   "This file will be updated.\n")))
-                      #   }
-                        
-                      #   message(crayon::green(paste0("Saving hib model to: '", output_path, "'\n")) )
-                        
-                      #   saveRDS(self, output_path)
-                      #   assertthat::assert_that(file.exists(output_path),
-                      #                           msg = "Writing a copy of the model failed...")
-                      #   invisible()
-                      # },
                       
                       #' @description
                       #' Function to generate figures summarising the model.
                       #' 
                       #' @param type (`character()`) Options are: "fixed-effects",
                       #' "random-effects", "map-sites".
+                      #' 
                       #' @return (`ggplot`).
                       plot = function(type = "fixed-effects"){
-                        # sjPlot::plot_model(self$model, 
-                        #                    show.intercept = T)
-                        
                         assertthat::assert_that(is.character(type))
-                        # stop("Function in progress...")
                         # Plot options
                         type = match.arg(type,
                                          c("fixed-effects",
@@ -347,16 +286,10 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                           fixef_df <- self$fixedef_coefficients
                           
                           # Set a baseline- Intercept
-                          # TODO: convert chr col of Coefficient_name to factor, based on order of terms in df
+                          # Convert chr col of Coefficient_name to factor, based on order of terms in df
                           fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name,
                                                               levels = fixef_df$Coefficient_name)
   
-                          # fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name)
-                          # if ("(Intercept)" %in% fixef_df$Coefficient_name){
-                          #   fixef_df$Coefficient <- relevel(fixef_df$Coefficient_name,
-                          #                                   ref = "(Intercept)")
-                          # }
-                          
                           # %%%
                           plt <- ggplot2::ggplot(fixef_df) +
                             ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
@@ -388,7 +321,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                           rand_df <- as.data.frame(lme4::ranef(self$model)) |>
                             dplyr::mutate(lwr = condval - 1.96*condsd, 
                                           upr = condval + 1.96*condsd) |>
-                            # order from small to large?
+                            # order from small to large
                             dplyr::group_by(grpvar, term) |>
                             dplyr::arrange(condval, .by_group = T) |>
                             dplyr::mutate(ID_ord = 1:dplyr::n()) |>
@@ -398,7 +331,7 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                                                               T ~ "n.s."))
                           
                           # colour as +ve or -ve 
-                          # plot - no names...
+                          # plot - without names
                           plt <- ggplot2::ggplot(rand_df) +
                             ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
                             ggplot2::geom_errorbar(ggplot2::aes(x = ID_ord, 
@@ -429,10 +362,10 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                         
                         if (type == "map-sites"){
                           
-                          
-                          # Just get a coarse-ish world map...
+                          # Get a coarse-ish world map...
                           tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
-                          # NOTE: This differe per model type!!
+                          
+                          # Get response
                           resp_var <- all.vars(self$model@call$formula[[2]])
                           resp_lab <- gsub("_", "\n", resp_var)
                           
@@ -515,10 +448,11 @@ HibModelLME4 <- R6Class("HibModelLME4",# "hib_lme4_model",
                       },
 
                       #' @description
-                      #' Function to assess the model.
+                      #' Function to assess the model using the performance package.
                       #' 
                       #' @return (`NULL`).
                       check_model = function(){
+                        message("Checking model...\n\tNote this function is still in development...")
                         m <- self$model
                         performance::check_model(m)
                       }

@@ -1,30 +1,31 @@
-
-#' Prepare GLOBIOM output for projection.
+#' prep_globiom: Prepare GLOBIOM output for projection.
 #'
 #' @description Function to format a prepared GLOBIOM netCDF file for use in 
 #' Hibiiscus projections.
+#' 
 #' @details This function expects a downscaled GLOBIOM output. Variables are
 #' extracted and converted to raster format, with each raster stack representing
 #' a particular year.
 #' Likely of little use for anyone outside IIASA.
 #'
-#' @param file_path A filepath in [`character`] pointing to a GLOBIOM output in netCDF format.
-#' @param out_as_rast A [`logical`] denoting if the output type should be a (list)
-#' of [`SpatRaster`], or a [`stars`] object (default: \code{TRUE}, i.e. returns  [`SpatRaster`]).
+#' @param file_path A filepath (`character`) pointing to a GLOBIOM output in netCDF format.
+#' @param out_as_rast A `logical` denoting if the output type should be a (list)
+#' of `SpatRaster`, or a `stars` object (default: \code{TRUE}, i.e. returns  `SpatRaster`).
 #' @param incl_pixel_area A [`logical`] denoting if the output should include the
 #' 'pixel_area_ha' variable (Default: \code{TRUE}).
-#' @param vars_to_include A [`character`] vector of variables to be extracted. 
+#' @param vars_to_include A `character` vector of variables to be extracted. 
 #' If \code{NULL}, all variables will be extracted.
-#' @param vars_to_ignore A [`character`] vector of variables to be ignored 
+#' @param vars_to_ignore A `character` vector of variables to be ignored 
 #' If \code{NULL}, all variables will be extracted - unless vars_to_include is not \code{NULL}.
-#' @return A (list of) [`SpatRaster`] stack with the formatted GLOBIOM predictors.
+#' 
+#' @return A (list of) `SpatRaster` stacks with the formatted GLOBIOM predictors.
 #'
 #' @keywords utils
 #'
 #' @examples
 #' \dontrun{
 #' # Expects a filename pointing to a globiom-netCDF file.
-#' globiom_rast <- prep_globiom(file_path)
+#' globiom_rast <- prep_globiom("path/to/globiom_data.nc")
 #' }
 #'
 #' @export
@@ -59,7 +60,7 @@ prep_globiom <- function(file_path,
   if (incl_pixel_area){
     # Check that "pixel_area_ha" is in vars_
     # If not, add
-    # Drop pixel_area[_ha]
+    
     if (!any(grepl("pixel_area", vars_, ignore.case = TRUE))){
       all_vars <- names(tmp_nc$var)
       pixel_area_var <- all_vars[grepl("pixel_area", all_vars, ignore.case = TRUE)]
@@ -71,6 +72,7 @@ prep_globiom <- function(file_path,
         incl_pixel_area <- F
       }
       if (length(pixel_area_var) > 1){
+        # Drop pixel_area[_ha]
         message(crayon::yellow(paste0("\nWarning: ",
                                       length(pixel_area_var), 
                                       " possible pixel area variables found.",
@@ -206,7 +208,6 @@ prep_globiom <- function(file_path,
   # Return as a list of raster stacks - incl cell area (optional) - in-case weighting by this...
   out <- stars_to_rast(stars_res)
   
-  # terra::time(out$`2010`)
   if (incl_pixel_area){
     # Convert pixel area stars to raster
     assertthat::assert_that(
@@ -224,7 +225,7 @@ prep_globiom <- function(file_path,
 }
 
 
-#' Converts a stars object to list of rasters
+#' stars_to_rast: Converts a stars object to list of rasters
 #'
 #' @description This is a small helper function to convert a [`stars`] object to
 #' a [`SpatRaster`] object. If multiple time periods are in the [`stars`] object,
@@ -234,11 +235,9 @@ prep_globiom <- function(file_path,
 #'
 #' @returns A [`list`] containing [`SpatRaster`] objects.
 #'
-#' @keywords scenario
+#' @keywords scenario, internal
 #'
 #' @noRd
-#'
-#' @keywords internal
 stars_to_rast <- function(obj){
   assertthat::assert_that(
     inherits(obj, 'stars')
@@ -283,3 +282,4 @@ stars_to_rast <- function(obj){
   
   return(out)
 }
+

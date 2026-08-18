@@ -2,24 +2,33 @@
 % Please edit documentation in R/hib_saveload.R
 \name{hib_load}
 \alias{hib_load}
-\title{Load a hib object from RDS}
+\title{hib_load: Load Hib___ objects.}
 \usage{
 hib_load(path)
 }
 \arguments{
-\item{path}{A \code{\link{character}} pointing to a file (file names must have
-a ".rds" extension).}
+\item{path}{A \code{character} pointing to a file (file names should have
+a ".rds" extension, if they don't, the extension will be added).}
+}
+\value{
+A hibiiscus object, one of: \code{HibDatabase}, \code{HibLULegend},
+\code{HibModelLME4}, \code{HibModelINLA}, \code{HibModelBRMS}, \code{HibCV}, \code{HibProjection}
 }
 \description{
-The function loads the hibiiscus object fomr the specified file location.
+Load a hibiiscus object from a saved RDS.
 }
 \details{
-Loads a hibiiscus data object to file.
+The function loads the hibiiscus object from the specified file location.
+If the original object (HibProjection) included \code{SpatRaster} data, this
+will be loaded from the appropriate tif file/s.
 }
 \examples{
 \dontrun{
   hib_obj <- hib_load("an/example/file_path/hib_model.rds")
 }
+}
+\seealso{
+\code{\link[=hib_save]{hib_save()}}
 }
 \keyword{data,}
 \keyword{load}

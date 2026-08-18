@@ -62,13 +62,16 @@ function found within this package.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{input}}{(\code{character()} or \code{data.frame})\cr
+\item{\code{input}}{(\code{character()} (rds filepath) or \code{data.frame})\cr
 The source data used to generate the LU legend}
 
 \item{\code{input_chr}}{(\code{character()})\cr
 Text indicating the source of the data.}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+(\code{HibLULegend})\cr
 }
 }
 \if{html}{\out{<hr>}}

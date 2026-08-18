@@ -2,19 +2,28 @@
 % Please edit documentation in R/hib_joininfo.R
 \name{hib_join_species}
 \alias{hib_join_species}
-\title{Joins external species information to a HibDatabase object}
+\title{hib_join_species: Join external species information to a HibDatabase object}
 \usage{
 hib_join_species(obj, spp_info)
 }
 \arguments{
-\item{obj}{A \code{\link{HibDatabase}} object.}
+\item{obj}{A \code{HibDatabase} object.}
 
-\item{spp_info}{A \code{\link{data.frame}} or similar of categorical or numeric information
-to be added to the database. Must share atleast one column with obj$species.}
+\item{spp_info}{A \code{data.frame} or similar of categorical or numeric information
+to be added to the species data in the \code{HibDatabase}.
+Must share at least one column with \code{HibDatabase$species}, e.g. 'Best_guess_binomial'.}
+}
+\value{
+HibDatabase
 }
 \description{
 This function joins external information to a \code{\link{HibDatabase}} object. Such
 information could be for example prepared data on species traits.
+}
+\examples{
+\dontrun{
+  hib_db <- hib_join_species(hib_db, new_spp_data_df)
+} 
 }
 \keyword{database,}
 \keyword{external}

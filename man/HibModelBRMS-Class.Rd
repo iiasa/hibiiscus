@@ -104,7 +104,9 @@ Number of orignal taxa names contributing to the fitted model.}
 Number of sites contributing to the fitted model.}
 
 \item{\code{extra_args}}{(\code{list})\cr
-Additional arguments specified during model fitting.}
+Additional arguments specified during model fitting.
+
+@return (\code{HibModelBRMS})}
 }
 \if{html}{\out{</div>}}
 }
@@ -148,7 +150,7 @@ Function to generate figures summarising the model.
 \if{html}{\out{<a id="method-HibModelBRMS-check_model"></a>}}
 \if{latex}{\out{\hypertarget{method-HibModelBRMS-check_model}{}}}
 \subsection{Method \code{check_model()}}{
-Function to assess the model.
+Function to assess the model using the performance package.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{HibModelBRMS$check_model()}\if{html}{\out{</div>}}
 }

@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-<Text to be written!>
+<!--<Text to be written!> -->
 
 ## Installation
 
@@ -45,19 +45,41 @@ install.packages("hibiiscus", repos = "https://iiasa.r-universe.dev")
 **hibiiscus** is based on R6 Classes (objects) with data components internally stored as `data.frame`/`tibble` or **terra** `SpatRaster`.
 
 
-## Example
+## Using hibiiscus
 
-This is a basic example which shows you how to solve a common problem:
+This package is designed to help with processing and modelling PREDICTS-like data.
+All standalone functions have the prefix `hib_`, and modify the focal R6 object.
+A brief example of how to load and process the data is shown below.
+Further examples can be found in the vignettes.
+Please check the reference section for full details of functionality.
 
 ```{r example, echo=FALSE,warning=FALSE, eval = FALSE}
 library(hibiiscus)
 
+# Load the 2016 PREDICTS data
+hib_db <- hib_load_db("../data/predicts/2016_v1.1/database.rds",
+                      "../data/predicts/2016_v1.1/sites.rds",
+                      "PREDICTS_2016")
+
+# Filter data to 'Europe'
+hib_db <- hib_filter_sites(hib_db, 
+                           UN_region == "Europe")
+
+# Run linear effort correction
+hib_db$hib_effort_correction()
+
+# Calculate total abundance for each site
+hib_db <- hib_calc_div_within(hib_db,
+                              c("Total_abundance"))
+
 ```
+
+
 
 ## Citation
 
 <code>
-Cornford, R & Jung, Martin (2022). hibiiscus - Modelling framework for hierachical ecological impact analysis. R package version 0.1, https://github.com/iiasa/hibiiscus.
+Cornford, R & Jung, Martin (2026). hibiiscus - Modelling framework for hierachical ecological impact analysis. R package version 0.1, https://github.com/iiasa/hibiiscus.
 </code>
 
 ## Acknowledgement

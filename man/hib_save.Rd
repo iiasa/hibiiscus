@@ -2,7 +2,7 @@
 % Please edit documentation in R/hib_saveload.R
 \name{hib_save}
 \alias{hib_save}
-\title{Save a hib object to RDS}
+\title{hib_save: Save Hib___ objects.}
 \usage{
 hib_save(obj, path, overwrite = FALSE)
 }
@@ -10,22 +10,28 @@ hib_save(obj, path, overwrite = FALSE)
 \item{obj}{A hibiiscus object, one of: \code{HibDatabase}, \code{HibLULegend},
 \code{HibModelLME4}, \code{HibModelINLA}, \code{HibModelBRMS}, \code{HibCV}, \code{HibProjection}.}
 
-\item{path}{A \code{\link{character}} pointing to a file (file names should have
+\item{path}{A \code{character} pointing to a file (file names should have
 a ".rds" extension. Non-rds extensions will be amended to rds).}
 
-\item{overwrite}{A \code{\link{logical}} indicating whether a previously saved file should
+\item{overwrite}{A \code{logical} indicating whether a previously saved file should
 be overwritten. (Default: \code{FALSE})}
 }
 \description{
-The function saves the hibiiscus object in the specified file location.
+Saves a hibiiscus data object to disk.
 }
 \details{
-Saves a hibiiscus data object to file.
+The function saves the hibiiscus object in the specified file location.
+If the object (\code{HibProjection}) includes \code{SpatRaster} data, this will
+be separately saved in '.tif' file/s, with the same base-path.
 }
 \examples{
 \dontrun{
   hib_save(model_obj, "an/example/file_path/hib_model.rds", T)
 }
 }
+\seealso{
+\code{\link[=hib_load]{hib_load()}}
+}
 \keyword{data,}
+\keyword{models,}
 \keyword{save}
