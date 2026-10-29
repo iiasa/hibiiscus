@@ -55,6 +55,26 @@ modify the focal R6 object. A brief example of how to load and process
 the data is shown below. Further examples can be found in the vignettes.
 Please check the reference section for full details of functionality.
 
+``` r
+library(hibiiscus)
+
+# Load the 2016 PREDICTS data
+hib_db <- hib_load_db("../data/predicts/2016_v1.1/database.rds",
+                      "../data/predicts/2016_v1.1/sites.rds",
+                      "PREDICTS_2016")
+
+# Filter data to 'Europe'
+hib_db <- hib_filter_sites(hib_db, 
+                           UN_region == "Europe")
+
+# Run linear effort correction
+hib_db$hib_effort_correction()
+
+# Calculate total abundance for each site
+hib_db <- hib_calc_div_within(hib_db,
+                              c("Total_abundance"))
+```
+
 ## Citation
 
 <code> Cornford, R & Jung, Martin (2026). hibiiscus - Modelling
