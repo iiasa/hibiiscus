@@ -13,44 +13,45 @@ Template object for projection results
 }
 \keyword{classes}
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{last_update}}{(\code{character})\cr
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{last_update}}{(\code{character})\cr
 Identifies the most recent update to the object (YYYY-MM-DD).}
 
-\item{\code{model}}{(\code{R6})\cr
+    \item{\code{model}}{(\code{R6})\cr
 The model used to project, one of \link{HibModelLME4},
 \link{HibModelINLA}, \link{HibModelBRMS}.}
 
-\item{\code{projection}}{(\code{data.frame}, \code{SpatRaster}, or \code{list})\cr
+    \item{\code{projection}}{(\code{data.frame}, \code{SpatRaster}, or \code{list})\cr
 The results of model projection.}
 
-\item{\code{projection_specs}}{(\code{list})\cr
+    \item{\code{projection_specs}}{(\code{list})\cr
 List of specifications used for modelling.}
 
-\item{\code{aoa}}{(\code{list})\cr
+    \item{\code{aoa}}{(\code{list})\cr
 Results of Area-of-Applicability calculations.}
-}
-\if{html}{\out{</div>}}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-HibProjection-new}{\code{HibProjection$new()}}
-\item \href{#method-HibProjection-print}{\code{HibProjection$print()}}
-\item \href{#method-HibProjection-plot}{\code{HibProjection$plot()}}
-\item \href{#method-HibProjection-clone}{\code{HibProjection$clone()}}
-}
+  \itemize{
+    \item \href{#method-HibProjection-initialize}{\code{HibProjection$new()}}
+    \item \href{#method-HibProjection-print}{\code{HibProjection$print()}}
+    \item \href{#method-HibProjection-plot}{\code{HibProjection$plot()}}
+    \item \href{#method-HibProjection-clone}{\code{HibProjection$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-HibProjection-new"></a>}}
-\if{latex}{\out{\hypertarget{method-HibProjection-new}{}}}
-\subsection{Method \code{new()}}{
-Creates a new instance of this \link[R6:R6Class]{R6} class.
+\if{html}{\out{<a id="method-HibProjection-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-HibProjection-initialize}{}}}
+\subsection{\code{HibProjection$new()}}{
+  Creates a new instance of this \link[R6:R6Class]{R6} class.
 Note, this object is constructed via the \link{hib_project_model}
 function found within this package.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibProjection$new(
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibProjection$new(
   obj,
   proj,
   backtransform,
@@ -59,109 +60,105 @@ function found within this package.
   inla_specs,
   brms_specs,
   aoa_res
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{obj}}{(\code{HibModelXXXX})\cr
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{obj}}{(\code{HibModelXXXX})\cr
 The model object used in cross-validation.}
-
-\item{\code{proj}}{(\code{data.frame}, \code{SpatRaster}, or \code{list})\cr
+      \item{\code{proj}}{(\code{data.frame}, \code{SpatRaster}, or \code{list})\cr
 The results of model projection.}
-
-\item{\code{backtransform}}{(\code{function} or \code{NULL})\cr
+      \item{\code{backtransform}}{(\code{function} or \code{NULL})\cr
 Describes the backtransformation specified when
 making a model projection.}
-
-\item{\code{rescale_specs}}{(\code{list})\cr
+      \item{\code{rescale_specs}}{(\code{list})\cr
 List of specifications used for rescaling predictions.}
-
-\item{\code{lme4_specs}}{(\code{list})\cr
+      \item{\code{lme4_specs}}{(\code{list})\cr
 List of specifications used for lme4 models.}
-
-\item{\code{inla_specs}}{(\code{list})\cr
+      \item{\code{inla_specs}}{(\code{list})\cr
 List of specifications used for inla models.}
-
-\item{\code{brms_specs}}{(\code{list})\cr
+      \item{\code{brms_specs}}{(\code{list})\cr
 List of specifications used for brms models.}
-
-\item{\code{aoa_res}}{(\code{list}, or \code{NULL})\cr
+      \item{\code{aoa_res}}{(\code{list}, or \code{NULL})\cr
 List of Area-of-Applicability results.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{HibProjection})\cr
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{HibProjection})\cr
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibProjection-print"></a>}}
 \if{latex}{\out{\hypertarget{method-HibProjection-print}{}}}
-\subsection{Method \code{print()}}{
-Base printout function presents core information about the
+\subsection{\code{HibProjection$print()}}{
+  Base printout function presents core information about the
 object.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibProjection$print()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibProjection$print()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibProjection-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-HibProjection-plot}{}}}
-\subsection{Method \code{plot()}}{
-Function to generate figures summarising the
+\subsection{\code{HibProjection$plot()}}{
+  Function to generate figures summarising the
 projection results.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibProjection$plot(
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibProjection$plot(
   type = "response-map",
   response_var = NULL,
   uncertainty_var = NULL,
   aoa_mask = FALSE,
   aoa_var = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{type}}{(\code{character()}) Options are:
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(\code{character()}) Options are:
 "response-map", "uncertainty-map", "bivariate-map",
 "response-distr", "uncertainty-distr", "bivariate-distr".}
-
-\item{\code{response_var}}{(\code{character}, or \code{NULL})}
-
-\item{\code{uncertainty_var}}{(\code{character}, or \code{NULL})}
-
-\item{\code{aoa_mask}}{(\code{logical})}
-
-\item{\code{aoa_var}}{(\code{character}, or \code{NULL})}
+      \item{\code{response_var}}{(\code{character}, or \code{NULL})}
+      \item{\code{uncertainty_var}}{(\code{character}, or \code{NULL})}
+      \item{\code{aoa_mask}}{(\code{logical})}
+      \item{\code{aoa_var}}{(\code{character}, or \code{NULL})}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{ggplot}).
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{ggplot}).
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibProjection-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-HibProjection-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibProjection$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{HibProjection$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibProjection$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

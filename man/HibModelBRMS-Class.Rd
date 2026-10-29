@@ -4,7 +4,7 @@
 \alias{HibModelBRMS}
 \title{HibModelBRMS}
 \description{
-This is the template object for an \link[R6:R6Class]{R6} brms model class.
+This is the template object for an \link[R6:R6Class]{R6} \code{brms} model class.
 It contains functions for summarising and visualising the model results.
 }
 \details{
@@ -12,58 +12,59 @@ Template object for brms model
 }
 \keyword{classes}
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{dataset_name}}{(\code{character})\cr
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{dataset_name}}{(\code{character})\cr
 Identifies the dataset used.}
 
-\item{\code{last_update}}{(\code{character})\cr
+    \item{\code{last_update}}{(\code{character})\cr
 Identifies the most recent update to the object (YYYY-MM-DD).}
 
-\item{\code{data}}{(\code{data.frame})\cr
+    \item{\code{data}}{(\code{data.frame})\cr
 The data used in model fitting.}
 
-\item{\code{model}}{(\code{brmsfit})\cr
+    \item{\code{model}}{(\code{brmsfit})\cr
 The brms model object.}
 
-\item{\code{extra_args}}{(\code{list()})\cr
+    \item{\code{extra_args}}{(\code{list()})\cr
 Identifies addition arguments supplied during model
 fitting (found in '...' when calling \code{hib_fit_brms}).}
 
-\item{\code{fixedef_coefficients}}{(\code{data.frame})\cr
+    \item{\code{fixedef_coefficients}}{(\code{data.frame})\cr
 The fixed effects coefficients.}
 
-\item{\code{metrics}}{(\code{list})\cr
+    \item{\code{metrics}}{(\code{list})\cr
 List containing model performance metrics.}
 
-\item{\code{processing_flags}}{(\code{list()})\cr
+    \item{\code{processing_flags}}{(\code{list()})\cr
 Identifies the processing steps used for the HibDatabase
 object that was used for model fitting.}
 
-\item{\code{site_locations}}{(\code{data.frame})\cr
+    \item{\code{site_locations}}{(\code{data.frame})\cr
 Contains columns for "SSBS", "Longitude" ,"Latitude"}
-}
-\if{html}{\out{</div>}}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-HibModelBRMS-new}{\code{HibModelBRMS$new()}}
-\item \href{#method-HibModelBRMS-print}{\code{HibModelBRMS$print()}}
-\item \href{#method-HibModelBRMS-plot}{\code{HibModelBRMS$plot()}}
-\item \href{#method-HibModelBRMS-check_model}{\code{HibModelBRMS$check_model()}}
-\item \href{#method-HibModelBRMS-clone}{\code{HibModelBRMS$clone()}}
-}
+  \itemize{
+    \item \href{#method-HibModelBRMS-initialize}{\code{HibModelBRMS$new()}}
+    \item \href{#method-HibModelBRMS-print}{\code{HibModelBRMS$print()}}
+    \item \href{#method-HibModelBRMS-plot}{\code{HibModelBRMS$plot()}}
+    \item \href{#method-HibModelBRMS-check_model}{\code{HibModelBRMS$check_model()}}
+    \item \href{#method-HibModelBRMS-clone}{\code{HibModelBRMS$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-HibModelBRMS-new"></a>}}
-\if{latex}{\out{\hypertarget{method-HibModelBRMS-new}{}}}
-\subsection{Method \code{new()}}{
-Creates a new instance of this \link[R6:R6Class]{R6} class.
+\if{html}{\out{<a id="method-HibModelBRMS-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-HibModelBRMS-initialize}{}}}
+\subsection{\code{HibModelBRMS$new()}}{
+  Creates a new instance of this \link[R6:R6Class]{R6} class.
 Note, this object is constructed via the \link{hib_fit_brms}
 function found within this package.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibModelBRMS$new(
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibModelBRMS$new(
   db_obj,
   mod_df,
   brms_obj,
@@ -73,107 +74,108 @@ function found within this package.
   n_taxa,
   n_sites,
   extra_args
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{db_obj}}{(\code{HibDatabase}, or \code{list})\cr
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{db_obj}}{(\code{HibDatabase}, or \code{list})\cr
 The HibDatabase object/s used to fit the model.}
-
-\item{\code{mod_df}}{(\code{data.frame})\cr
+      \item{\code{mod_df}}{(\code{data.frame})\cr
 The data.frame of the data used in model fitting.}
-
-\item{\code{brms_obj}}{(\code{brmsfit})\cr
+      \item{\code{brms_obj}}{(\code{brmsfit})\cr
 The brms model object.}
-
-\item{\code{fixef_df}}{(\code{data.frame})\cr
+      \item{\code{fixef_df}}{(\code{data.frame})\cr
 The fixed effects from the fitted model.}
-
-\item{\code{metr_ls}}{(\code{list})\cr
+      \item{\code{metr_ls}}{(\code{list})\cr
 The list of model performance metrics.}
-
-\item{\code{n_spp}}{(\code{integer} or \code{list})\cr
+      \item{\code{n_spp}}{(\code{integer} or \code{list})\cr
 Number of species contributing to the fitted model.}
-
-\item{\code{n_taxa}}{(\code{integer} or \code{list})\cr
+      \item{\code{n_taxa}}{(\code{integer} or \code{list})\cr
 Number of orignal taxa names contributing to the fitted model.}
-
-\item{\code{n_sites}}{(\code{integer} or \code{list})\cr
+      \item{\code{n_sites}}{(\code{integer} or \code{list})\cr
 Number of sites contributing to the fitted model.}
-
-\item{\code{extra_args}}{(\code{list})\cr
+      \item{\code{extra_args}}{(\code{list})\cr
 Additional arguments specified during model fitting.
 
 @return (\code{HibModelBRMS})}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibModelBRMS-print"></a>}}
 \if{latex}{\out{\hypertarget{method-HibModelBRMS-print}{}}}
-\subsection{Method \code{print()}}{
-Base printout function presents core information about the
+\subsection{\code{HibModelBRMS$print()}}{
+  Base printout function presents core information about the
 object.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibModelBRMS$print()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibModelBRMS$print()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibModelBRMS-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-HibModelBRMS-plot}{}}}
-\subsection{Method \code{plot()}}{
-Function to generate figures summarising the model.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibModelBRMS$plot(type = "fixed-effects")}\if{html}{\out{</div>}}
+\subsection{\code{HibModelBRMS$plot()}}{
+  Function to generate figures summarising the model.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibModelBRMS$plot(type = "fixed-effects")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(\code{character()}) Options are: "fixed-effects",
+"random-effects", "map-sites".}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{ggplot}).
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{type}}{(\code{character()}) Options are: "fixed-effects",
-"random-effects", "map-sites".}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{ggplot}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibModelBRMS-check_model"></a>}}
 \if{latex}{\out{\hypertarget{method-HibModelBRMS-check_model}{}}}
-\subsection{Method \code{check_model()}}{
-Function to assess the model using the performance package.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibModelBRMS$check_model()}\if{html}{\out{</div>}}
+\subsection{\code{HibModelBRMS$check_model()}}{
+  Function to assess the model using the performance package.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibModelBRMS$check_model()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibModelBRMS-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-HibModelBRMS-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibModelBRMS$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{HibModelBRMS$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibModelBRMS$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

@@ -19,168 +19,178 @@ Sci Rep 6, 31153 (2016). https://doi.org/10.1038/srep31153
 }
 \keyword{classes}
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{dataset_name}}{(\code{character()})\cr
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{dataset_name}}{(\code{character()})\cr
 Identifies the dataset used.}
 
-\item{\code{last_update}}{(\code{character()})\cr
+    \item{\code{last_update}}{(\code{character()})\cr
 Identifies the most recent update to the Database (YYYY-MM-DD).}
 
-\item{\code{paths}}{(\code{list()})\cr
+    \item{\code{paths}}{(\code{list()})\cr
 Identifies the files used to create the Database object.}
 
-\item{\code{sites}}{(\code{data.frame})\cr
+    \item{\code{sites}}{(\code{data.frame})\cr
 Stores information on the sites within the Database.}
 
-\item{\code{species}}{(\code{data.frame})\cr
+    \item{\code{species}}{(\code{data.frame})\cr
 Stores information on the species within the Database.}
 
-\item{\code{diversity_within}}{(\code{tibble})\cr
+    \item{\code{diversity_within}}{(\code{tibble})\cr
 Stores information on biodiversity metrics calculated for
 each site (i.e. alpha diversity).}
 
-\item{\code{diversity_between}}{(\code{tibble})\cr
+    \item{\code{diversity_between}}{(\code{tibble})\cr
 Stores information on biodiversity metrics calculated
 between sites, within studies (i.e. beta diversity).}
 
-\item{\code{site_contrasts}}{(\code{data.frame})\cr
+    \item{\code{site_contrasts}}{(\code{data.frame})\cr
 Stores information on 'distances' between sites, within
 studies (e.g., geographic distance).}
 
-\item{\code{processing_flags}}{(\code{list()})\cr
+    \item{\code{processing_flags}}{(\code{list()})\cr
 Stores information on processing that has occurred (e.g.,
 filtering data, adding data).}
-}
-\if{html}{\out{</div>}}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-HibDatabase-new}{\code{HibDatabase$new()}}
-\item \href{#method-HibDatabase-checkself}{\code{HibDatabase$checkself()}}
-\item \href{#method-HibDatabase-print}{\code{HibDatabase$print()}}
-\item \href{#method-HibDatabase-hib_effort_correction}{\code{HibDatabase$hib_effort_correction()}}
-\item \href{#method-HibDatabase-plot}{\code{HibDatabase$plot()}}
-\item \href{#method-HibDatabase-clone}{\code{HibDatabase$clone()}}
-}
+  \itemize{
+    \item \href{#method-HibDatabase-initialize}{\code{HibDatabase$new()}}
+    \item \href{#method-HibDatabase-checkself}{\code{HibDatabase$checkself()}}
+    \item \href{#method-HibDatabase-print}{\code{HibDatabase$print()}}
+    \item \href{#method-HibDatabase-hib_effort_correction}{\code{HibDatabase$hib_effort_correction()}}
+    \item \href{#method-HibDatabase-plot}{\code{HibDatabase$plot()}}
+    \item \href{#method-HibDatabase-clone}{\code{HibDatabase$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-HibDatabase-new"></a>}}
-\if{latex}{\out{\hypertarget{method-HibDatabase-new}{}}}
-\subsection{Method \code{new()}}{
-Creates a new instance of this \link[R6:R6Class]{R6} class.
+\if{html}{\out{<a id="method-HibDatabase-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-HibDatabase-initialize}{}}}
+\subsection{\code{HibDatabase$new()}}{
+  Creates a new instance of this \link[R6:R6Class]{R6} class.
 Note, this object is constructed via the \link{hib_create_db} and
 \link{hib_update_db} functions found within this package.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibDatabase$new(dataset_name, paths)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{dataset_name}}{(\code{character()})\cr
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibDatabase$new(dataset_name, paths)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{dataset_name}}{(\code{character()})\cr
 Text indicating the dataset contributing to the database being created.}
-
-\item{\code{paths}}{(\code{list()})\cr
+      \item{\code{paths}}{(\code{list()})\cr
 List of paths to the 'species' and 'site' data to be loaded.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{HibDatabase})\cr
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{HibDatabase})\cr
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibDatabase-checkself"></a>}}
 \if{latex}{\out{\hypertarget{method-HibDatabase-checkself}{}}}
-\subsection{Method \code{checkself()}}{
-Self check function to ensure that the site and species
+\subsection{\code{HibDatabase$checkself()}}{
+  Self check function to ensure that the site and species
 data.frames contain the correct columns and align in content.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibDatabase$checkself(sites = self$sites, species = self$species)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibDatabase$checkself(sites = self$sites, species = self$species)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{sites}}{(\code{data.frame}).}
+      \item{\code{species}}{(\code{data.frame}).}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{sites}}{(\code{data.frame}).}
-
-\item{\code{species}}{(\code{data.frame}).}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibDatabase-print"></a>}}
 \if{latex}{\out{\hypertarget{method-HibDatabase-print}{}}}
-\subsection{Method \code{print()}}{
-Base printout function presents core information about the
+\subsection{\code{HibDatabase$print()}}{
+  Base printout function presents core information about the
 Database object.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibDatabase$print()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibDatabase$print()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibDatabase-hib_effort_correction"></a>}}
 \if{latex}{\out{\hypertarget{method-HibDatabase-hib_effort_correction}{}}}
-\subsection{Method \code{hib_effort_correction()}}{
-Function to apply effort correction to the species data.
+\subsection{\code{HibDatabase$hib_effort_correction()}}{
+  Function to apply effort correction to the species data.
 Uses a simple, linear scaling, such that sampling effort
 of a site is scaled relative to the maximum value per study,
 and multiplied by the original measure of diversity.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibDatabase$hib_effort_correction()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibDatabase$hib_effort_correction()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{HibDatabase}).
+  }
 }
 
-\subsection{Returns}{
-(\code{HibDatabase}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibDatabase-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-HibDatabase-plot}{}}}
-\subsection{Method \code{plot()}}{
-Function to generate figures summarising the site-level
+\subsection{\code{HibDatabase$plot()}}{
+  Function to generate figures summarising the site-level
 data present in the HibDatabase.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibDatabase$plot(type = "map-sites")}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibDatabase$plot(type = "map-sites")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(\code{character()}) Options are: "map-sites",
+"map-studies", "biome-N", "ecoregion-N", "realm-N", "class-N".}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{ggplot}).
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{type}}{(\code{character()}) Options are: "map-sites",
-"map-studies", "biome-N", "ecoregion-N", "realm-N", "class-N".}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{ggplot}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibDatabase-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-HibDatabase-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibDatabase$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{HibDatabase$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibDatabase$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

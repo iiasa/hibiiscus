@@ -53,7 +53,7 @@ A brief example of how to load and process the data is shown below.
 Further examples can be found in the vignettes.
 Please check the reference section for full details of functionality.
 
-```{r example, echo=FALSE,warning=FALSE, eval = FALSE}
+```{r example, warning=FALSE, eval = FALSE}
 library(hibiiscus)
 
 # Load the 2016 PREDICTS data

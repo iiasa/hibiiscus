@@ -61,14 +61,14 @@ intervals.
 generated via bootstrapping or the SE-based approach. Values should fall between
 0 and 1, typically in the range 0.5 to 0.95.
 Multiple values can be provided.
-\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re.form} in \code{\link[=predict.merMod]{predict.merMod()}},
+\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re.form} in \code{\link[lme4:predict.merMod]{predict.merMod()}},
 used to specify random effects to condition on when predicting.
 }}
 
 \item{inla_specs}{A named \code{list} (or \code{NULL}) containing details relevant to
 projecting a \code{HibModelINLA}. \cr
 \itemize{
-\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re.form} in \code{\link[=predict.merMod]{predict.merMod()}},
+\item \code{re_form} (\code{formula}, \code{NULL}, or \code{NA}), as \code{re.form} in \code{\link[lme4:predict.merMod]{predict.merMod()}},
 used to specify random effects to condition on when predicting.
 \item \code{link_inverse} a \code{function} that is the inverse of the link used to fit the model.
 Used to backtranform the global intercept for use in rescaling predictions.
@@ -81,8 +81,8 @@ Named items should consist of:
 \item \code{incl_obs_uncert} (\code{logical}), to determine whether or not observation-level
 uncertainty is included in predictions.
 Setting this parameter to \code{TRUE} will produce predictions using
-\code{\link[=predict.brmsfit]{predict.brmsfit()}} (larger uncertainty), setting to \code{FALSE} calls
-\code{\link[=fitted.brmsfit]{fitted.brmsfit()}} internally.
+\code{\link[brms:predict.brmsfit]{predict.brmsfit()}} (larger uncertainty), setting to \code{FALSE} calls
+\code{\link[brms:fitted.brmsfit]{fitted.brmsfit()}} internally.
 \item \code{conf_level} (\code{numeric}) is used to specify the confidence levels of intervals
 generated. Values should fall between 0 and 1, typically in the range 0.5 to 0.95.
 Internally converted to quantiles and passed to the \code{probs} argument of \code{predict.brmsfit()}/

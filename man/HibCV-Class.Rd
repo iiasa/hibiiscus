@@ -13,132 +13,135 @@ Template object for cross-validation results
 }
 \keyword{classes}
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{last_update}}{(\code{character})\cr
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{last_update}}{(\code{character})\cr
 Identifies the most recent update to the object (YYYY-MM-DD).}
 
-\item{\code{model_type}}{(\code{character})\cr
+    \item{\code{model_type}}{(\code{character})\cr
 Identifies the type of model; one of "HibModelLME4",
 "HibModelINLA", "HibModelBRMS".}
 
-\item{\code{original_model_obj}}{(\code{list})\cr
+    \item{\code{original_model_obj}}{(\code{list})\cr
 Contains a list of core model information}
 
-\item{\code{cv_results}}{(\code{list})\cr
+    \item{\code{cv_results}}{(\code{list})\cr
 Contains the list of results from cross-validation}
 
-\item{\code{insample_results}}{(\code{list})\cr
+    \item{\code{insample_results}}{(\code{list})\cr
 Contains the list of results from in-sample validation}
 
-\item{\code{re_form}}{(\code{list})\cr
+    \item{\code{re_form}}{(\code{list})\cr
 A list of the re_form model structures used in evaluation.}
 
-\item{\code{use_original_mesh}}{(\code{logical} or \code{NULL})\cr
+    \item{\code{use_original_mesh}}{(\code{logical} or \code{NULL})\cr
 Indicates use of original mesh for spatial INLA models.}
-}
-\if{html}{\out{</div>}}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-HibCV-new}{\code{HibCV$new()}}
-\item \href{#method-HibCV-print}{\code{HibCV$print()}}
-\item \href{#method-HibCV-plot}{\code{HibCV$plot()}}
-\item \href{#method-HibCV-clone}{\code{HibCV$clone()}}
-}
+  \itemize{
+    \item \href{#method-HibCV-initialize}{\code{HibCV$new()}}
+    \item \href{#method-HibCV-print}{\code{HibCV$print()}}
+    \item \href{#method-HibCV-plot}{\code{HibCV$plot()}}
+    \item \href{#method-HibCV-clone}{\code{HibCV$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-HibCV-new"></a>}}
-\if{latex}{\out{\hypertarget{method-HibCV-new}{}}}
-\subsection{Method \code{new()}}{
-Creates a new instance of this \link[R6:R6Class]{R6} class.
+\if{html}{\out{<a id="method-HibCV-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-HibCV-initialize}{}}}
+\subsection{\code{HibCV$new()}}{
+  Creates a new instance of this \link[R6:R6Class]{R6} class.
 Note, this object is constructed via the \link{hib_cv_model}
 function found within this package.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibCV$new(mod_obj, cv_res, insamp_res, re_form, use_orig_mesh)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{mod_obj}}{(\code{HibModelXXXX})\cr
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibCV$new(mod_obj, cv_res, insamp_res, re_form, use_orig_mesh)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{mod_obj}}{(\code{HibModelXXXX})\cr
 The model object used in cross-validation.}
-
-\item{\code{cv_res}}{(\code{list})\cr
+      \item{\code{cv_res}}{(\code{list})\cr
 The results of cross-validation.}
-
-\item{\code{insamp_res}}{(\code{list})\cr
+      \item{\code{insamp_res}}{(\code{list})\cr
 The results of ins-sample validation.}
-
-\item{\code{re_form}}{(\code{list})\cr
+      \item{\code{re_form}}{(\code{list})\cr
 The list of random effects structures used in model evaluation.}
-
-\item{\code{use_orig_mesh}}{(\code{logical} or \code{NULL})\cr
+      \item{\code{use_orig_mesh}}{(\code{logical} or \code{NULL})\cr
 Indicates use of original mesh for spatial INLA models}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{HibCV})\cr
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{HibCV})\cr
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibCV-print"></a>}}
 \if{latex}{\out{\hypertarget{method-HibCV-print}{}}}
-\subsection{Method \code{print()}}{
-Base printout function presents core information about the
+\subsection{\code{HibCV$print()}}{
+  Base printout function presents core information about the
 object.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibCV$print()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibCV$print()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibCV-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-HibCV-plot}{}}}
-\subsection{Method \code{plot()}}{
-Function to generate figures summarising the cross-
+\subsection{\code{HibCV$plot()}}{
+  Function to generate figures summarising the cross-
 validation results.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibCV$plot(type = "metrics", metrics = c("rmse", "rsq"))}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{type}}{(\code{character()}) Options are: "coefficients",
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibCV$plot(type = "metrics", metrics = c("rmse", "rsq"))}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{type}}{(\code{character()}) Options are: "coefficients",
 "coefficients-summary", "obs-v-pred", "obs-v-error",
 "pred-v-error", "metrics", "map-sites".}
-
-\item{\code{metrics}}{(\code{character}) Options are the lower-case
+      \item{\code{metrics}}{(\code{character}) Options are the lower-case
 abbreviations of calculated error metrics. - Only needed
 if type == "metrics".}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{ggplot}).
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{ggplot}).
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibCV-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-HibCV-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibCV$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{HibCV$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibCV$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

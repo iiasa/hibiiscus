@@ -14,7 +14,7 @@ hib_create_lu_legend(input)
 \code{HibLULegend}
 }
 \description{
-This function creates a \code{\link{R6}} \code{\link{HibLULegend}} object containing the provided
+This function creates a \code{\link[R6:R6]{R6}} \code{\link{HibLULegend}} object containing the provided
 land-use legend (i.e., linking sites, SSBS, to land-uses/intensities).
 }
 \details{

@@ -278,7 +278,7 @@ hib_calc_aoa <- function(mod_obj,
 #' @param variable_scale_params A [`list`] of the parameters used to scale each variable
 #' @param mod_data A [`data.frame`] of the data used to fit the original model
 #' @param fix_vars A [`character`] identifying model fixed effects
-#' @param proj_data A [`dataframe`], [`SpatRaster`] or list of [`SpatRaster`], 
+#' @param proj_data A [`data.frame`], [`SpatRaster`] or list of [`SpatRaster`], 
 #' containing covariates for projecting the model.
 #' 
 #' @return list

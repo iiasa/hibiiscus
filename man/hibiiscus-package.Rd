@@ -22,6 +22,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Richard Cornford \email{cornford@iiasa.ac.at} (\href{https://orcid.org/0000-0002-9963-3603}{ORCID})
   \item Martin Jung \email{martinjung@zoho.com} (\href{https://orcid.org/0000-0002-7569-1390}{ORCID})
 }
 

@@ -24,7 +24,7 @@ An object of class \code{HibDatabase}, containing site and species information
 which can be further modified for subsequent ecological analysis.
 }
 \description{
-This function creates an \code{\link{R6}} \code{HibDatabase} object containing the loaded
+This function creates an \code{\link[R6:R6]{R6}} \code{HibDatabase} object containing the loaded
 \code{PREDICTS}-like database.
 }
 \details{
