@@ -35,11 +35,10 @@ before fitting mixed-effects models using `lme4`.
 
 * We then demonstrate the use of cross-validation to interrogate model performance.
 
-* Before finishing with an example of model projection, including estimation of 
-the Area of Applicability (AOA, see Meyers and Pebesma, 2021).
+* BAnd run model projection, including estimation of the Area of Applicability 
+(AOA, see Meyers and Pebesma, 2021).
 
-* TODO: add in integration - random simulation of new data...
-
+* Before finishing with an example of model fitting integrating two datasets.
 ### 1. Load package and PREDICTS-like data
 
 ```{r Load packages}

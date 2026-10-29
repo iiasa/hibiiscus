@@ -54,9 +54,7 @@ Imports:
     stringi,
     marginaleffects
 Suggests:
-    knitr,
     posterior,
-    rmarkdown,
     rnaturalearth,
     rnaturalearthdata,
     testthat (>= 3.0.0),
@@ -69,4 +67,3 @@ Language: en-GB
 Roxygen: list(markdown = TRUE)
 LazyData: true
 Config/roxygen2/version: 8.1.1
-VignetteBuilder: knitr
