@@ -42,8 +42,7 @@ before fitting mixed-effects models using `lme4`.
 ### 1. Load package and PREDICTS-like data
 
 ```{r Load packages}
-# library(hibiiscus)
-devtools::load_all()
+library(hibiiscus)
 
 ```
 
@@ -302,7 +301,6 @@ hib_db2$hib_effort_correction()
 hib_db2 <- hib_calc_div_within(hib_db2,
                               c("Total_abundance"))
 
-devtools::load_all()
 hib_ta_mod2 <- hib_fit_lme4(obj = hib_db2,
                             form = sqrt(Rescaled_total_abundance) ~ LUI + (1|SS),
                             REML = F,

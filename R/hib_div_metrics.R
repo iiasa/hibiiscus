@@ -2011,6 +2011,13 @@ hib_calc_div_between <- function(obj,
   matchable_metrics_idx <- !is.na(pmatch(metrics_spec_df$metric,
                                          metrics_))
 
+  unsupported_metrics <- metrics_spec_df$metric[!matchable_metrics_idx]
+  if (length(unsupported_metrics) > 0){
+    stop("Unsupported diversity metric(s): ",
+         paste(unsupported_metrics, collapse = ", "),
+         call. = FALSE)
+  }
+
   # subset to matchable metrics
   metrics_spec_df <- metrics_spec_df[matchable_metrics_idx,]
 
