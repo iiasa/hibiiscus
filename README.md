@@ -3,6 +3,8 @@
 
 # hibiiscus - Modelling framework for hierachical ecological impact analysis
 
+<img src="man/figures/icon.png" align="right" width="120" alt="hibiiscus icon" />
+
 <!-- badges: start -->
 
 [![CRAN
@@ -79,9 +81,18 @@ hib_db <- hib_calc_div_within(hib_db,
 
 ## Citation
 
-<code> Cornford, R & Jung, Martin (2026). hibiiscus - Modelling
-framework for hierachical ecological impact analysis. R package version
-0.1, <https://github.com/iiasa/hibiiscus>. </code>
+if you use the software, please cite the following reference:
+
+> Cornford, R & Jung, Martin (2026). hibiiscus - Modelling framework for
+> hierachical ecological impact analysis. R package version 0.1,
+> <https://github.com/iiasa/hibiiscus>.
+
+Please also cite the publication for which this software was developed:
+
+> Cornford, R., M. Jung, and P. Visconti. 2026. “ Stress-Testing
+> Model-Derived Biodiversity Indicators Under Different Assumptions of
+> Land-Use Change Impacts.” Diversity and Distributions 32, no. 11:
+> e70255. <https://doi.org/10.1111/ddi.70255>
 
 ## Acknowledgement
 
