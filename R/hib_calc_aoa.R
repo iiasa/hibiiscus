@@ -105,7 +105,7 @@ hib_calc_aoa <- function(mod_obj,
   
   mod_df <- mod_df[, c(fix_vars, "y"), drop = F]
   
-  m_rf <- caret::train(mod_df[, fix_vars, drop = F ],
+  m_rf <- caret::train(as.data.frame(mod_df[, fix_vars, drop = F ]),
                        mod_df$y,
                        method="rf",
                        importance=TRUE,

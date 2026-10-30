@@ -1,6 +1,8 @@
 # Testthat checks for hib_fit_lme4.R, cv, projection
-
 test_that("Check lme4 modelling pipeline works as desired.", {
+  
+  testthat::skip_if_not_installed("lme4")
+  
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        dataset_name = "custom - dummy_data")

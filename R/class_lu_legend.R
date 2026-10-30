@@ -67,7 +67,7 @@ HibLULegend <- R6Class("HibLULegend",
                            if (is.character(input)){
                              message(crayon::green(paste0("\nInitialising HibLULegend from file: ",
                                                           input, "...\n")) )
-                             lu_df <- readr::read_rds(input)
+                             lu_df <- readRDS(input)
                              self$input_data <- paste0("file ('", 
                                                        input,
                                                        "')")

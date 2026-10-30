@@ -16,6 +16,8 @@ badge](https://iiasa.r-universe.dev/badges/hibiiscus)](https://iiasa.r-universe.
 [![Codecov test
 coverage](https://codecov.io/gh/iiasa/hibiiscus/graph/badge.svg)](https://app.codecov.io/gh/iiasa/hibiiscus)
 [![R-CMD-check](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml)
+[![Diversity and
+Distributions](https://img.shields.io/badge/paper-peer--reviewed-brightgreen.svg)](https://doi.org/10.1111/ddi.70255)
 <!-- badges: end -->
 
 <!--<Text to be written!> -->
@@ -97,5 +99,41 @@ Europe Research and Innovation programme under Grant Agreement No
 101060423 (LAMASUS).
 
 ## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+
+<!-- prettier-ignore-start -->
+
+<!-- markdownlint-disable -->
+
+<table>
+
+<tr>
+
+<td align="center">
+
+<a href="https://github.com/rcornf">
+<img src="https://avatars.githubusercontent.com/u/45459638?v=4" width="100px;" alt=""/>
+</a><br>
+<a href="https://github.com/iiasa/hibiiscus/commits?author=rcornf">rcornf</a>
+</td>
+
+<td align="center">
+
+<a href="https://github.com/Martin-Jung">
+<img src="https://avatars.githubusercontent.com/u/3788377?v=4" width="100px;" alt=""/>
+</a><br>
+<a href="https://github.com/iiasa/hibiiscus/commits?author=Martin-Jung">Martin-Jung</a>
+</td>
+
+</tr>
+
+</table>
+
+<!-- markdownlint-enable -->
+
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 <!-- get_contributors(org = "IIASA", repo = "hibiiscus") -->

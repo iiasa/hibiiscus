@@ -80,7 +80,7 @@ HibDatabase <- R6Class("HibDatabase",
                              assertthat::has_extension(paths$species, "rds")
                            )
                            
-                           species <- readr::read_rds(paths$species)
+                           species <- readRDS(paths$species)
                            
                            species$Dataset_name <- dataset_name
                            
@@ -111,7 +111,7 @@ HibDatabase <- R6Class("HibDatabase",
                                assertthat::has_extension(paths$sites, "rds")
                              )
                              
-                             sites <- readr::read_rds(paths$sites)
+                             sites <- readRDS(paths$sites)
                              # dataset_name
                              sites$Dataset_name <- dataset_name
                              

@@ -273,7 +273,7 @@ hib_load <- function(path){
   # Try and read in the database
   message(crayon::green(paste0("\nLoading Hibiiscus object from: '", path, "'...\n")))
   
-  obj <- readr::read_rds(path)
+  obj <- readRDS(path)
   
   # Make some sensitivity checks
   assertthat::assert_that(
