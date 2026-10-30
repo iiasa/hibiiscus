@@ -36,9 +36,9 @@ hib_update_db(obj, path_species, path_sites = "", dataset_name = "")
 
 ## Value
 
-An object of class `HibDatabase`, containing site and species
-information which can be further modified for subsequent ecological
-analysis.
+The updated
+[`HibDatabase`](https://iiasa.github.io/hibiiscus/reference/HibDatabase-Class.md)
+object, with the supplied dataset added to its site and species data.
 
 ## Details
 
