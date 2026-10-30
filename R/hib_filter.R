@@ -67,7 +67,7 @@ hib_filter_sites <- function(obj, condition){
   obj$processing_flags$filtering_steps[[filter_idx]] <- paste0(as.character(filter_idx),
                                                                ": ",
                                                                str_cond)
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   obj$checkself()
   
@@ -147,7 +147,7 @@ hib_filter_species <- function(obj, condition){
   obj$processing_flags$filtering_steps[[filter_idx]] <- paste0(as.character(filter_idx),
                                                                ": ",
                                                                str_cond)
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   obj$checkself()
   

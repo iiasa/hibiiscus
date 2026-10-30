@@ -80,15 +80,8 @@ hib_fit_lme4 <- function(obj,
   # Add functionality for dredging/testing a range of model params...?
   # Add functionality to return averaged model output
   
-  # Check whether lme4 package is available
-  # check_package('lme4')
-  if (!isNamespaceLoaded("lme4")) { 
-    attachNamespace("lme4")
-    requireNamespace('lme4') 
-  }
-  # file.path("lme4")
-  # rcmdcheck::rcmdcheck(path = "lme4",
-  #                      libpath = .libPaths())
+  rlang::check_installed(c("lme4", "MuMIn"),
+                         reason = "to fit lme4 models and calculate model statistics.")
   
   # Add assertions
   assertthat::assert_that(

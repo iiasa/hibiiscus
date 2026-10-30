@@ -133,6 +133,13 @@ hib_project_model <- function(mod_obj,
     is.logical(calc_aoa),
     inherits(cv_obj, "HibCV") || is.null(cv_obj)
   )
+
+  if (inherits(mod_obj, "HibModelLME4")){
+    rlang::check_installed("lme4", reason = "to project lme4 models.")
+  }
+  if (inherits(mod_obj, "HibModelBRMS")){
+    rlang::check_installed("brms", reason = "to project brms models.")
+  }
   
 
   # %%%%%
@@ -337,6 +344,8 @@ hib_project_model <- function(mod_obj,
 
       # se-based CIs... and conf level...
       if (lme4_specs$calc_se == T){
+        rlang::check_installed("marginaleffects",
+                               reason = "to calculate standard errors for model predictions.")
         
         message(crayon::green("\nCalculating standard error of model predictions..."))
         # get conf level if specified - only one, or multiple
@@ -808,7 +817,8 @@ hib_project_model <- function(mod_obj,
                    control.compute = list(dic = TRUE, waic = TRUE),
                    control.predictor = list(A = INLA::inla.stack.A(comb_stk),
                                             link = 1),
-                   verbose = F)
+                   verbose = F,
+                   silent = TRUE)
 
         check_flag <- nrow(m0$summary.fixed)
       }
@@ -821,7 +831,8 @@ hib_project_model <- function(mod_obj,
                  control.compute = list(dic = TRUE, waic = TRUE),
                  control.predictor = list(A = INLA::inla.stack.A(comb_stk),
                                           link = 1),
-                 verbose = F)
+                 verbose = F,
+                 silent = TRUE)
     }
     # %%%%%
 
@@ -1881,6 +1892,8 @@ terra_proj_lme4_pred <- function(mod,
   
   # se-based CIs... and conf level...
   if (lme4_specs$calc_se == T){
+    rlang::check_installed("marginaleffects",
+                           reason = "to calculate standard errors for model predictions.")
     message(crayon::green("\nCalculating standard error of model predictions..."))
     # get conf level if specified - only one, or multiple
     
@@ -2494,6 +2507,7 @@ check_covar_levels <- function(mod, proj_dat, covars){
                                "are not in the model fitting data!\n\n",
                                "Please fix this, see details below:\n"
                                ) ))
+    rlang::check_installed("insight", reason = "to format projection validation messages.")
     problem_vars |>
       dplyr::bind_rows() |>
       insight::format_table(use_symbols = T, digits = 0) |>

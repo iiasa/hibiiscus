@@ -95,7 +95,7 @@ hib_update_db <- function(obj,
   old_dat_nm <- obj$dataset_name
   
   obj$dataset_name <- paste(obj$dataset_name, dataset_name, sep = "; ")
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   # Add paths...
   obj$paths$species <- c(obj$paths$species, new_obj$paths$species)

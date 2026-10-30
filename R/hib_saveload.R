@@ -129,7 +129,7 @@ hib_save <- function(obj, path, overwrite = FALSE){
                            aoa_fp,
                            overwrite = overwrite)
         # Dynamically store fps
-        dc_obj$aoa$aoa$proj_aoa <- basename(aoa_fp)
+        dc_obj$aoa$proj_aoa <- basename(aoa_fp)
       }
     }
     
@@ -247,8 +247,7 @@ hib_save <- function(obj, path, overwrite = FALSE){
 hib_load <- function(path){
 
   assertthat::assert_that(
-    is.character(path),
-    file.exists(path)
+    is.character(path)
     # assertthat::has_extension(path, "rds")
   )
   

@@ -99,7 +99,7 @@ hib_set_lu_legend <- function(obj, leg){
   # Add in a legend flag
   obj$processing_flags$lu_legend_source <- leg$input_data
   
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   return(obj)
   

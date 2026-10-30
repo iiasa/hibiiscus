@@ -162,7 +162,7 @@ HibModelLME4 <- R6Class("HibModelLME4",
                         }
                         self$site_locations <- loc_df
 
-                        self$last_update <- lubridate::now()
+                        self$last_update <- Sys.time()
                         
                         # %%%%%%%%%%%%%%%
                         
@@ -263,6 +263,7 @@ HibModelLME4 <- R6Class("HibModelLME4",
                       #' 
                       #' @return (`ggplot`).
                       plot = function(type = "fixed-effects"){
+                        rlang::check_installed("ggplot2", reason = "to plot hibiiscus objects.")
                         assertthat::assert_that(is.character(type))
                         # Plot options
                         type = match.arg(type,
@@ -315,6 +316,7 @@ HibModelLME4 <- R6Class("HibModelLME4",
                         #    fixed effects - posteriors
                         # 2. random iid
                         if (type == "random-effects"){
+                          rlang::check_installed("lme4", reason = "to plot lme4 random effects.")
                          
                           rand_vars <- all.vars(self$user_formula$random)
                           
@@ -363,6 +365,8 @@ HibModelLME4 <- R6Class("HibModelLME4",
                         if (type == "map-sites"){
                           
                           # Get a coarse-ish world map...
+                          rlang::check_installed(c("rnaturalearth", "rnaturalearthdata", "sf"),
+                                                 reason = "to plot model locations.")
                           tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
                           
                           # Get response

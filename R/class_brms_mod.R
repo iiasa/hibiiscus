@@ -157,7 +157,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               }
                               self$site_locations <- loc_df
 
-                              self$last_update <- lubridate::now()
+                              self$last_update <- Sys.time()
                               
                               # %%%%%%%%%%%%%%%
                            
@@ -257,6 +257,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             #' "random-effects", "map-sites".
                             #' @return (`ggplot`).
                             plot = function(type = "fixed-effects"){
+                              rlang::check_installed("ggplot2", reason = "to plot hibiiscus objects.")
                               
                               assertthat::assert_that(is.character(type))
                 
@@ -307,6 +308,8 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               #    fixed effects - posteriors
                               # 2. random iid
                               if (type == "random-effects"){
+                                rlang::check_installed(c("brms", "reshape2"),
+                                                       reason = "to plot brms random effects.")
                                 # TODO: ranef(m) produces a list of 3D arrays
                                 # dim 1 = factor levels
                                 # dim 2 = summary stats
@@ -374,6 +377,8 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               if (type == "map-sites"){
                                 
                                 # Just get a coarse-ish world map...
+                                rlang::check_installed(c("rnaturalearth", "rnaturalearthdata", "sf"),
+                                                       reason = "to plot model locations.")
                                 tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
                                 
                                 resp_var <- all.vars(stats::formula(self$model)$formula[[2]])

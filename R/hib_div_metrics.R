@@ -1275,7 +1275,7 @@ hib_calc_div_within <- function(obj, metrics){
     obj$diversity_within <- out_tib
   }
   
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
 
   # checkself?
 
@@ -1360,6 +1360,7 @@ hib_calc_veg <- function(spp_site_data,
     return(NULL)
   }
 
+  rlang::check_installed("vegan", reason = "to calculate vegan dissimilarity metrics.")
   dist_obj <- vegan::vegdist(spp_site_data,
                              method = metric,
                              binary = binary)
@@ -1443,6 +1444,7 @@ hib_calc_veg <- function(spp_site_data,
 #'  
 #' @noRd
 calc_hypervolume <- function(spp_site_matrix){
+  rlang::check_installed("geometry", reason = "to calculate hypervolume-based diversity.")
   assertthat::assert_that(
     is.data.frame(spp_site_matrix)
   )
@@ -1588,13 +1590,13 @@ calc_horn_overlap <- function(x, y){
   
   horn_overlap <- round(num/denom, 5)
   
-  if (out < 0){
-    out <- 0
+  if (horn_overlap < 0){
+    horn_overlap <- 0
   }
-  if (out > 1){
-    out <- 1
+  if (horn_overlap > 1){
+    horn_overlap <- 1
   }
-  return(out)
+  return(horn_overlap)
 }
 
 
@@ -1825,6 +1827,7 @@ hib_calc_nonveg <- function(spp_site_data,
   # Calculate baselga_X metrics
   else if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient",
                          "baselga_ruzicka_balanced", "baselga_ruzicka_gradient")){
+    rlang::check_installed("betapart", reason = "to calculate Baselga beta-diversity metrics.")
     
     if (metric %in% c("baselga_bray_balanced", "baselga_bray_gradient")){
       out <- unlist(betapart::beta.pair.abund(spp_site_data, 
@@ -2609,7 +2612,7 @@ hib_calc_div_between <- function(obj,
     obj$diversity_between <- out_tib
   }
   
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
 
   return(obj)
 }

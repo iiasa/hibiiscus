@@ -30,8 +30,6 @@
 #'   save(out, "data/dummy_data.rda")
 #' }
 #' 
-#' @import stringi 
-#' 
 #' @keywords internal
 #' 
 #' @author Martin Jung
@@ -69,7 +67,9 @@ create_dummy_data <- function(what = "sites",
   if(what == "sites"){
     
     # Create ids of studies
-    ns <- stringi::stri_rand_strings(n = n_studies,length = 7)
+    ns <- vapply(seq_len(n_studies), function(study_index) {
+      paste0(sample(c(letters, LETTERS, 0:9), 7L, replace = TRUE), collapse = "")
+    }, character(1))
     assertthat::assert_that(length(unique(ns)) == n_studies)
     # lui <- c("Minimal use", "Light use", "Intense use")
    
@@ -154,7 +154,9 @@ create_dummy_data <- function(what = "sites",
     # ui_legend = c("Minimal_use", "Light_use", "Intense_use")
     # %%%%%%%%%%%%%%%%
     # Create ids of studies
-    ns <- stringi::stri_rand_strings(n = n_studies, length = 7)
+    ns <- vapply(seq_len(n_studies), function(study_index) {
+      paste0(sample(c(letters, LETTERS, 0:9), 7L, replace = TRUE), collapse = "")
+    }, character(1))
     assertthat::assert_that(length(unique(ns)) == n_studies)
     
     out <- tidyr::crossing(
@@ -185,6 +187,8 @@ create_dummy_data <- function(what = "sites",
     
     # Lat/Long sampling
     # get a coarse-ish world map...
+    rlang::check_installed(c("sf", "rnaturalearth", "rnaturalearthdata"),
+                 reason = "to generate dummy species data.")
     map <- rnaturalearth::ne_countries(scale = 110, returnclass = 'sf')
     map <- map |>
       dplyr::filter(continent != "Antarctica")
@@ -246,7 +250,9 @@ create_dummy_data <- function(what = "sites",
       # For each SS, sample N spp - 
       ssbs <- unique(out$SSBS[out$SS == ss])
       N_spp <- stats::runif(n = 1, min = 5, max = 100) |> round()
-      spp_id <- stringi::stri_rand_strings(n = N_spp, length = 7)
+      spp_id <- replicate(N_spp,
+              paste0(sample(c(letters, LETTERS, 0:9), 7L, replace = TRUE),
+                 collapse = ""))
       
       # Sample mean abundance (log) - runif()
       mean_n <- stats::runif(n = 1, min = 5, max = 100) |> round()

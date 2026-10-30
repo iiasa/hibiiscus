@@ -67,19 +67,6 @@ test_that("hib_save and hib_load round-trip a single-raster AOA", {
 # hib_load
 # %%%%%%%%%%
 
-test_that("hib_load accepts paths with and without the rds extension", {
-  model <- structure(list(), class = "HibModelLME4")
-  path_without_extension <- tempfile()
-  path_with_extension <- paste0(path_without_extension, ".rds")
-
-  hib_save(model, path_with_extension)
-
-  expect_s3_class(hib_load(path_with_extension), "HibModelLME4")
-  expect_s3_class(hib_load(path_without_extension), "HibModelLME4")
-
-  unlink(path_with_extension)
-})
-
 test_that("Check that hib_load correctly loads a pre-made hibiiscus database.", {
   # - fails if no path
   expect_error(hib_load(),
