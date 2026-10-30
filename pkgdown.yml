@@ -1,9 +1,9 @@
-pandoc: 3.1.11
-pkgdown: 2.1.1
+pandoc: 3.8.3
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   01_basic_use: 01_basic_use.html
-last_built: 2024-09-27T20:31Z
+last_built: 2026-10-30T11:04Z
 urls:
   reference: https://iiasa.github.io/hibiiscus/reference
   article: https://iiasa.github.io/hibiiscus/articles
