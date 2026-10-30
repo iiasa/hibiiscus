@@ -45,7 +45,7 @@ hib_db <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc.
 # View a summary of the hib database object
 print(hib_db)
 #> Hibiiscus database (including dataset/s: Dummy data)
-#> Last updated: 2026-10-30 14:36:16.795378
+#> Last updated: 2026-10-30 15:08:35.921611
 #>   Number of sites:               200
 #>   Number of species:             873
 #>   Number of taxa (orig. names):  873
@@ -177,7 +177,7 @@ hib_db <- hib_calc_site_contrasts(hib_db,
 print(hib_db)
 #> LUI contrast
 #> Hibiiscus database (including dataset/s: Dummy data)
-#> Last updated: 2026-10-30 14:36:26.574569
+#> Last updated: 2026-10-30 15:08:44.747055
 #>   Number of sites:               190
 #>   Number of species:             868
 #>   Number of taxa (orig. names):  868
@@ -230,7 +230,7 @@ hib_ta_mod <- hib_fit_lme4(hib_db,
 
 print(hib_ta_mod)
 #> Hibiiscus fitted model (lme4)
-#> Last updated: 2026-10-30 14:36:26.783777
+#> Last updated: 2026-10-30 15:08:44.914294
 #>   Number of sites:               190
 #>   Number of species:             868
 #>   Number of taxa (orig. names):  868
@@ -298,7 +298,7 @@ hib_bc_mod <- hib_fit_lme4(hib_db,
 
 print(hib_bc_mod)
 #> Hibiiscus fitted model (lme4)
-#> Last updated: 2026-10-30 14:36:27.01807
+#> Last updated: 2026-10-30 15:08:45.112
 #>   Number of sites:               170
 #>   Number of species:             814
 #>   Number of taxa (orig. names):  814
@@ -432,7 +432,7 @@ hib_cv <- hib_cv_model(hib_ta_mod,
                      
 print(hib_cv)
 #> Hibiiscus cross-validated model (lme4)
-#> Last updated: 2026-10-30 14:36:29.781791
+#> Last updated: 2026-10-30 15:08:47.390114
 #> 
 #> --------------------
 #> 
@@ -519,37 +519,26 @@ hib_proj <- hib_project_model(hib_ta_mod,
 #> Estimating Area-of-Applicability...
 #> Loading required package: ggplot2
 #> Loading required package: lattice
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
-#> Warning: Setting row names on a tibble is deprecated.
 #> Warning in randomForest.default(x, y, mtry = param$mtry, ...): invalid mtry:
 #> reset to within valid range
 #> note: variables were not weighted either because no weights or model were given,
@@ -636,7 +625,7 @@ hib_db2 <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc
 # View a summary of the hib database object
 print(hib_db2)
 #> Hibiiscus database (including dataset/s: Dummy data 2)
-#> Last updated: 2026-10-30 14:36:36.404602
+#> Last updated: 2026-10-30 15:08:53.032683
 #>   Number of sites:               150
 #>   Number of species:             939
 #>   Number of taxa (orig. names):  939

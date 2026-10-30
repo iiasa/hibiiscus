@@ -78,6 +78,8 @@ Europe Research and Innovation programme under Grant Agreement No
 
 ## Contributors
 
+[TABLE]
+
 # Package index
 
 ## All functions
