@@ -89,9 +89,7 @@ Applicability (AOA, see Meyers and Pebesma, 2021).</p></li>
 datasets. ### 1. Load package and PREDICTS-like data</p></li>
 </ul>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># library(hibiiscus)</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/load_all.html" class="external-link">load_all</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Loading <span style="color: #0000BB;">hibiiscus</span></span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/iiasa/hibiiscus" class="external-link">hibiiscus</a></span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load our simulated data - and assign the dataset an identifying name.</span></span>
 <span><span class="va">hib_db</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hib_create_db.html">hib_create_db</a></span><span class="op">(</span>path_species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"dummy_species_rc.rds"</span>, </span>
@@ -106,7 +104,7 @@ datasets. ### 1. Load package and PREDICTS-like data</p></li>
 <span><span class="co"># View a summary of the hib database object</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">hib_db</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Hibiiscus database (including dataset/s: <span style="font-weight: bold;">Dummy data</span>)</span></span>
-<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 20:43:30.795495</span></span></span>
+<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 21:12:39.475545</span></span></span>
 <span><span class="co">#&gt;   Number of sites:               <span style="color: #00BB00;">200</span></span></span>
 <span><span class="co">#&gt;   Number of species:             <span style="color: #00BB00;">873</span></span></span>
 <span><span class="co">#&gt;   Number of taxa (orig. names):  <span style="color: #00BB00;">873</span></span></span>
@@ -227,7 +225,7 @@ studies).<a class="anchor" aria-label="anchor" href="#correct-measurements-for-s
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">hib_db</span><span class="op">)</span></span>
 <span><span class="co">#&gt; LUI contrast</span></span>
 <span><span class="co">#&gt; Hibiiscus database (including dataset/s: <span style="font-weight: bold;">Dummy data</span>)</span></span>
-<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 20:43:41.593513</span></span></span>
+<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 21:12:50.433382</span></span></span>
 <span><span class="co">#&gt;   Number of sites:               <span style="color: #00BB00;">190</span></span></span>
 <span><span class="co">#&gt;   Number of species:             <span style="color: #00BB00;">868</span></span></span>
 <span><span class="co">#&gt;   Number of taxa (orig. names):  <span style="color: #00BB00;">868</span></span></span>
@@ -278,7 +276,7 @@ land-use, and a simple model of Bray-Curtis dissimilarity.<a class="anchor" aria
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">hib_ta_mod</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Hibiiscus fitted model (lme4)</span></span>
-<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 20:43:42.002934</span></span></span>
+<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 21:12:50.827801</span></span></span>
 <span><span class="co">#&gt;   Number of sites:               <span style="color: #00BB00;">190</span></span></span>
 <span><span class="co">#&gt;   Number of species:             <span style="color: #00BB00;">868</span></span></span>
 <span><span class="co">#&gt;   Number of taxa (orig. names):  <span style="color: #00BB00;">868</span></span></span>
@@ -346,7 +344,7 @@ land-use, and a simple model of Bray-Curtis dissimilarity.<a class="anchor" aria
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">hib_bc_mod</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Hibiiscus fitted model (lme4)</span></span>
-<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 20:43:42.24641</span></span></span>
+<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 21:12:50.896914</span></span></span>
 <span><span class="co">#&gt;   Number of sites:               <span style="color: #00BB00;">170</span></span></span>
 <span><span class="co">#&gt;   Number of species:             <span style="color: #00BB00;">814</span></span></span>
 <span><span class="co">#&gt;   Number of taxa (orig. names):  <span style="color: #00BB00;">814</span></span></span>
@@ -472,7 +470,7 @@ geographically blocked folds.<a class="anchor" aria-label="anchor" href="#cross-
 <span>                     </span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">hib_cv</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Hibiiscus cross-validated model (lme4)</span></span>
-<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 20:43:44.928535</span></span></span>
+<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 21:12:53.226776</span></span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -522,8 +520,8 @@ the complete dataset (In-sample).</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Generate a simple df of example land-uses for projection.</span></span>
 <span><span class="va">proj_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span>,</span>
-<span>                       y <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span></span>
+<span>                       y <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>Forest_cover <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html" class="external-link">n</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                LUI <span class="op">=</span> <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/case-and-replace-when.html" class="external-link">case_when</a></span><span class="op">(</span><span class="va">Forest_cover</span> <span class="op">&lt;=</span> <span class="fl">0.3</span> <span class="op">~</span> <span class="st">"Human"</span>,</span>
 <span>                                              <span class="va">Forest_cover</span> <span class="op">&gt;</span> <span class="fl">0.3</span> <span class="op">&amp;</span> <span class="va">Forest_cover</span> <span class="op">&lt;=</span> <span class="fl">0.7</span> <span class="op">~</span> <span class="st">"Semi-natural"</span>,</span>
@@ -633,7 +631,7 @@ are therefore no locations outside the AOA in this example.</p>
 <span><span class="co"># View a summary of the hib database object</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">hib_db2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Hibiiscus database (including dataset/s: <span style="font-weight: bold;">Dummy data 2</span>)</span></span>
-<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 20:43:51.564998</span></span></span>
+<span><span class="co">#&gt; Last updated: <span style="color: #00BB00;">2026-10-30 21:12:59.794019</span></span></span>
 <span><span class="co">#&gt;   Number of sites:               <span style="color: #00BB00;">150</span></span></span>
 <span><span class="co">#&gt;   Number of species:             <span style="color: #00BB00;">939</span></span></span>
 <span><span class="co">#&gt;   Number of taxa (orig. names):  <span style="color: #00BB00;">939</span></span></span>
@@ -691,8 +689,6 @@ are therefore no locations outside the AOA in this example.</p>
 <span><span class="co">#&gt; <span style="color: #BBBBBB;">    Total abundance ...</span></span></span>
 <span><span class="co"><span style="color: #BBBBBB;">#&gt; </span></span></span>
 <span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/load_all.html" class="external-link">load_all</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Loading <span style="color: #0000BB;">hibiiscus</span></span></span>
 <span><span class="va">hib_ta_mod2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hib_fit_lme4.html">hib_fit_lme4</a></span><span class="op">(</span>obj <span class="op">=</span> <span class="va">hib_db2</span>,</span>
 <span>                            form <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">Rescaled_total_abundance</span><span class="op">)</span> <span class="op">~</span> <span class="va">LUI</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span><span class="op">|</span><span class="va">SS</span><span class="op">)</span>,</span>
 <span>                            REML <span class="op">=</span> <span class="cn">F</span>,</span>

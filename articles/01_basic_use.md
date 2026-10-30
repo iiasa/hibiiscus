@@ -25,9 +25,7 @@ the hibiiscus package.
 
 ``` r
 
-# library(hibiiscus)
-devtools::load_all()
-#> ℹ Loading hibiiscus
+library(hibiiscus)
 ```
 
 ``` r
@@ -45,7 +43,7 @@ hib_db <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc.
 # View a summary of the hib database object
 print(hib_db)
 #> Hibiiscus database (including dataset/s: Dummy data)
-#> Last updated: 2026-10-30 20:43:30.795495
+#> Last updated: 2026-10-30 21:12:39.475545
 #>   Number of sites:               200
 #>   Number of species:             873
 #>   Number of taxa (orig. names):  873
@@ -177,7 +175,7 @@ hib_db <- hib_calc_site_contrasts(hib_db,
 print(hib_db)
 #> LUI contrast
 #> Hibiiscus database (including dataset/s: Dummy data)
-#> Last updated: 2026-10-30 20:43:41.593513
+#> Last updated: 2026-10-30 21:12:50.433382
 #>   Number of sites:               190
 #>   Number of species:             868
 #>   Number of taxa (orig. names):  868
@@ -230,7 +228,7 @@ hib_ta_mod <- hib_fit_lme4(hib_db,
 
 print(hib_ta_mod)
 #> Hibiiscus fitted model (lme4)
-#> Last updated: 2026-10-30 20:43:42.002934
+#> Last updated: 2026-10-30 21:12:50.827801
 #>   Number of sites:               190
 #>   Number of species:             868
 #>   Number of taxa (orig. names):  868
@@ -298,7 +296,7 @@ hib_bc_mod <- hib_fit_lme4(hib_db,
 
 print(hib_bc_mod)
 #> Hibiiscus fitted model (lme4)
-#> Last updated: 2026-10-30 20:43:42.24641
+#> Last updated: 2026-10-30 21:12:50.896914
 #>   Number of sites:               170
 #>   Number of species:             814
 #>   Number of taxa (orig. names):  814
@@ -432,7 +430,7 @@ hib_cv <- hib_cv_model(hib_ta_mod,
                      
 print(hib_cv)
 #> Hibiiscus cross-validated model (lme4)
-#> Last updated: 2026-10-30 20:43:44.928535
+#> Last updated: 2026-10-30 21:12:53.226776
 #> 
 #> --------------------
 #> 
@@ -496,8 +494,8 @@ the complete dataset (In-sample).
 
 # Generate a simple df of example land-uses for projection.
 proj_df <- expand.grid(x = 1:10,
-                       y = 1:10) %>%
-  as.data.frame() %>%
+                       y = 1:10) |>
+  as.data.frame() |>
   dplyr::mutate(Forest_cover = runif(dplyr::n()),
                 LUI = dplyr::case_when(Forest_cover <= 0.3 ~ "Human",
                                               Forest_cover > 0.3 & Forest_cover <= 0.7 ~ "Semi-natural",
@@ -625,7 +623,7 @@ hib_db2 <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc
 # View a summary of the hib database object
 print(hib_db2)
 #> Hibiiscus database (including dataset/s: Dummy data 2)
-#> Last updated: 2026-10-30 20:43:51.564998
+#> Last updated: 2026-10-30 21:12:59.794019
 #>   Number of sites:               150
 #>   Number of species:             939
 #>   Number of taxa (orig. names):  939
@@ -683,8 +681,6 @@ hib_db2 <- hib_calc_div_within(hib_db2,
 #>     Total abundance ...
 #> 
 
-devtools::load_all()
-#> ℹ Loading hibiiscus
 hib_ta_mod2 <- hib_fit_lme4(obj = hib_db2,
                             form = sqrt(Rescaled_total_abundance) ~ LUI + (1|SS),
                             REML = F,
