@@ -1,6 +1,6 @@
 # Changelog
 
-## hibiiscus - Version 0.1
+## hibiiscus 0.1
 
 ### New features
 
