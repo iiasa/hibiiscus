@@ -10,7 +10,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/iiasa/hibiiscus/blob/master/inst/CITATION)
+[`inst/CITATION`](https://github.com/iiasa/hibiiscus/blob/martin/inst/CITATION)
 
 Cornford, R & Jung, Martin (2024). hibiiscus - Modelling framework for
 hierachical ecological impact analysis. R package version 0.1,
