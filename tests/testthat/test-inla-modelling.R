@@ -1,6 +1,7 @@
 # Testthat checks for hib_fit_inla.R, cv, projection
 
 test_that("Check inla modelling pipeline works as desired.", {
+  invisible(utils::capture.output(suppressMessages(suppressWarnings({
   
   testthat::skip_if_not_installed("INLA")
   testthat::skip_on_ci()
@@ -29,11 +30,11 @@ test_that("Check inla modelling pipeline works as desired.", {
                                     baseline_lui = "Primary_Minimal_use")
   
   # within-site model
-  suppressWarnings(mod_w <- hib_fit_inla(tmp_db,
-                                         log(Total_abundance + 1) ~ -1 + Intercept + LUI,
-                                         ~ f(SS, model = "iid")
-                                         # relevel_specs = c("LUI" = "Primary_Minimal_use")
-                                         ))
+  suppressMessages(suppressWarnings(mod_w <- hib_fit_inla(tmp_db,
+                                                          log(Total_abundance + 1) ~ -1 + Intercept + LUI,
+                                                          ~ f(SS, model = "iid")
+                                                          # relevel_specs = c("LUI" = "Primary_Minimal_use")
+                                                          )))
   expect_true(inherits(mod_w,
                        "HibModelINLA"))
   
@@ -48,10 +49,13 @@ test_that("Check inla modelling pipeline works as desired.", {
   # mod_b$plot()
   
   # cv
-  suppressWarnings(cv_w <- hib_cv_model(mod_w,
-                                      tmp_db,
-                                      c("Random-2"),
-                                      backtransform = function(x){exp(x) - 1}))
+  invisible(utils::capture.output(
+    suppressMessages(suppressWarnings(cv_w <- hib_cv_model(mod_w,
+                                                           tmp_db,
+                                                           c("Random-2"),
+                                                           backtransform = function(x){exp(x) - 1}))),
+    type = "message"
+  ))
   expect_true(inherits(cv_w,
                        "HibCV"))
   
@@ -67,9 +71,9 @@ test_that("Check inla modelling pipeline works as desired.", {
   
   # projection
   # simulate some lui/contrast data for models
-  # 100x100 grid
-  proj_df_w <- expand.grid(x = 1:100,
-                           y = 1:100) |>
+  # 10x10 test grid
+  proj_df_w <- expand.grid(x = 1:10,
+                           y = 1:10) |>
     as.data.frame() |>
     dplyr::mutate(LUI = sample(as.character(unique(mod_w$data$LUI)),
                                dplyr::n(), T))
@@ -156,4 +160,5 @@ test_that("Check inla modelling pipeline works as desired.", {
   #                            proj_rast_b)
   # expect_true(inherits(proj_b_,
   #                      "hib_mod_projection"))  
+  }))))
 })

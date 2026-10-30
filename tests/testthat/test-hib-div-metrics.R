@@ -59,7 +59,7 @@ test_that("Check that between-sample diversity metrics work.", {
   
   
   between_site_metrics <- c("baselga_bray_balanced", "euclidean", "theta",
-                            "horn")
+                            "horn", "horn_dissim")
   # unique(tmp_db$sites$LUI)
   tmp_db <- hib_calc_div_between(tmp_db,
                                  between_site_metrics, 
@@ -70,6 +70,11 @@ test_that("Check that between-sample diversity metrics work.", {
   
   expect_true(is.data.frame(tmp_db$diversity_between))
   expect_true(nrow(tmp_db$diversity_between) == length(between_site_metrics))
+
+  horn_dissim <- tmp_db$diversity_between$Data[[which(tmp_db$diversity_between$Metric == "Horn_dissim")]]
+  expect_gt(nrow(horn_dissim), 0)
+  expect_true(all(is.finite(horn_dissim$Horn_dissim)))
+  expect_true(all(horn_dissim$Horn_dissim >= 0 & horn_dissim$Horn_dissim <= 1))
   
   # tmp_db <- hib_calc_div_between(tmp_db,
   #                                c("euclidean", "theta",
