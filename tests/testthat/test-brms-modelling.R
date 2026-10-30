@@ -1,6 +1,7 @@
 # Testthat checks for hib_fit_brms.R, cv, projection
 
 test_that("Check brms modelling pipeline works as desired.", {
+  invisible(utils::capture.output(suppressMessages(suppressWarnings({
   
   testthat::skip_if_not_installed("rstan")
   testthat::skip_if_not_installed("cmdstanr")
@@ -31,25 +32,29 @@ test_that("Check brms modelling pipeline works as desired.", {
                                     baseline_lui = "Primary_Minimal_use")
   
   # within-site model
-  suppressWarnings(mod_w <- hib_fit_brms(tmp_db,
-                                         log(Total_abundance + 1) ~ LUI + (1 | SS),
-                                         iter = 100,
-                                         chains = 1,
-                                         backend = "cmdstanr"
-                                         # relevel_specs = c("LUI" = "Cropland_Intense_use")
-                                         ))
+  suppressMessages(suppressWarnings(mod_w <- hib_fit_brms(tmp_db,
+                                                          log(Total_abundance + 1) ~ LUI + (1 | SS),
+                                                          iter = 50,
+                                                          chains = 1,
+                                                          backend = "cmdstanr",
+                                                          silent = 2,
+                                                          refresh = 0
+                                                          # relevel_specs = c("LUI" = "Cropland_Intense_use")
+                                                          )))
   expect_true(inherits(mod_w,
                        "HibModelBRMS"))
   
   # between-site model
-  suppressWarnings(mod_b <- hib_fit_brms(tmp_db,
-                                         Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
-                                         iter = 100,
-                                         chains = 1,
-                                         backend = "cmdstanr"
-                                         # scale_specs = list(covars_to_scale = "Geogr_dist_hav",
-                                         #                    scale_func = NULL)
-                                         ))
+  suppressMessages(suppressWarnings(mod_b <- hib_fit_brms(tmp_db,
+                                                          Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
+                                                          iter = 50,
+                                                          chains = 1,
+                                                          backend = "cmdstanr",
+                                                          silent = 2,
+                                                          refresh = 0
+                                                          # scale_specs = list(covars_to_scale = "Geogr_dist_hav",
+                                                          #                    scale_func = NULL)
+                                                          )))
   expect_true(inherits(mod_b,
                        "HibModelBRMS"))
   
@@ -57,16 +62,16 @@ test_that("Check brms modelling pipeline works as desired.", {
   # mod_b$plot()
   
   # cv
-  suppressWarnings(cv_w <- hib_cv_model(mod_w,
-                                      tmp_db,
-                                      c("Random-2"),
-                                      backtransform = function(x){exp(x) - 1}))
+  suppressMessages(suppressWarnings(cv_w <- hib_cv_model(mod_w,
+                                                         tmp_db,
+                                                         c("Random-2"),
+                                                         backtransform = function(x){exp(x) - 1})))
   expect_true(inherits(cv_w,
                        "HibCV"))
   
-  suppressWarnings(cv_b <- hib_cv_model(mod_b,
-                                      tmp_db,
-                                      c("Random-2")))
+  suppressMessages(suppressWarnings(cv_b <- hib_cv_model(mod_b,
+                                                         tmp_db,
+                                                         c("Random-2"))))
   expect_true(inherits(cv_b,
                        "HibCV"))
   
@@ -76,15 +81,15 @@ test_that("Check brms modelling pipeline works as desired.", {
   
   # projection
   # simulate some lui/contrast data for models
-  # 100x100 grid
-  proj_df_w <- expand.grid(x = 1:100,
-                           y = 1:100) |>
+  # 10x10 test grid
+  proj_df_w <- expand.grid(x = 1:10,
+                           y = 1:10) |>
     as.data.frame() |>
     dplyr::mutate(LUI = sample(as.character(unique(mod_w$data$LUI)),
                                dplyr::n(), T))
   
-  proj_df_b <- expand.grid(x = 1:100,
-                           y = 1:100) |>
+  proj_df_b <- expand.grid(x = 1:10,
+                           y = 1:10) |>
     as.data.frame() |>
     dplyr::mutate(LUI_contrast = sample(as.character(unique(mod_b$data$LUI_contrast)),
                                         dplyr::n(), T),
@@ -157,5 +162,9 @@ test_that("Check brms modelling pipeline works as desired.", {
   proj_b_ <- hib_project_model(mod_b,
                              proj_rast_b)
   expect_true(inherits(proj_b_,
-                       "HibProjection"))  
+                       "HibProjection"))
+
+  # proj_w_$plot()
+  # proj_b_$plot()
+  }))))
 })

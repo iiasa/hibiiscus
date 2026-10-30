@@ -34,6 +34,8 @@ prep_globiom <- function(file_path,
                          incl_pixel_area = TRUE,
                          vars_to_include = NULL,
                          vars_to_ignore = NULL){
+  rlang::check_installed(c("ncdf4", "stars"),
+                         reason = "to prepare GLOBIOM NetCDF files.")
   # Assertions
   assertthat::assert_that(
     is.character(file_path),
@@ -151,7 +153,7 @@ prep_globiom <- function(file_path,
           make.names(unlist(dim_units)) |> as.vector()
         )
         
-        tmp_star <- tmp_star |> stars:::split.stars(dim_nm) |> stats::setNames(nm = dim_units)
+        tmp_star <- base::split(tmp_star, dim_nm) |> stats::setNames(nm = dim_units)
         
         tmp_dim_spec <- stars::st_dimensions(tmp_star)
         # Need to store 
@@ -235,6 +237,12 @@ prep_globiom <- function(file_path,
 #'
 #' @returns A [`list`] containing [`SpatRaster`] objects.
 #'
+#' @examples
+#' \dontrun{
+#' obj <- stars::st_as_stars(matrix(1:4, nrow = 2))
+#' stars_to_rast(obj)
+#' }
+#'
 #' @keywords scenario, internal
 #'
 #' @noRd
@@ -267,7 +275,7 @@ stars_to_rast <- function(obj){
   
   for(t_ in time_idx){
     # Slice to a specific time frame for each
-    tmp_rast <- obj |> stars:::slice.stars("time", t_) |>
+    tmp_rast <- dplyr::slice(obj, along = "time", index = t_) |>
       terra::rast() # Or alternatively rast
     names(tmp_rast) <- names(obj)
     

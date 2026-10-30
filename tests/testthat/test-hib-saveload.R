@@ -26,6 +26,42 @@ test_that("Check that hib_save correctly saves data.", {
   # expect_true(file.exists("inst/extdata/dummy_database.rds"))
 })
 
+test_that("hib_save and hib_load round-trip a single-raster AOA", {
+  
+  testthat::skip_if_not_installed("terra")
+  
+  projection <- terra::rast(nrows = 2, ncols = 2,
+                            xmin = 0, xmax = 2, ymin = 0, ymax = 2,
+                            vals = 1:4)
+  aoa <- terra::rast(nrows = 2, ncols = 2,
+                     xmin = 0, xmax = 2, ymin = 0, ymax = 2,
+                     vals = c(0, 1, 1, 0))
+  model <- structure(list(), class = "HibModelLME4")
+  projection_obj <- HibProjection$new(
+    obj = model,
+    proj = projection,
+    backtransform = NULL,
+    rescale_specs = NULL,
+    lme4_specs = NULL,
+    inla_specs = NULL,
+    brms_specs = NULL,
+    aoa_res = list(proj_aoa = aoa)
+  )
+
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+  save_path <- file.path(tmp_dir, "projection.rds")
+  hib_save(projection_obj, save_path)
+  loaded_obj <- hib_load(save_path)
+
+  expect_s4_class(loaded_obj$projection, "SpatRaster")
+  expect_s4_class(loaded_obj$aoa$proj_aoa, "SpatRaster")
+  expect_equal(terra::values(loaded_obj$projection), terra::values(projection))
+  expect_equal(terra::values(loaded_obj$aoa$proj_aoa), terra::values(aoa))
+
+  unlink(tmp_dir, recursive = TRUE)
+})
+
 
 # %%%%%%%%%%
 # hib_load

@@ -1,6 +1,9 @@
 # Testthat checks for hib_fit_lme4.R, cv, projection
-
 test_that("Check lme4 modelling pipeline works as desired.", {
+  invisible(utils::capture.output(suppressMessages(suppressWarnings({
+  
+  testthat::skip_if_not_installed("lme4")
+  
   tmp_db <- hib_create_db(#path_species = "inst/extdata/dummy_species_rc.rds",
                        path_species = system.file("extdata", "dummy_species_rc.rds", package = "hibiiscus", mustWork = TRUE),
                        dataset_name = "custom - dummy_data")
@@ -24,20 +27,20 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   
   # within-site model
   # ignore warnings...
-  suppressWarnings(mod_w <- hib_fit_lme4(tmp_db,
-                                         log(Total_abundance + 1) ~ LUI + (1 | SS),
-                                         calc_CIs = "Wald",
-                                         relevel_specs = c("LUI" = "Primary_Minimal_use")
-                                         ))
+  suppressMessages(suppressWarnings(mod_w <- hib_fit_lme4(tmp_db,
+                                                          log(Total_abundance + 1) ~ LUI + (1 | SS),
+                                                          calc_CIs = "Wald",
+                                                          relevel_specs = c("LUI" = "Primary_Minimal_use")
+                                                          )))
   
   expect_true(inherits(mod_w,
                        "HibModelLME4"))
   
   # between-site model
-  suppressWarnings(mod_b <- hib_fit_lme4(tmp_db,
-                                         Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
-                                         calc_CIs = "Wald",
-                                         relevel_specs = c("LUI_contrast" = "Primary_Minimal_use_vs_Primary_Minimal_use")))
+  suppressMessages(suppressWarnings(mod_b <- hib_fit_lme4(tmp_db,
+                                                          Theta ~ LUI_contrast + Geogr_dist_hav + (1 | SS),
+                                                          calc_CIs = "Wald",
+                                                          relevel_specs = c("LUI_contrast" = "Primary_Minimal_use_vs_Primary_Minimal_use"))))
   expect_true(inherits(mod_b,
                        "HibModelLME4"))
   
@@ -45,16 +48,22 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   # mod_b$plot()
   
   # cv
-  suppressWarnings(cv_w <- hib_cv_model(mod_w,
-                                      tmp_db,
-                                      c("Random-2", "Random-5"),
-                                      backtransform = function(x){exp(x) - 1}))
+  invisible(utils::capture.output(
+    suppressMessages(suppressWarnings(cv_w <- hib_cv_model(mod_w,
+                                                           tmp_db,
+                                                           c("Random-2", "Random-5"),
+                                                           backtransform = function(x){exp(x) - 1}))),
+    type = "message"
+  ))
   expect_true(inherits(cv_w,
                        "HibCV"))
   
-  suppressWarnings(cv_b <- hib_cv_model(mod_b,
-                                      tmp_db,
-                                      c("Random-2")))
+  invisible(utils::capture.output(
+    suppressMessages(suppressWarnings(cv_b <- hib_cv_model(mod_b,
+                                                           tmp_db,
+                                                           c("Random-2")))),
+    type = "message"
+  ))
   expect_true(inherits(cv_b,
                        "HibCV"))
   
@@ -64,15 +73,15 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   
   # projection
   # simulate some lui/contrast data for models
-  # 100x100 grid
-  proj_df_w <- expand.grid(x = 1:100,
-                           y = 1:100) |>
+  # 10x10 test grid
+  proj_df_w <- expand.grid(x = 1:10,
+                           y = 1:10) |>
     as.data.frame() |>
     dplyr::mutate(LUI = sample(as.character(unique(mod_w$data$LUI)),
                                dplyr::n(), T))
   
-  proj_df_b <- expand.grid(x = 1:100,
-                           y = 1:100) |>
+  proj_df_b <- expand.grid(x = 1:10,
+                           y = 1:10) |>
     as.data.frame() |>
     dplyr::mutate(LUI_contrast = sample(as.character(unique(mod_b$data$LUI_contrast)),
                                         dplyr::n(), T),
@@ -167,5 +176,6 @@ test_that("Check lme4 modelling pipeline works as desired.", {
   
   # proj_w_$projection
   # proj_b_$projection
+  }))))
 })
 

@@ -133,7 +133,7 @@ HibCV <- R6Class("HibCV",
                      self$cv_results <- cv_res
                      self$insample_results <- insamp_res
                      
-                     self$last_update <- lubridate::now()
+                     self$last_update <- Sys.time()
                      
                      # %%%%%%%%%%%%%%%
                      
@@ -306,6 +306,7 @@ HibCV <- R6Class("HibCV",
                      )
                      
                      
+                     rlang::check_installed("insight", reason = "to format cross-validation summaries.")
                      df |>
                        dplyr::select(CV_type, N_folds, N, Random_effect_form, RMSE, Predictive_R2) |>
                        dplyr::rename(`CV type` = CV_type,
@@ -346,6 +347,7 @@ HibCV <- R6Class("HibCV",
                    #' @return (`ggplot`).
                    plot = function(type = "metrics",
                                    metrics = c("rmse", "rsq")){
+                     rlang::check_installed("ggplot2", reason = "to plot hibiiscus objects.")
                      
                      
                      # Types:
@@ -1066,6 +1068,8 @@ HibCV <- R6Class("HibCV",
                        
                        # %%%%%
                        # Just get a coarse-ish world map...
+                       rlang::check_installed(c("rnaturalearth", "rnaturalearthdata", "sf"),
+                                              reason = "to plot model locations.")
                        tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
                        # NOTE: This differs per model type!!
                        # if (self$model_type == "hib_lme4_model"){

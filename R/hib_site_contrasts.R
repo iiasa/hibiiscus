@@ -433,6 +433,7 @@ hib_calc_site_contrasts <- function(obj,
 
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
   if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
+    rlang::check_installed("geosphere", reason = "to calculate geographic site contrasts.")
     # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
     site_comp_df <- site_comp_df |>
       # get the lat and long for s1
@@ -597,7 +598,7 @@ hib_calc_site_contrasts <- function(obj,
     obj$site_contrasts <- site_comp_df
   }
   
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   return(obj)
 

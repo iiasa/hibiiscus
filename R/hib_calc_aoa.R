@@ -54,9 +54,13 @@ hib_calc_aoa <- function(mod_obj,
     is.data.frame(proj_data) || inherits(proj_data, "SpatRaster") || ( is.list(proj_data) & !is.data.frame(proj_data) & all(unlist(lapply(proj_data, function(x){inherits(x, "SpatRaster")}))) )
   )
 
+  rlang::check_installed(c("caret", "FNN", "randomForest"),
+                         reason = "to calculate an area of applicability.")
+
   # Get covars and response names
   # lme4:
   if (inherits(mod_obj, "HibModelLME4")){
+    rlang::check_installed("lme4", reason = "to calculate AOA for lme4 models.")
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(stats::formula(mod_obj$model)))))
     rand_vars <- names(lme4::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
@@ -85,6 +89,7 @@ hib_calc_aoa <- function(mod_obj,
   
   # brms:
   if (inherits(mod_obj, "HibModelBRMS")){
+    rlang::check_installed("brms", reason = "to calculate AOA for brms models.")
     all_covars <- all.vars(stats::formula(stats::delete.response(stats::terms(mod_obj$model$formula$formula))))
     rand_vars <- names(brms::ranef(mod_obj$model))
     fix_vars <- all_covars[!all_covars %in% rand_vars]
@@ -105,7 +110,7 @@ hib_calc_aoa <- function(mod_obj,
   
   mod_df <- mod_df[, c(fix_vars, "y"), drop = F]
   
-  m_rf <- caret::train(mod_df[, fix_vars, drop = F ],
+  m_rf <- caret::train(as.data.frame(mod_df[, fix_vars, drop = F ]),
                        mod_df$y,
                        method="rf",
                        importance=TRUE,
@@ -186,7 +191,7 @@ hib_calc_aoa <- function(mod_obj,
       diag(tmp_dist) <- NA
       
       tmp_sub$row_mean <- rowMeans(tmp_dist, na.rm = T)
-      tmp_sub$row_min <- matrixStats::rowMins(tmp_dist, na.rm = T)
+      tmp_sub$row_min <- apply(tmp_dist, 1, min, na.rm = TRUE)
       
       tmp_di[[j]] <- tmp_sub[, c("SSBS", "fold_id", "row_min", "row_mean")]
     }
@@ -442,6 +447,12 @@ calc_test_DI <- function(train_DI,
 #' 
 #' @return vector
 #' 
+#' @examples
+#' \dontrun{
+#' model <- caret::train(Species ~ ., data = iris, method = "rf")
+#' aoa_get_weights_local(model, names(iris)[1:4])
+#' }
+#'
 #' @references 
 #' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
 #' area of applicability of spatial prediction models. 
@@ -500,6 +511,13 @@ aoa_get_weights_local <- function(model, variables){
 #' 
 #' @return list
 #' 
+#' @examples
+#' \dontrun{
+#' train <- data.frame(land_use = factor(c("forest", "cropland", "forest")))
+#' weight <- data.frame(land_use = 1)
+#' aoa_categorial_train_local(train, "land_use", weight)
+#' }
+#'
 #' @references 
 #' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
 #' area of applicability of spatial prediction models. 

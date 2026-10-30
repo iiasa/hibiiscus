@@ -88,7 +88,7 @@ HibProjection <- R6Class("HibProjection",
                              message(crayon::green("\nInitialising HibProjection object ...") )
                              
                              # Store projection information (list of data)
-                             self$last_update <- lubridate::now()
+                             self$last_update <- Sys.time()
                              
                              self$model <- obj
                              self$projection <- proj
@@ -152,6 +152,7 @@ HibProjection <- R6Class("HibProjection",
                              n_pred_vars <- NA
                              if (inherits(self$model, "HibModelLME4")){
                                mod_type <- "lme4"
+                               rlang::check_installed("lme4", reason = "to inspect lme4 model projections.")
                                
                                all_covars <- all.vars(formula(delete.response(terms(formula(self$model$model)))))
                                rand_vars <- names(lme4::ranef(self$model$model))
@@ -172,6 +173,7 @@ HibProjection <- R6Class("HibProjection",
                              
                              if (inherits(self$model, "HibModelBRMS")){
                                mod_type <- "brms"
+                               rlang::check_installed("brms", reason = "to inspect brms model projections.")
 
                                all_covars <- all.vars(formula(delete.response(terms(formula(self$model$model$formula)))))
                                rand_vars <- names(brms::ranef(self$model$model))
@@ -292,6 +294,7 @@ HibProjection <- R6Class("HibProjection",
                                            aoa_var = NULL
                                            # aoa_clr ??
                            ){
+                             rlang::check_installed("ggplot2", reason = "to plot hibiiscus objects.")
                              
                              assertthat::assert_that(
                                is.character(type),
@@ -597,6 +600,7 @@ HibProjection <- R6Class("HibProjection",
                              }
                              
                              if (type == "bivariate-map"){
+                               rlang::check_installed(c("biscale", "cowplot"), reason = "to plot bivariate maps.")
                                # TODO: add colour scale options...
                                # c("Bluegill", "BlueGold", "BlueOr", "BlueYl", "Brown",
                                #   "Brown2", "DkBlue","DkBlue2", "DkCyan","DkCyan2", "DkViolet",

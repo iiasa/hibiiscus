@@ -3,6 +3,8 @@
 
 # hibiiscus - Modelling framework for hierachical ecological impact analysis
 
+<img src="man/figures/icon.png" align="right" width="120" alt="hibiiscus icon" />
+
 <!-- badges: start -->
 
 [![CRAN
@@ -16,6 +18,8 @@ badge](https://iiasa.r-universe.dev/badges/hibiiscus)](https://iiasa.r-universe.
 [![Codecov test
 coverage](https://codecov.io/gh/iiasa/hibiiscus/graph/badge.svg)](https://app.codecov.io/gh/iiasa/hibiiscus)
 [![R-CMD-check](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/iiasa/hibiiscus/actions/workflows/R-CMD-check.yaml)
+[![Diversity and
+Distributions](https://img.shields.io/badge/paper-peer--reviewed-brightgreen.svg)](https://doi.org/10.1111/ddi.70255)
 <!-- badges: end -->
 
 <!--<Text to be written!> -->
@@ -77,9 +81,18 @@ hib_db <- hib_calc_div_within(hib_db,
 
 ## Citation
 
-<code> Cornford, R & Jung, Martin (2026). hibiiscus - Modelling
-framework for hierachical ecological impact analysis. R package version
-0.1, <https://github.com/iiasa/hibiiscus>. </code>
+if you use the software, please cite the following reference:
+
+> Cornford, R & Jung, Martin (2026). hibiiscus - Modelling framework for
+> hierachical ecological impact analysis. R package version 0.1,
+> <https://github.com/iiasa/hibiiscus>.
+
+Please also cite the publication for which this software was developed:
+
+> Cornford, R., M. Jung, and P. Visconti. 2026. “ Stress-Testing
+> Model-Derived Biodiversity Indicators Under Different Assumptions of
+> Land-Use Change Impacts.” Diversity and Distributions 32, no. 11:
+> e70255. <https://doi.org/10.1111/ddi.70255>
 
 ## Acknowledgement
 
@@ -97,5 +110,41 @@ Europe Research and Innovation programme under Grant Agreement No
 101060423 (LAMASUS).
 
 ## Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+
+<!-- prettier-ignore-start -->
+
+<!-- markdownlint-disable -->
+
+<table>
+
+<tr>
+
+<td align="center">
+
+<a href="https://github.com/rcornf">
+<img src="https://avatars.githubusercontent.com/u/45459638?v=4" width="100px;" alt=""/>
+</a><br>
+<a href="https://github.com/iiasa/hibiiscus/commits?author=rcornf">rcornf</a>
+</td>
+
+<td align="center">
+
+<a href="https://github.com/Martin-Jung">
+<img src="https://avatars.githubusercontent.com/u/3788377?v=4" width="100px;" alt=""/>
+</a><br>
+<a href="https://github.com/iiasa/hibiiscus/commits?author=Martin-Jung">Martin-Jung</a>
+</td>
+
+</tr>
+
+</table>
+
+<!-- markdownlint-enable -->
+
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 <!-- get_contributors(org = "IIASA", repo = "hibiiscus") -->

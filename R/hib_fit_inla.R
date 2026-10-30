@@ -421,7 +421,8 @@ hib_fit_inla <- function(obj,
                  # control.inla = list(strategy = "", int.strategy = ""), 
                  control.compute = list(dic = TRUE, waic = TRUE),
                  control.predictor = list(A = INLA::inla.stack.A(stk)),
-                 verbose = F)
+                 verbose = F,
+                 silent = TRUE)
 
       check_flag <- nrow(m0$summary.fixed)
     }
@@ -434,7 +435,8 @@ hib_fit_inla <- function(obj,
                control.compute = list(dic = TRUE, waic = TRUE),
                control.predictor = list(A = INLA::inla.stack.A(stk)),
                # , link = 1??
-               verbose = F)
+               verbose = F,
+               silent = TRUE)
   }
 
   # TODO:

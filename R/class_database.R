@@ -80,7 +80,7 @@ HibDatabase <- R6Class("HibDatabase",
                              assertthat::has_extension(paths$species, "rds")
                            )
                            
-                           species <- readr::read_rds(paths$species)
+                           species <- readRDS(paths$species)
                            
                            species$Dataset_name <- dataset_name
                            
@@ -111,7 +111,7 @@ HibDatabase <- R6Class("HibDatabase",
                                assertthat::has_extension(paths$sites, "rds")
                              )
                              
-                             sites <- readr::read_rds(paths$sites)
+                             sites <- readRDS(paths$sites)
                              # dataset_name
                              sites$Dataset_name <- dataset_name
                              
@@ -251,7 +251,7 @@ HibDatabase <- R6Class("HibDatabase",
                            # Save inputs in list
                            # dataset_name
                            self$dataset_name <- dataset_name
-                           self$last_update <- lubridate::now()
+                           self$last_update <- Sys.time()
                            self$paths <- paths
                            self$sites <- sites
                            self$species <- species
@@ -492,7 +492,7 @@ HibDatabase <- R6Class("HibDatabase",
                                                                                            T ~ Measurement))
                            # Add a flag to some background info - Measures are effort corrected = T
                            self$processing_flags$measures_effort_corrected <- TRUE
-                           self$last_update <- lubridate::now()
+                           self$last_update <- Sys.time()
                            
                            # Check that Effort_corrected_measurement has no NAs
                            assertthat::assert_that(
@@ -514,6 +514,7 @@ HibDatabase <- R6Class("HibDatabase",
                          #' 
                          #' @return (`ggplot`).
                          plot = function(type = "map-sites"){
+                           rlang::check_installed("ggplot2", reason = "to plot hibiiscus objects.")
                            # Figure options
                            # - site map (map-sites)
                            # - study map (map-studies)
@@ -552,6 +553,8 @@ HibDatabase <- R6Class("HibDatabase",
                            # combine similar plot types into one call
                            # %%%%%
                            if (type %in% c("map-sites", "map-studies")){
+                             rlang::check_installed(c("rnaturalearth", "rnaturalearthdata", "sf"),
+                                                    reason = "to plot site maps.")
                              
                              # Assert that Lat and long are in sites
                              assertthat::assert_that(

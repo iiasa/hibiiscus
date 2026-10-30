@@ -70,6 +70,13 @@ hib_cv_model <- function(mod_obj,
     is.function(backtransform) || is.null(backtransform),
     is.logical(use_original_mesh) || is.null(use_original_mesh)
   )
+
+  if (inherits(mod_obj, "HibModelLME4")){
+    rlang::check_installed("lme4", reason = "to cross-validate lme4 models.")
+  }
+  if (inherits(mod_obj, "HibModelBRMS")){
+    rlang::check_installed("brms", reason = "to cross-validate brms models.")
+  }
   
 
   # Align input args with available options
@@ -280,7 +287,8 @@ hib_cv_model <- function(mod_obj,
                             control.compute = list(dic = TRUE, waic = TRUE),
                             control.predictor = list(A = INLA::inla.stack.A(comb_stk),
                                                       link = 1),
-                            verbose = F)
+                            verbose = F,
+                            silent = TRUE)
         
         check_flag <- nrow(tmp_m$summary.fixed)
       }
@@ -293,7 +301,8 @@ hib_cv_model <- function(mod_obj,
                           control.compute = list(dic = TRUE, waic = TRUE),
                           control.predictor = list(A = INLA::inla.stack.A(comb_stk),
                                                     link = 1),
-                          verbose = F)
+                          verbose = F,
+                          silent = TRUE)
     }
     
     
@@ -938,7 +947,8 @@ hib_cv_mod_inner <- function(mod_obj,
                            # control.inla = list(strategy = "", int.strategy = ""), 
                            control.compute = list(dic = TRUE, waic = TRUE),
                            control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
-                           verbose = T)
+                           verbose = FALSE,
+                           silent = TRUE)
           
           check_flag <- nrow(tmp_m$summary.fixed)
         }
@@ -950,7 +960,8 @@ hib_cv_mod_inner <- function(mod_obj,
                          # control.inla = list(strategy = "", int.strategy = ""), 
                          control.compute = list(dic = TRUE, waic = TRUE),
                          control.predictor = list(A = INLA::inla.stack.A(comb_stk)),
-                         verbose = T)
+                         verbose = FALSE,
+                         silent = TRUE)
       }
       
       

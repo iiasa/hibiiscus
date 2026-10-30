@@ -44,7 +44,7 @@ hib_join_species <- function(obj, spp_info){
   obj$species <- dplyr::left_join(obj$species,
                                   spp_info)  
   
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   # %%%
   # Flag addition of data - source name/an id..
@@ -116,7 +116,7 @@ hib_join_sites <- function(obj, site_info){
   obj$sites <- dplyr::left_join(obj$sites,
                          site_info)
 
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   # %%%
   # Flag addition of data - source name/an id..
@@ -201,7 +201,7 @@ hib_join_site_contrasts <- function(obj, site_contrast_info){
     stop("hib_join_site_contrasts unsuccessful. See above for details.", call. = F)
   }
 
-  obj$last_update <- lubridate::now()
+  obj$last_update <- Sys.time()
   
   # %%%
   # Flag addition of data - source name/an id..

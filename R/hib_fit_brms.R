@@ -66,7 +66,7 @@ hib_fit_brms <- function(obj,
                          ...
                          ){
   
-  if(!isNamespaceLoaded("brms")) { attachNamespace("brms");requireNamespace('brms') }
+  rlang::check_installed("brms", reason = "to fit brms models.")
   
   # Check inputs
   assertthat::assert_that(

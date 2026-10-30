@@ -207,7 +207,7 @@ HibModelINLA <- R6Class("HibModelINLA",
                               }
                               self$site_locations <- loc_df
                               
-                              self$last_update <- lubridate::now()
+                              self$last_update <- Sys.time()
                               
                               # %%%%%%%%%%%%%%%
                               
@@ -280,6 +280,7 @@ HibModelINLA <- R6Class("HibModelINLA",
                             #' "random-effects", "spatial-random-field", "map-sites".
                             #' @return (`ggplot`).
                             plot = function(type = "fixed-effects"){
+                              rlang::check_installed("ggplot2", reason = "to plot hibiiscus objects.")
                               assertthat::assert_that(is.character(type))
                               # Plot options
                               # TODO: covar-distributions
@@ -468,6 +469,8 @@ HibModelINLA <- R6Class("HibModelINLA",
                               if (type == "map-sites"){
                                 
                                 # Just get a coarse-ish world map...
+                                rlang::check_installed(c("rnaturalearth", "rnaturalearthdata", "sf"),
+                                                       reason = "to plot model locations.")
                                 tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
                                 
                                 resp_var <- all.vars(self$user_formula$response_fixed[[2]])
