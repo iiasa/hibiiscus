@@ -45,7 +45,7 @@ hib_db <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc.
 # View a summary of the hib database object
 print(hib_db)
 #> Hibiiscus database (including dataset/s: Dummy data)
-#> Last updated: 2026-10-30 15:08:35.921611
+#> Last updated: 2026-10-30 15:24:15.327581
 #>   Number of sites:               200
 #>   Number of species:             873
 #>   Number of taxa (orig. names):  873
@@ -177,7 +177,7 @@ hib_db <- hib_calc_site_contrasts(hib_db,
 print(hib_db)
 #> LUI contrast
 #> Hibiiscus database (including dataset/s: Dummy data)
-#> Last updated: 2026-10-30 15:08:44.747055
+#> Last updated: 2026-10-30 15:24:22.536847
 #>   Number of sites:               190
 #>   Number of species:             868
 #>   Number of taxa (orig. names):  868
@@ -230,7 +230,7 @@ hib_ta_mod <- hib_fit_lme4(hib_db,
 
 print(hib_ta_mod)
 #> Hibiiscus fitted model (lme4)
-#> Last updated: 2026-10-30 15:08:44.914294
+#> Last updated: 2026-10-30 15:24:22.678158
 #>   Number of sites:               190
 #>   Number of species:             868
 #>   Number of taxa (orig. names):  868
@@ -298,7 +298,7 @@ hib_bc_mod <- hib_fit_lme4(hib_db,
 
 print(hib_bc_mod)
 #> Hibiiscus fitted model (lme4)
-#> Last updated: 2026-10-30 15:08:45.112
+#> Last updated: 2026-10-30 15:24:22.840837
 #>   Number of sites:               170
 #>   Number of species:             814
 #>   Number of taxa (orig. names):  814
@@ -432,7 +432,7 @@ hib_cv <- hib_cv_model(hib_ta_mod,
                      
 print(hib_cv)
 #> Hibiiscus cross-validated model (lme4)
-#> Last updated: 2026-10-30 15:08:47.390114
+#> Last updated: 2026-10-30 15:24:24.751494
 #> 
 #> --------------------
 #> 
@@ -625,7 +625,7 @@ hib_db2 <- hib_create_db(path_species = system.file("extdata", "dummy_species_rc
 # View a summary of the hib database object
 print(hib_db2)
 #> Hibiiscus database (including dataset/s: Dummy data 2)
-#> Last updated: 2026-10-30 15:08:53.032683
+#> Last updated: 2026-10-30 15:24:30.060646
 #>   Number of sites:               150
 #>   Number of species:             939
 #>   Number of taxa (orig. names):  939
