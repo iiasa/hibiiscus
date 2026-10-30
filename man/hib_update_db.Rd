@@ -22,8 +22,7 @@ If \code{""} is supplied, the parameter will be internally updated to the filena
 associated with \code{path_species}.}
 }
 \value{
-An object of class \code{HibDatabase}, containing site and species information
-which can be further modified for subsequent ecological analysis.
+The updated \code{\link{HibDatabase}} object, with the supplied dataset added to its site and species data.
 }
 \description{
 This function updates an existing \code{HibDatabase}, for example by adding

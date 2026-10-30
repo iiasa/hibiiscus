@@ -16,7 +16,8 @@
 #' 
 #' @param obj A [`HibDatabase`] object.
 #' @inheritParams hib_create_db
-#' @inherit hib_create_db return references
+#' @returns The updated [`HibDatabase`] object, with the supplied dataset added to its site and species data.
+#' @inherit hib_create_db references
 #' 
 #' @keywords database, preparation
 #' @examples 

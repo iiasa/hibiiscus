@@ -67,9 +67,9 @@ get_n_spp_taxa <- function(df, measure_var){
 #' Calculate total abundance for each site with abundance records.
 #'
 #' @details 
-#' Total abundance = sum(x[i]), where x[i] is the abundance of species i within 
+#' Total abundance = sum(`x[i]`), where `x[i]` is the abundance of species i within
 #' a given site.
-#' Rescaled total abundance = Total abundance[j,k]/max(Total abundance[j,k]), where
+#' Rescaled total abundance = `Total abundance[j,k]`/max(`Total abundance[j,k]`), where
 #' the total abundance in eack site j is divided by the maximum total abundance 
 #' in study k.
 #' Internal function for use in `hib_calc_div_within()`.
@@ -220,9 +220,9 @@ hib_calc_sr <- function(spp_df, measure_var){
 #' Calculate Simpson's diversity index per site.
 #'
 #' @details 
-#' Simpson's diversity is calculated as: 1 - sum(p[i]^2), 
-#' where p[i] = x[i] / sum(x[i]), 
-#' and x[i] is the abundance of species i within a given site.
+#' Simpson's diversity is calculated as: `1 - sum(p[i]^2)`,
+#' where `p[i] = x[i] / sum(x[i])`,
+#' and `x[i]` is the abundance of species i within a given site.
 #' For sites without any species present (Total abundance == 1), Simpson's diversity
 #' as calculated here will be undefined (`NaN`).
 #' Internal function for use in `hib_calc_div_within()`
@@ -242,7 +242,7 @@ hib_calc_sr <- function(spp_df, measure_var){
 #' @keywords database, processing, diversity
 #'
 #' @seealso
-#' [hib_calc_div_within()], [hib_calc_pie()]
+#' [hib_calc_div_within()], `hib_calc_pie()`
 #'
 #' @examples 
 #' \dontrun{
@@ -334,7 +334,7 @@ hib_calc_simpson <- function(spp_df, measure_var, msg = TRUE){
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_within()], [hib_calc_sr()]
+#' [hib_calc_div_within()], `hib_calc_sr()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -416,7 +416,7 @@ hib_calc_chao1 <- function(spp_df, measure_var){
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_within()], [hib_calc_sr()]
+#' [hib_calc_div_within()], `hib_calc_sr()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -513,7 +513,7 @@ hib_calc_rsr <- function(spp_df, measure_var){
 #' @details 
 #' Mean abundance = N/S, where N is the total abundance of species within 
 #' a given site, and S is the number of species present.
-#' Rescaled mean abundance = Mean abundance[j,k]/max(Mean abundance[j,k]), where
+#' Rescaled mean abundance = `Mean abundance[j,k]`/max(`Mean abundance[j,k]`), where
 #' the mean abundance in eack site j is divided by the maximum mean abundance 
 #' in study k.
 #' Internal function for use in `hib_calc_div_within()`.
@@ -596,7 +596,7 @@ hib_calc_ma <- function(spp_df, measure_var){
 #' the abundance of species i in a given site.
 #' Species with 0 abundance are excluded from calculations.
 #' We assign empty sites (0 species richness) a GMA value of 0.
-#' Rescaled geometric mean abundance = Geometric mean abundance[j,k]/max(Geometric mean abundance[j,k]), where
+#' Rescaled geometric mean abundance = `Geometric mean abundance[j,k]`/max(`Geometric mean abundance[j,k]`), where
 #' the geometric mean abundance in eack site j is divided by the maximum geometric mean abundance 
 #' in study k.
 #' Internal function for use in `hib_calc_div_within()`.
@@ -788,7 +788,7 @@ hib_calc_shannon <- function(spp_df, measure_var, msg = TRUE){
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_within()], [hib_calc_simpson()]
+#' [hib_calc_div_within()], `hib_calc_simpson()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -925,7 +925,7 @@ hib_calc_pie <- function(spp_df, measure_var){
 #' https://doi.org/10.1111/2041-210X.14265
 #' 
 #' @seealso
-#' [hib_calc_equalness()], [hib_calc_div_within()]
+#' `hib_calc_equalness()`, [hib_calc_div_within()]
 #'
 #' @examples
 #' \dontrun{
@@ -1415,7 +1415,7 @@ hib_calc_veg <- function(spp_site_data,
 #' 
 #' @details 
 #' Expects two vectors, one each for the abundance/occurence of species at two sites
-#' assuming that values at the same index (e.g., x[i], y[i]) correspond to the 
+#' assuming that values at the same index (e.g., `x[i]`, `y[i]`) correspond to the
 #' same species/taxonomic entity.
 #' Output is the normalised hypervolume.
 #' 
@@ -1434,7 +1434,7 @@ hib_calc_veg <- function(spp_site_data,
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_between()], [hib_calc_nonveg()] 
+#' [hib_calc_div_between()], `hib_calc_nonveg()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -1482,7 +1482,7 @@ calc_hypervolume <- function(spp_site_matrix){
 #' 
 #' @details 
 #' Expects two vectors, one each for the abundance/occurence of species at two sites
-#' assuming that values at the same index (e.g., x1[i], x2[i]) correspond to the 
+#' assuming that values at the same index (e.g., `x1[i]`, `x2[i]`) correspond to the
 #' same species/taxonomic entity.
 #' Cosine similarity is calculated as: sum( x1 * x2 ) / ( sqrt( sum( x1^2 )) * sqrt( sum( x2^2 ) ) )
 #' Note, that by default, this measure is a similarity, contrasting with most 
@@ -1498,7 +1498,7 @@ calc_hypervolume <- function(spp_site_matrix){
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_between()], [hib_calc_nonveg()] 
+#' [hib_calc_div_between()], `hib_calc_nonveg()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -1540,7 +1540,7 @@ calc_cosine_sim <- function(x1, x2){
 #' 
 #' @details 
 #' Expects two vectors, one each for the abundance/occurence of species at two sites
-#' assuming that values at the same index (e.g., x[i], y[i]) correspond to the 
+#' assuming that values at the same index (e.g., `x[i]`, `y[i]`) correspond to the
 #' same species/taxonomic entity.
 #' Note, that by default, Horn's overlap is a similarity, contrasting with most 
 #' other between-site measures, which are dissimilarity/distances. Overlap is 
@@ -1555,7 +1555,7 @@ calc_cosine_sim <- function(x1, x2){
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_between()], [hib_calc_nonveg()] 
+#' [hib_calc_div_between()], `hib_calc_nonveg()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -1606,7 +1606,7 @@ calc_horn_overlap <- function(x, y){
 #' 
 #' @details 
 #' Expects two vectors, one each for the abundance/occurence of species at two sites
-#' assuming that values at the same index (e.g., x[i], y[i]) correspond to the 
+#' assuming that values at the same index (e.g., `x[i]`, `y[i]`) correspond to the
 #' same species/taxonomic entity.
 #' Output is NUM/DEN, where NUM is calculated as:
 #' sum(|x - y|^alpha)^(1/alpha), 
@@ -1634,7 +1634,7 @@ calc_horn_overlap <- function(x, y){
 #' @keywords database, processing, diversity
 #' 
 #' @seealso
-#' [hib_calc_div_between()], [hib_calc_nonveg()] 
+#' [hib_calc_div_between()], `hib_calc_nonveg()`
 #' 
 #' @examples 
 #' \dontrun{
@@ -1703,7 +1703,7 @@ calc_minkowski <- function(x, y, method = "D", alpha = 2){
 #' @return data.frame
 #' 
 #' @seealso
-#' [hib_calc_div_between()], [hib_calc_veg()] 
+#' [hib_calc_div_between()], `hib_calc_veg()`
 #' 
 #' @examples 
 #' \dontrun{

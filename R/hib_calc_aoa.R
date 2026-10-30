@@ -442,6 +442,12 @@ calc_test_DI <- function(train_DI,
 #' 
 #' @return vector
 #' 
+#' @examples
+#' \dontrun{
+#' model <- caret::train(Species ~ ., data = iris, method = "rf")
+#' aoa_get_weights_local(model, names(iris)[1:4])
+#' }
+#'
 #' @references 
 #' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
 #' area of applicability of spatial prediction models. 
@@ -500,6 +506,13 @@ aoa_get_weights_local <- function(model, variables){
 #' 
 #' @return list
 #' 
+#' @examples
+#' \dontrun{
+#' train <- data.frame(land_use = factor(c("forest", "cropland", "forest")))
+#' weight <- data.frame(land_use = 1)
+#' aoa_categorial_train_local(train, "land_use", weight)
+#' }
+#'
 #' @references 
 #' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
 #' area of applicability of spatial prediction models. 

@@ -235,6 +235,12 @@ prep_globiom <- function(file_path,
 #'
 #' @returns A [`list`] containing [`SpatRaster`] objects.
 #'
+#' @examples
+#' \dontrun{
+#' obj <- stars::st_as_stars(matrix(1:4, nrow = 2))
+#' stars_to_rast(obj)
+#' }
+#'
 #' @keywords scenario, internal
 #'
 #' @noRd

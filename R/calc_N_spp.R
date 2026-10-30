@@ -17,7 +17,7 @@
 #' @keywords database, model, processing
 #' 
 #' @seealso
-#' [get_n_spp_taxa()]
+#' `get_n_spp_taxa()`
 #' 
 #' @examples 
 #' \dontrun{
