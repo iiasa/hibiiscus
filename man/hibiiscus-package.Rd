@@ -4,9 +4,9 @@
 \name{hibiiscus-package}
 \alias{hibiiscus}
 \alias{hibiiscus-package}
-\title{hibiiscus: Framework for transferable ecological impact analyses}
+\title{hibiiscus: Modelling framework for hierachical ecological impact analysis}
 \description{
-This package uses principles of ecological meta-analysis to assess the impacts of land use and land-use intensity on ecological communities. Data and modelling approach originate from the PREDICTS framework and are adapted for greater transferability, accounting of uncertainty and robustness.
+This package uses principles of hierarchical modelling to assess the impacts of land use and land-use intensity on ecological communities. Data and modelling approach originate from the PREDICTS framework and are adapted for use with alternative land-use categories (legends), integration of additional ecological data, modelling with frequentist and Bayesian approaches, and extended model evaluation.
 }
 \seealso{
 Useful links:
@@ -22,6 +22,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Richard Cornford \email{cornford@iiasa.ac.at} (\href{https://orcid.org/0000-0002-9963-3603}{ORCID})
   \item Martin Jung \email{martinjung@zoho.com} (\href{https://orcid.org/0000-0002-7569-1390}{ORCID})
 }
 

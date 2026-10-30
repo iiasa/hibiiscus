@@ -2,25 +2,32 @@
 % Please edit documentation in R/hib_lu_legend.R
 \name{hib_create_lu_legend}
 \alias{hib_create_lu_legend}
-\title{Create an lu legend}
+\title{hib_create_lu_legend: Create a 'new' land-use legend.}
 \usage{
 hib_create_lu_legend(input)
 }
 \arguments{
-\item{input}{Either a \code{\link{character}} pointing to a saved RDS file, or a \code{\link{data.frame}}-like
-object within the environment.}
+\item{input}{Either a \code{character} pointing to a saved rds file, or a
+\code{data.frame}-like object within the environment.}
+}
+\value{
+\code{HibLULegend}
 }
 \description{
-This function creates a \code{\link{R6}} HibLULegend object containing the loaded land-use legend.
-
-This object is then used in other functions of this package to prepare or filter
-associated databases and enable ecological impact analyses.
+This function creates a \code{\link[R6:R6]{R6}} \code{\link{HibLULegend}} object containing the provided
+land-use legend (i.e., linking sites, SSBS, to land-uses/intensities).
+}
+\details{
+The provided data.frame must include the following columns:
+\code{SSBS}, \code{Predominant_land_use}, \code{Use_intensity} and \code{LUI}.
 }
 \examples{
 \dontrun{
-  lu_leg <- create_lu_legend("../Data/landuse_dataframe.RDS")
-  lu_leg
+  lu_leg <- hib_create_lu_legend("../Data/landuse_dataframe.rds")
 }
+}
+\seealso{
+\code{\link{HibLULegend}}
 }
 \keyword{database,}
 \keyword{land-use,}

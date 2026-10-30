@@ -2,31 +2,60 @@
 % Please edit documentation in R/hib_calc_aoa.R
 \name{hib_calc_aoa}
 \alias{hib_calc_aoa}
-\title{Calculate an Area-of-Applicability (AOA) given a model, cross-validation output, and
-the data being used to make projections}
+\title{hib_calc_aoa: Calculate the Area-of-Applicability.}
 \usage{
 hib_calc_aoa(mod_obj, cv_obj, proj_data)
 }
 \arguments{
 \item{mod_obj}{One of; \code{\link{HibModelLME4}}, \code{\link{HibModelINLA}} or \code{\link{HibModelBRMS}}.}
 
-\item{cv_obj}{A \code{\link{HibCV}} object, based on the above mod_obj.}
+\item{cv_obj}{A \code{\link{HibCV}} object, based on the above \code{mod_obj}.}
 
-\item{proj_data}{A \code{\link{data.frame}}, \code{\link{SpatRaster}} or list of \code{\link{SpatRaster}},
-containing covariates for projecting the model.}
+\item{proj_data}{A \code{data.frame}, \code{SpatRaster} or list of \code{SpatRaster},
+containing covariates for projecting/predicting the model. Predicted
+responses should not be included.}
+}
+\value{
+list
 }
 \description{
-This function estimates an AOA, for each of the cross-validation approaches,
-following the methods of Meyer and Pebesma 2021
+Calculate the Area-of-Applicability (AOA) given a model, cross-validation
+output, and the data being used to make projection/prediction.
 }
 \details{
-Expects a HibModel object, a \code{\link{HibCV}} object, and data used to
-make a projection.
+This function estimates an AOA, for each of the cross-validation approaches
+supplied.
+We follow the methods of Meyer and Pebesma 2021, to estimate a dissimilarity
+index (DI) using model fitting/projection variables, and cross-validation
+folds to estimate applicability limits.
+See references for further information. \cr
+The returned list includes:
+\itemize{
+\item \code{variable_weights}, a \code{data.frame} of variable importance weights.
+\item \code{variable_scale_params}, a \code{list} of the parameters used to scale each variable.
+\item \code{train_DI}, a \code{list} containing DI estimates and thresholds per cross-validation type.
+\item \code{proj_aoa}, the AOA output, where 1 indicates a location within the AOA, 0 outside the AOA,
+same data type as \code{proj_data}.
+}
 }
 \examples{
 \dontrun{
   aoa_res <- hib_calc_aoa(mod_obj, cv_obj, proj_data)
 } 
 }
+\references{
+\itemize{
+\item Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the
+area of applicability of spatial prediction models.
+Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+\item Meyer H, Milà C, Ludwig M, Linnenbrink J (2023). \emph{CAST: 'caret' Applications
+for Spatial-Temporal Models}. R package, \url{https://CRAN.R-project.org/package=CAST}.
+}
+}
+\seealso{
+\code{\link{hib_cv_model}}
+\code{\link{HibCV}}
+}
+\keyword{AOA}
 \keyword{model,}
 \keyword{projections,}

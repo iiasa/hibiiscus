@@ -1,17 +1,44 @@
-#' Calculate an Area-of-Applicability (AOA) given a model, cross-validation output, and
-#' the data being used to make projections
+#' hib_calc_aoa: Calculate the Area-of-Applicability.
 #' 
 #' @description
-#' This function estimates an AOA, for each of the cross-validation approaches, 
-#' following the methods of Meyer and Pebesma 2021
+#' Calculate the Area-of-Applicability (AOA) given a model, cross-validation 
+#' output, and the data being used to make projection/prediction.
+#' 
 #' @details
-#' Expects a HibModel object, a [`HibCV`] object, and data used to 
-#' make a projection.
+#' This function estimates an AOA, for each of the cross-validation approaches 
+#' supplied.
+#' We follow the methods of Meyer and Pebesma 2021, to estimate a dissimilarity 
+#' index (DI) using model fitting/projection variables, and cross-validation 
+#' folds to estimate applicability limits.
+#' See references for further information. \cr
+#' The returned list includes: 
+#' - `variable_weights`, a `data.frame` of variable importance weights. 
+#' - `variable_scale_params`, a `list` of the parameters used to scale each variable. 
+#' - `train_DI`, a `list` containing DI estimates and thresholds per cross-validation type. 
+#' - `proj_aoa`, the AOA output, where 1 indicates a location within the AOA, 0 outside the AOA, 
+#' same data type as `proj_data`.
+#' 
 #' @param mod_obj One of; [`HibModelLME4`], [`HibModelINLA`] or [`HibModelBRMS`].
-#' @param cv_obj A [`HibCV`] object, based on the above mod_obj.
-#' @param proj_data A [`data.frame`], [`SpatRaster`] or list of [`SpatRaster`], 
-#' containing covariates for projecting the model.
-#' @keywords model, projections, 
+#' @param cv_obj A [`HibCV`] object, based on the above `mod_obj`.
+#' @param proj_data A `data.frame`, `SpatRaster` or list of `SpatRaster`, 
+#' containing covariates for projecting/predicting the model. Predicted
+#' responses should not be included.
+#' 
+#' @return list
+#' 
+#' @references 
+#' * Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
+#' area of applicability of spatial prediction models. 
+#' Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+#' * Meyer H, Milà C, Ludwig M, Linnenbrink J (2023). _CAST: 'caret' Applications 
+#' for Spatial-Temporal Models_. R package, <https://CRAN.R-project.org/package=CAST>.
+#' 
+#' @keywords model, projections, AOA
+#' 
+#' @seealso
+#' \code{\link{hib_cv_model}}
+#' \code{\link{HibCV}}
+#' 
 #' @examples 
 #' \dontrun{
 #'   aoa_res <- hib_calc_aoa(mod_obj, cv_obj, proj_data)
@@ -20,14 +47,12 @@
 hib_calc_aoa <- function(mod_obj, 
                          cv_obj,
                          proj_data){
-  # Note: proj_data should not include prediction - just covars...
   
   assertthat::assert_that(
     inherits(mod_obj, "HibModelLME4") || inherits(mod_obj, "HibModelINLA") || inherits(mod_obj, "HibModelBRMS"), # obj is a hib model
     inherits(cv_obj, "HibCV"),
     is.data.frame(proj_data) || inherits(proj_data, "SpatRaster") || ( is.list(proj_data) & !is.data.frame(proj_data) & all(unlist(lapply(proj_data, function(x){inherits(x, "SpatRaster")}))) )
   )
-  
 
   # Get covars and response names
   # lme4:
@@ -56,9 +81,6 @@ hib_calc_aoa <- function(mod_obj,
     fix_vars <- fix_vars[!fix_vars == "Intercept"]
     
     resp_form <- mod_obj$user_formula$response_fixed[[2]]
-
-    # print(fix_vars)
-    # print(resp_form)
   }
   
   # brms:
@@ -71,7 +93,6 @@ hib_calc_aoa <- function(mod_obj,
     
     resp_form <- mod_obj$model$formula$formula[[2]]
   }
-  
   
   # Proceed with DI calculation process
   
@@ -90,35 +111,26 @@ hib_calc_aoa <- function(mod_obj,
                        importance=TRUE,
                        trControl = caret::trainControl(method="cv"))
   
-  # 2. get weights... - 
-  
-  # weight <- CAST:::aoa_get_weights(m_rf, variables = fix_vars)
+  # 2. get weights...
   weight <- aoa_get_weights_local(m_rf, fix_vars)
   
-  # 3. convert cat data to dummy (can use aoa_categorial_train(train, variables, weight = 1)
-  # use own approach)
-  # catupdate <- CAST:::aoa_categorial_train(mod_df[, fix_vars, drop = F ],
-  #                                          variables = fix_vars, 
-  #                                          weight = weight)
+  # 3. convert cat data to dummy cats
   # aoa_categorial_train_local
   catupdate <- aoa_categorial_train_local(mod_df[, fix_vars, drop = F ],
                                           variables = fix_vars, 
                                           weight = weight)
-  
 
   train <- catupdate$train
   weight <- catupdate$weight
   
-  
   # 4. scale data
-  # print(head(train))
   train <- scale(train[, names(weight)])
   
   # make sure all variables have variance
   # if (any(apply(train, 2, FUN=function(x){all(is.na(x))}))){
   #   stop("some variables in train seem to have no variance")
   # }
-  # 
+  
   # save scale param for later
   scaleparam <- attributes(train)
   
@@ -136,7 +148,6 @@ hib_calc_aoa <- function(mod_obj,
   
   train_mult$SSBS <- mod_obj$data$SSBS
   
-  # return(train_mult)
   
   # 5. DI for each cv-block for each cv-type - need to link to SSBS/fold...
   N_cv_type <- length(cv_obj$cv_results)
@@ -179,9 +190,10 @@ hib_calc_aoa <- function(mod_obj,
       
       tmp_di[[j]] <- tmp_sub[, c("SSBS", "fold_id", "row_min", "row_mean")]
     }
-    # normalise DI by mean of row means
+
     tmp_di_df <- dplyr::bind_rows(tmp_di)
-    # 6. normalise DI by avg
+    
+    # 6. normalise DI by mean of row means
     tmp_di_df <- tmp_di_df |>
       dplyr::mutate(DI = row_min / mean(row_mean, na.rm = T))
     
@@ -196,13 +208,13 @@ hib_calc_aoa <- function(mod_obj,
     
   }
   
-  
   # TEST DI
   # 8. return DI for proj data..., indicate aoa at different cv-types - 
   #    need to scale proj based on train scale... calc dist between proj and train...
-  # Could just use mod_df??
+  
   mod_data <- mod_obj$data
-  # Need to think about proj format, if df, easy - as above...
+  
+  
   if (is.data.frame(proj_data) || inherits(proj_data, "SpatRaster")){
     proj_aoa <- calc_test_DI(DI_ls, 
                              train_mult,
@@ -211,6 +223,7 @@ hib_calc_aoa <- function(mod_obj,
                              mod_data,
                              fix_vars,
                              proj_data)
+    proj_aoa_ <- proj_aoa$proj_aoa
   }
   if (( is.list(proj_data) & 
         !is.data.frame(proj_data) & 
@@ -230,15 +243,16 @@ hib_calc_aoa <- function(mod_obj,
                                           m_dat,
                                           fix_v,
                                           p_dat)})
+
+    proj_aoa_ <- lapply(proj_aoa, function(x){x$proj_aoa})
   }
+  
+  # TODO: other potential output: train data, proj data?
   
   return(list(variable_weights = weight,
               variable_scale_params = scaleparam,
-              # To output - expanded, unscaled, un weighted train and proj??
-              # train_dat = train,
               train_DI = DI_ls,
-              # proj_dat = proj_aoa$proj_mult,
-              proj_aoa = proj_aoa$proj_aoa))
+              proj_aoa = proj_aoa_))
 }
 
 
@@ -246,16 +260,16 @@ hib_calc_aoa <- function(mod_obj,
 # Internal helper functions
 
  
-#' Calculate a Dissimilarity Index (DI) between the data used to fit the model,
-#' and the data being used for the projection
+#' calc_test_DI
 #' 
 #' @description
+#' Calculate a Dissimilarity Index (DI) between the data used to fit the model,
+#' and the data being used for the projection.
+#'
+#' @details
 #' This function estimates DI for each data point in the projection data and under 
 #' each of the cross-validation approaches.
-#' -following the methods of Meyer and Pebesma 2021
-#' @details
-#' Expects information on DI for each cv approach, model-specific data, and 
-#' data used to make a projection.
+#' 
 #' @param train_DI A [`list`] containing information on the DI values for "training"
 #' data under a range of cross-validation strategies
 #' @param train_mult A [`data.frame`] containing the model fitting data, weighted 
@@ -264,9 +278,18 @@ hib_calc_aoa <- function(mod_obj,
 #' @param variable_scale_params A [`list`] of the parameters used to scale each variable
 #' @param mod_data A [`data.frame`] of the data used to fit the original model
 #' @param fix_vars A [`character`] identifying model fixed effects
-#' @param proj_data A [`dataframe`], [`SpatRaster`] or list of [`SpatRaster`], 
+#' @param proj_data A [`data.frame`], [`SpatRaster`] or list of [`SpatRaster`], 
 #' containing covariates for projecting the model.
-#' @keywords projections, dissimilarity
+#' 
+#' @return list
+#' 
+#' @references 
+#' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
+#' area of applicability of spatial prediction models. 
+#' Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+#' 
+#' @keywords projections, dissimilarity, AOA
+#' 
 #' @examples 
 #' \dontrun{
 #'   di_out <- calc_test_DI(train_DI, train_mult, variable_weights,
@@ -294,7 +317,7 @@ calc_test_DI <- function(train_DI,
     data_df <- proj_data
   } 
   if (inherits(proj_data, "SpatRaster")){
-    # Convert factor cols to numeric...
+    # Convert factor layers to numeric...
     if (any(is.factor(proj_data))){
       proj_data[[which(is.factor(proj_data))]] <- as.numeric(proj_data[[which(is.factor(proj_data))]])
     }
@@ -303,27 +326,21 @@ calc_test_DI <- function(train_DI,
   }
   
   # If fix vars are all in data_df, expand categorical covars
-  # cols_in_fix_vars <- colnames(data_df)[colnames(data_df) %in% fix_vars]
-  # cols_not_in_fix_vars <- colnames(data_df)[!colnames(data_df) %in% fix_vars]
-  # 
+   
   fix_vars_in_df <- fix_vars[fix_vars %in% colnames(data_df)]
   # For each fix/cat_var, expand to levels using caret - 
   cat_vars <- fix_vars_in_df[which(sapply(data_df[, fix_vars_in_df, drop = F], class) %in% c("factor","character"))]
   
-  # print(cat_vars)
-  
   if (length(cat_vars) > 0){
     for (cat_var in cat_vars){
-      # print(cat_var)
+      
       data_df[, cat_var] <- factor(as.character(data_df[, cat_var, drop = T]),
                                    levels = levels(mod_data[, cat_var, drop = T]))
       
       data_df[!data_df[, cat_var] %in% unique(mod_data[, cat_var, drop = T]), cat_var] <- NA
-      # 
+       
       data_df[, cat_var] <- droplevels(data_df[, cat_var])
       
-      # print(unique(mod_data[, cat_var]))
-      # print(unique(data_df[, cat_var]))
       
       # then create dummy variables for the remaining levels in train:
       data_dummy <- stats::predict(caret::dummyVars(paste0("~", cat_var), data = mod_data, 
@@ -335,7 +352,6 @@ calc_test_DI <- function(train_DI,
     data_df <- data_df[, -which(names(data_df) %in% cat_vars)]
   }
   
-  # print("HERE")
   # For each non-fix var, get those that match names in weights...
   # Having expanded /collated covar-level names, check all are present (compare to names(weight))
   
@@ -350,13 +366,11 @@ calc_test_DI <- function(train_DI,
     all(names(variable_weights) %in% colnames(data_df)) 
   )
   # select those cols for scaling - names(weight) 
-  # - ensure scaleparams and columsn are in correct order
+  # - ensure scaleparams and columns are in correct order
   data_df[, names(variable_weights)] <- scale(data_df[, names(variable_weights)],
                                     center = variable_scale_params$`scaled:center`[names(variable_weights)],
                                     scale  = variable_scale_params$`scaled:scale`[names(variable_weights)])
   
-  # print(variable_scale_params$`scaled:scale`)
-  # print(head(data_df))
   
   weight_matr_ <- matrix(unlist(variable_weights), 
                          ncol = ncol(data_df[, names(variable_weights)]),
@@ -407,19 +421,32 @@ calc_test_DI <- function(train_DI,
     )    
   }
 
-  # Also return scaled, multiplied covariate values?? - coult be useful
+  # Also return scaled, multiplied covariate values?? - could be useful
 
   return(list(proj_mult = data_mult,
               proj_aoa  = out))
 }
 
 
-#' Collect variable importance weights from a fitted caret train object
+#' aoa_get_weights_local
 #' 
 #' @description
-#' This function is a local version of the function from the CAST package
-#' -following the methods of Meyer and Pebesma 2021
-#' - key difference is inclusion of ", drop = F" in weight collection
+#' Collect variable importance weights from a fitted caret train object
+#' 
+#' @details
+#' This function is a local version of the function from the CAST package.
+#' The key difference is inclusion of ", drop = F" in weight collection.
+#' 
+#' @param model A fitted `caret` train object, e.g. a random forest.
+#' @param variables A character vector of covariates used in the model.
+#' 
+#' @return vector
+#' 
+#' @references 
+#' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
+#' area of applicability of spatial prediction models. 
+#' Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+#' 
 #' @keywords projections, dissimilarity, weights
 #' @noRd
 aoa_get_weights_local <- function(model, variables){
@@ -457,13 +484,27 @@ aoa_get_weights_local <- function(model, variables){
 }
 
 
+#' aoa_categorial_train_local
+#' 
+#' @description
 #' Convert categorical/factor variables to expanded, dummy variables for subsequent
 #' DI calculations
 #' 
-#' @description
-#' This function is a local version of the function from the CAST package
-#' - following the methods of Meyer and Pebesma 2021
-#' - key difference is inclusion of 'sep = ""' in variable expansion
+#' @details
+#' This function is a local version of the function from the CAST package.
+#' The key difference is inclusion of 'sep = ""' in variable expansion.
+#' 
+#' @param train A data.frame of variables.
+#' @param variables A character vector of covariates used in the model.
+#' @param weight A named vector of weights used to weight variables.
+#' 
+#' @return list
+#' 
+#' @references 
+#' #' Meyer, H., & Pebesma, E. (2021). Predicting into unknown space? Estimating the 
+#' area of applicability of spatial prediction models. 
+#' Methods in Ecology and Evolution, 12, 1620–1633. https://doi.org/10.1111/2041-210X.13650
+#' 
 #' @keywords projections, dissimilarity, covariates
 #' @noRd
 aoa_categorial_train_local <- function(train, variables, weight){
@@ -481,18 +522,16 @@ aoa_categorial_train_local <- function(train, variables, weight){
     message("CAST warning: predictors contain categorical variables. The integration is currently still under development. Please check results carefully!")
     
     for (catvar in catvars){
-      # print(catvar)
-      # mask all unknown levels in newdata as NA (even technically no predictions can be made)
+      
+      # mask all unknown levels in newdata as NA (technically no predictions can be made)
       train[,catvar] <- droplevels(train[,catvar])
       
-      # print(head(train[,catvar]))
-
       # then create dummy variables for the remaining levels in train:
       dvi_train <- stats::predict(caret::dummyVars(paste0("~",catvar), data = train,
                                             sep = ""),
                            train)
-      train <- data.frame(train,dvi_train)
-      # print(head(dvi_train))
+      train <- data.frame(train, dvi_train)
+      
       if(!inherits(weight, "error")){
         addweights <- data.frame(t(rep(weight[, which(names(weight) == catvar)],
                                        ncol(dvi_train))))

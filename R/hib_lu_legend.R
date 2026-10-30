@@ -1,22 +1,29 @@
-#' Create an lu legend
+#' hib_create_lu_legend: Create a 'new' land-use legend.
 #' 
 #' @description 
-#' This function creates a [`R6`] HibLULegend object containing the loaded land-use legend. 
+#' This function creates a [`R6`] [`HibLULegend`] object containing the provided 
+#' land-use legend (i.e., linking sites, SSBS, to land-uses/intensities). 
 #' 
-#' This object is then used in other functions of this package to prepare or filter
-#' associated databases and enable ecological impact analyses. 
-#' @param input Either a [`character`] pointing to a saved RDS file, or a [`data.frame`]-like
-#' object within the environment.
+#' @details
+#' The provided data.frame must include the following columns:
+#' `SSBS`, `Predominant_land_use`, `Use_intensity` and `LUI`.
+#' 
+#' @param input Either a `character` pointing to a saved rds file, or a 
+#' `data.frame`-like object within the environment.
+#' 
+#' @return `HibLULegend`
+#' 
 #' @keywords database, land-use, legend
+#' 
+#' @seealso [`HibLULegend`]
+#' 
 #' @examples
 #' \dontrun{
-#'   lu_leg <- create_lu_legend("../Data/landuse_dataframe.RDS")
-#'   lu_leg
+#'   lu_leg <- hib_create_lu_legend("../Data/landuse_dataframe.rds")
 #' }
 #' @export
 hib_create_lu_legend <- function(input){
-  # hib_create_lu_legend
-  # %%%
+  
   assertthat::assert_that(
     is.character(input) || is.data.frame(input)
   )
@@ -26,94 +33,48 @@ hib_create_lu_legend <- function(input){
       assertthat::has_extension(input, "rds"))
   }
   
-  # ------ #
-  # message("Creating land-use legend...\n")
-  
   leg <- HibLULegend$new(input = input,
-                      input_chr = deparse(substitute(input)) )
+                         input_chr = deparse(substitute(input)) )
   
   return(leg)
-  # %%%
-  
 }
 
-# #' Save a previously created legend
-# #' 
-# #' @description 
-# #' The function [`save_legend`] saves the output of the formatted [`legend`] object in a specific
-# #' place.
-# #' @details 
-# #' Expecting a file with \code{rds} ending.
-# #' @param leg A [`HibLULegend`].
-# #' @param output_path A [`character`] pointing to a filename.
-# #' @keywords save, land-use, legend
-# #' @export
-# save_legend <- function(leg, output_path) leg$save_legend(output_path)
 
 
-
-# #' Load a saved lu legend
-# #' 
-# #' @description 
-# #' This function loads a previously created [`R6`] object containing a land-use legend class. 
-# #' 
-# #' @param path_input A [`character`] pointing to a saved RDS file.
-# #' @keywords database, land-use, legend
-# #' @examples
-# #' \dontrun{
-# #'   lu_leg <- load_lu_legend("../Data/landuse_legend.RDS")
-# #'   lu_leg
-# #' }
-# #' @export
-# load_lu_legend <- function(path_input){
-#   # hib_load_lu_legend
-#   assertthat::assert_that(
-#     is.character(path_input),
-#     file.exists(path_input),
-#     assertthat::has_extension(path_input, "rds")
-#   )
-#   # Try and read in the legend
-#   message(crayon::green(paste0("Loading land-use legend from: '", path_input, "...\n")))
-  
-#   leg <- readr::read_rds(path_input)
-  
-#   # Sensitivity checks that the object is correct
-#   assertthat::assert_that(
-#     inherits(leg, "HibLULegend")
-#   )
-#   leg$checkself()
-  
-#   return(leg)
-  
-# }
-
-
-# TODO:
-# Need to incl function to add legend...
-# Add to a list in database?
-
-
-#' Set a loaded lu legend as the LU legend within a hibiiscus database
+#' hib_set_lu_legend: Set a `HibLULegend` as the LU legend in a `HibDatabase`
 #'
 #' @description
-#' This function adds a land-use legend to a database - specifically modifying the 
-#' sites dataframe.
+#' This function adds the `HibLULegend` to the `HibDatabase`, modifying both the
+#' `sites` and `species` data.frames.
+#' 
+#' @details
+#' This function updates (and therefore overwrites) the previous 
+#' `Predominant_land_use`, `Use_intensity` and `LUI` columns in both the `sites` 
+#' and `species` data.frames.
 #'
-#' @param obj A [`HibDatabase`].
-#' @param leg A [`HibLULegend`].
+#' @param obj A `HibDatabase`.
+#' @param leg A `HibLULegend`.
+#' 
+#' @return `HibDatabase`
+#' 
+#' @seealso 
+#' [HibDatabase]
+#' [HibLULegend]
+#' 
 #' @keywords database, land-use, legend
+#' 
 #' @examples
 #' \dontrun{
-#'   obj <- set_lu_legend(obj, leg)
-#'   obj
+#'   obj <- hib_set_lu_legend(obj, leg)
 #' }
 #' @export
 hib_set_lu_legend <- function(obj, leg){
-  # hib_set_lu_legend
+  
   assertthat::assert_that(
-    inherits(obj, "HibDatabase") ,
+    inherits(obj, "HibDatabase"),
     inherits(leg, "HibLULegend") 
   )
+  
   message(crayon::green("\nSetting land-use legend for HibDatabase...\n"))
   
   # Make some sensitivity checks that the inputs are okay
@@ -135,15 +96,12 @@ hib_set_lu_legend <- function(obj, leg){
     # left join new legend info
     dplyr::left_join(leg$lu_df)
 
-  # %%%
   # Add in a legend flag
   obj$processing_flags$lu_legend_source <- leg$input_data
-  # %%%
   
   obj$last_update <- lubridate::now()
   
   return(obj)
   
 }
-
 

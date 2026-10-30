@@ -1,14 +1,14 @@
 #' Template object for INLA model 
 #' @title HibModelINLA
 #' @description 
-#' This is the template object for an [R6][R6::R6Class] INLA model class.
+#' This is the template object for an [R6][R6::R6Class] `INLA` model class.
 #' It contains functions for summarising and visualising the model results. 
 #' @keywords classes
 #' @import R6
 #' @rdname HibModelINLA-Class
 #' @export
-HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
-
+HibModelINLA <- R6Class("HibModelINLA", 
+                        
                           # Public data objects and functions
                           public = list(
                             #' @field dataset_name (`character`)\cr
@@ -24,7 +24,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             data = NULL,
                             
                             #' @field model (`inla`)\cr
-                            #' The inla model object.
+                            #' The `INLA::inla` model object.
                             model = NULL,
                             
                             #' @field processing_flags (`list()`)\cr
@@ -71,15 +71,13 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #' Contains columns for "SSBS", "Longitude" ,"Latitude".
                             site_locations = NULL,
                             
-                            # TODO
+                            
                             # what else to include
                             # 
                             # inla output is fairly basic, but extensive...
                             # important to store random effects params/hypers
                             # need to store A matrix
                             # store priors etc
-                            
-                            
                             
                             
                             # Executed when created
@@ -117,11 +115,11 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #'   Number of orignal taxa names contributing to the fitted model.
                             #' @param n_sites (`integer`)\cr
                             #'   Number of sites contributing to the fitted model.
+                            #'   
+                            #'   @return (`HibModelINLA`)
                             initialize = function(db_obj, 
                                                   mod_df,
                                                   inla_obj,
-                                                  # metr_vec,
-                                                  # %%%
                                                   fixef_df,
                                                   user_formula,
                                                   inla_fitted_formula,
@@ -130,13 +128,9 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                                   inla_mesh,
                                                   inla_mesh_settings,
                                                   inla_mesh_source,
-                                                  # %%%
                                                   n_spp,
                                                   n_taxa,
-                                                  n_sites
-                                                  # set_up_specs
-                                                  # spp df?
-                            ){
+                                                  n_sites){
 
                               # Package check
                               if (!requireNamespace("INLA", quietly = TRUE)) {
@@ -151,7 +145,6 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               # - some assertion checks
                               assertthat::assert_that(
                                 # Check database obj
-                                # db_obj$checkself(),
                                 inherits(db_obj, "HibDatabase"),
                                 # Check model data
                                 is.data.frame(mod_df),
@@ -202,16 +195,10 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               self$processing_flags$N_spp <- n_spp
                               self$processing_flags$N_taxa <- n_taxa
                               self$processing_flags$N_sites <- n_sites
-                              
-                              # if ("SSBS" %in% colnames(mod_df)){
-                              #   self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                              # } else if ("SSBS1" %in% colnames(mod_df)){
-                              #   self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
-                              # }
                             
                               self$dataset_name <- db_obj$dataset_name
 
-                              # TODO: store site locations
+                              # Store site locations
                               loc_df <- db_obj$sites[, c("SSBS", "Longitude" ,"Latitude")]
                               if ("SSBS" %in% colnames(mod_df)){
                                 loc_df <- loc_df |> dplyr::filter(SSBS %in% mod_df$SSBS)
@@ -236,11 +223,10 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               stats <- list(number_sites = self$processing_flags$N_sites,
                                             number_taxa = self$processing_flags$N_taxa,
                                             number_species = self$processing_flags$N_spp ) 
-                              # Metrics of fit?
+                              # Metrics of fit
                               m_summ <- summary(self$model)
                               
-                              # TODO: neatly print formula
-                              # self$user_formula$full
+                              # neatly print formula
                               form_chr <- as.character(self$user_formula$full)
                               form_chr <- paste(form_chr[2], form_chr[1], form_chr[3])
                               if (self$inla_incl_spatial_term){
@@ -286,41 +272,6 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                              "\twAIC \t ", m_summ$waic$waic, "\n"))
                             },
                             
-                            # #' @description
-                            # #' Function to save the object to the specified file-path 
-                            # #' ('output_path', must be '.rds').
-                            # #'
-                            # #' @param output_path (`character()`)
-                            # #' @return (`NULL`).
-                            # save_hib = function(output_path = NULL){
-                            #   assertthat::assert_that(
-                            #     is.null(output_path) || is.character(output_path)
-                            #   )
-                              
-                            #   if(!assertthat::has_extension(output_path, "rds")){
-                            #     output_path <- paste0(output_path, ".rds")
-                            #   }
-                              
-                            #   if (!dir.exists(dirname(output_path))){
-                            #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                            #                                   "\n",
-                            #                                   "This folder will be created.\n")))
-                            #     dir.create(dirname(output_path), recursive = T)
-                            #   }
-                              
-                            #   if (file.exists(output_path)){
-                            #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                            #                                   "\n",
-                            #                                   "This file will be updated.\n")))
-                            #   }
-                              
-                            #   message(crayon::green(paste0("Saving hib model to: '", output_path, "'\n")) )
-                              
-                            #   saveRDS(self, output_path)
-                            #   assertthat::assert_that(file.exists(output_path),
-                            #                           msg = "Writing a copy of the model failed...")
-                            #   invisible()
-                            # },
                             
                             #' @description
                             #' Function to generate figures summarising the model.
@@ -330,9 +281,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                             #' @return (`ggplot`).
                             plot = function(type = "fixed-effects"){
                               assertthat::assert_that(is.character(type))
-                              # stop("Function in progress...")
                               # Plot options
-                              # TODO: map-sites, covar-distributions
+                              # TODO: covar-distributions
                               type = match.arg(type,
                                                c("fixed-effects",
                                                  # "fixed-effects posteriors",
@@ -353,40 +303,17 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               
                               # 1. fixed effects - summary
                               if (type == "fixed-effects"){
-                                # TODO: just use fixedef_coefficients df
+                                # use fixedef_coefficients df
                                 fixef_df <- self$fixedef_coefficients
                                 
-                                # TODO: convert chr col of Coefficient_name to factor, based on order of terms in df
+                                # Convert chr col of Coefficient_name to factor, based on order of terms in df
                                 fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name,
                                                                     levels = fixef_df$Coefficient_name)
 
-                                # fixef_df <- self$model$summary.fixed
-                                # fixef_df$Coefficient <- rownames(fixef_df)
-                                
-                                # # Set a baseline- Intercept
-                                # # %%%
-                                # int_id <- which(grepl("intercept", fixef_df$Coefficient, ignore.case = T))
-                                # # TODO: What if another covar also contains intercept...
-                                # if (length(int_id) > 1){
-                                #   message(crayon::yellow("Warning: Multiple 'Intercept' coefficients found, selecting the first...\n"))
-                                #   int_id <- int_id[1]
-                                # }
-                                # # If no explicit intercept, set as 1st value...
-                                # if (length(int_id) == 0){
-                                #   int_id <- 1
-                                # }
-                                # fixef_df$Coefficient <- factor(fixef_df$Coefficient)
-                                # fixef_df$Coefficient <- relevel(fixef_df$Coefficient,
-                                #                                 ref = as.character(fixef_df$Coefficient[int_id]))
-                                # %%%
 
-                                # TODO: use Coefficient_name as x!
+                                # Use Coefficient_name as x
                                 plt <- ggplot2::ggplot(fixef_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
-                                  # ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name, 
-                                  #                   ymin = `0.025quant`,
-                                  #                   ymax = `0.975quant`),
-                                  #               width = 0) +
                                   ggplot2::geom_errorbar(ggplot2::aes(x = Coefficient_name,
                                                 ymin = loCI,
                                                 ymax = hiCI),
@@ -403,11 +330,10 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                 
                               }
                               #    fixed effects - posteriors
+                              #    TODO
                               # 2. random iid
                               if (type == "random-effects"){
-                                # if (is.null(self$user_formula$random)){
-                                #   
-                                # }
+                                
                                 # Get random vars from random form
                                 rand_vars <- all.vars(self$user_formula$random)
                                 # Get random vars coefs 
@@ -415,7 +341,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                 # Check inla summary.random - what if random slopes??
                                 rand_df <- self$model$summary.random[rand_vars] |>
                                   dplyr::bind_rows(.id = "Covar") |>
-                                  # order from small to large?
+                                  # order from small to large
                                   dplyr::group_by(Covar) |>
                                   dplyr::arrange(mean, .by_group = T) |>
                                   dplyr::mutate(ID_ord = 1:dplyr::n()) |>
@@ -461,7 +387,7 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                   stop()
                                 }
                                 
-                                # TODO: Need to facilitate for 3d meshes too!!
+                                # Facilitate for 3d meshes too
                                 # %%%%%
                                 if (self$inla_mesh_settings$mesh_dim == "3d"){
                                   gproj <- INLA::inla.mesh.projector(self$inla_mesh,  dims = c(360, 180))
@@ -496,15 +422,26 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                                     ggplot2::theme_bw() +
                                     basic_thm
                                   
-                                  # fields::image.plot(x = gproj$x, y = gproj$y, z = smean,
-                                  #                    col = viridis::viridis(201))
                                 }
                                 
                                 
                                 # %%%%%
                                 # If inla mesh is 2d...
                                 if (self$inla_mesh_settings$mesh_dim == "2d"){
-                                  # fmesher::fm_pixels() to replace inlabru::pixels
+                                  # TODO: fix dependencies here!
+                                  if (!requireNamespace("inlabru", quietly = TRUE)) {
+                                    stop(
+                                      "Package \"inlabru\" must be installed to plot 2d random fields...",
+                                      call. = FALSE
+                                    )
+                                  }
+                                  if (!requireNamespace("sp", quietly = TRUE)) {
+                                    stop(
+                                      "Package \"sp\" must be installed to plot 2d random fields...",
+                                      call. = FALSE
+                                    )
+                                  }
+                                  
                                   pix <- inlabru::pixels(self$inla_mesh)
                                   # TODO: conv sp:: to sf::st_coordinates... - need to convert pix first... st_as_sf() ?
                                   proj <- INLA::inla.mesh.projector(self$inla_mesh, sp::coordinates(pix))
@@ -529,11 +466,10 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               # 5. partial effects
                               
                               if (type == "map-sites"){
-                                # stop("Plotting map of sites used in model-fitting is in development...")
                                 
                                 # Just get a coarse-ish world map...
                                 tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
-                                # NOTE: This differs per model type!!
+                                
                                 resp_var <- all.vars(self$user_formula$response_fixed[[2]])
                                 resp_lab <- gsub("_", "\n", resp_var)
                                 
@@ -613,6 +549,8 @@ HibModelINLA <- R6Class("HibModelINLA", #hib_mod_inla
                               
                               (plt)
                             }
+                            
+                            # TODO: check model performance
                           ),
                           private = list()
 )

@@ -1,37 +1,54 @@
-#' Fit an inla-style mixed-effects model
+#' hib_fit_inla: Fit an INLA mixed-effects model
 #' 
 #' @description 
-#' This function fits an inla(bru) model using the supplied database, formula and other
+#' This function fits an INLA model using the supplied database, formula and other
 #' function arguments tuning the model fitting process
+#' 
 #' @details 
-#' Expects a [`HibDatabase`] object.
+#' This function takes the supplied database object (and various other arguments),
+#' fits the specified model and returns a HibModelINLA object.
+#' Still in development. Weighted data integration currently not implemented.
+#' 
 #' @param obj A [`HibDatabase`] object.
-#' @param response_fixed_form A [`formula`] with the response and fixed effects
-#' @param random_covar  A [`formula`] with random, non-spatial, iid effects specified
-#' @param family A [`character`] indicating the model family, e.g., "gaussian"
+#' @param response_fixed_form A `formula` with the response and fixed effects
+#' @param random_covar  A `formula` with random, non-spatial, 'iid' effects specified
+#' @param family A `character` indicating the model family, e.g., "gaussian"
 #' @param fit_settings In development
-#' @param incl_spatial_term A [`logical`], whether or not to include a spatial 
+#' @param incl_spatial_term A `logical`, whether or not to include a spatial 
 #' random effect
-#' @param input_mesh Optionally provide an inla mesh object
-#' @param mesh_settings Optionally specify inla mash settings, e.g., max.edge
-#' @param scale_specs A [`list`] containing "covars_to_scale" and "scale_func". 
-#' covars_to_scale is a [`character`] vector of numeric covariates that should be 
-#' scaled prior to modelling. scale_func is a function that will be used to scale 
-#' the specified covariates - if NULL, base::scale() will be used.
-#' @param relevel_specs A named [`vector`] where each item is:
-#' "<covar_to_relevel_name>" = "<base_level>".
+#' @param input_mesh Optionally provide an INLA `mesh` object
+#' @param mesh_settings Optionally specify INLA mash settings, e.g., max.edge
+#' @param scale_specs A named `list` containing "covars_to_scale" and "scale_func". 
+#' - `covars_to_scale` is a `character` vector of numeric covariates that should be 
+#' scaled prior to modelling. 
+#' - `scale_func` is a function that will be used to scale the specified 
+#' covariates - if `NULL`, `base::scale()` will be used.
+#' @param relevel_specs A `vector` where each item is: 
+#' \code{"<covar_to_relevel_name>" = "<base_level>"}.
 #' @param prior_list In development
+#' 
+#' @returns HibModelINLA
+#' 
+#' @references 
+#' * Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian 
+#'   Inference for Latent Gaussian Models Using Integrated Nested Laplace 
+#'   Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-39
+#' * H. Rue, A. Riebler, S. H. Sorbye, J. B. Illian, D. P. Simpson, and F. K. 
+#'   Lindgren. Bayesian computing with INLA: A review. Annual Reviews of Statistics 
+#'   and Its Applications, 4(March):395-421, 2017. URL http://arxiv.org/abs/1604.00860
+#' 
 #' @keywords model, fitting
+#'
+#' @seealso
+#' [HibModelINLA] 
+#' \code{\link[INLA]{inla}}
+#' 
 #' @examples 
 #' \dontrun{
-#'   mod <- hib_fit_inla(obj, ...)
+#'   mod <- hib_fit_inla(obj, y ~ -1 + Intercept + x, ~ f(a, model = "iid"))
 #' } 
 #' @export
 hib_fit_inla <- function(obj, 
-                         # form,
-                         # maybe initially separate formula into response (chr), fixed, random (non-spatial)
-                         # response,
-                         # fixed_covar,
                          response_fixed_form,
                          random_covar,
                          family = "gaussian",
@@ -61,7 +78,7 @@ hib_fit_inla <- function(obj,
   
   # Assertions
   assertthat::assert_that(
-    inherits(obj, "HibDatabase"), # obj is a hib database
+    inherits(obj, "HibDatabase"),
     assertthat::assert_that(attr(response_fixed_form, "class") == "formula"),
     assertthat::assert_that(attr(random_covar, "class") == "formula"), # could be null??
     is.character(family), # family is character
@@ -145,9 +162,7 @@ hib_fit_inla <- function(obj,
                         by = "SSBS")
     
     mod_df <- stats::na.omit(mod_df)
-    
-    # n_spp <- obj$diversity_within$N_species_total[[div_data_idx]]
-    
+        
   } else if (mod_resp %in% between_site_resp){
     
     # NOTE, not all covars are in sites, (Intercept)
@@ -196,16 +211,16 @@ hib_fit_inla <- function(obj,
     
     mod_df <- stats::na.omit(mod_df)
     
-    # print(head(mod_df))
-    
-    # n_spp <- obj$diversity_between$N_species_total[[div_data_idx]]
-    
   } else {
     message(crayon::magenta("Error: response variable specified is not available.\n"))
     stop()
   }
   # %%%%%
-  
+  # ensure that mod_df has >1 row of data!
+  assertthat::assert_that(
+    nrow(mod_df) > 1
+  )
+
   n_spp_taxa <- calc_N_spp(obj, mod_df, mod_resp)
   n_spp = n_spp_taxa$N_spp
   n_taxa = n_spp_taxa$N_taxa
@@ -222,22 +237,7 @@ hib_fit_inla <- function(obj,
   # A bit hacky!!!
   mod_df <- mod_df |>
     dplyr::mutate(y = !!response_fixed_form[[2]] )
-    # dplyr::mutate(y = !!as.formula(paste0(response, "~ 1"))[[2]] )
-  
-  # %%%
-  # mod_df <- na.omit(mod_df)
-  
-  # HERE!!!
-  # TODO: FOR SAFETY (esp brms), should convert any chr columns to fct (mod_covars)
-  # chr_cols_idx <- purrr::map(covars_sub, 
-  #                        function(x, df = mod_df){
-  #                          is.character(df[[x]])}) |> 
-  #   unlist()
-  # chr_cols <- covars_sub[chr_cols_idx]
-  # # print(chr_cols)
-  # for (c in chr_cols){
-  #   mod_df[[c]] <- as.factor(mod_df[[c]])
-  # }
+
 
   # %%%
   mod_df <- prep_model_data(mod_df,
@@ -364,8 +364,6 @@ hib_fit_inla <- function(obj,
     
     # Create weights (A) matrix
     
-    # TODO
-    # ERROR: coords are created in mesh build, but are also needed if mesh is provided...
     # Even if providing a mesh, need to specify mesh_dim
     
     A <- INLA::inla.spde.make.A(input_mesh, 
@@ -399,7 +397,6 @@ hib_fit_inla <- function(obj,
   ranef_chr <- as.character(random_covar)[2]
   inla_form <- paste(inla_form, ranef_chr, sep = " + ")
   
-  # spat_chr <- ""
   if (incl_spatial_term){
     # add spatial term
     spat_chr <- "f(s, model = site.spde)"
@@ -407,6 +404,7 @@ hib_fit_inla <- function(obj,
   }
   
   inla_form <- stats::formula(inla_form)
+
 
   message(crayon::green("Fitting model (this may take a while)...\n"))
 
@@ -486,6 +484,7 @@ hib_fit_inla <- function(obj,
     n_spp = n_spp,
     n_taxa = n_taxa,
     n_sites = n_sites
+  
   # TODO:
   # fit_settings,
   # prior_list

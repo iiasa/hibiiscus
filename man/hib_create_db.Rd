@@ -2,39 +2,46 @@
 % Please edit documentation in R/hib_create_db.R
 \name{hib_create_db}
 \alias{hib_create_db}
-\title{Create a database object}
+\title{hib_create_db: Create a \code{HibDatabase} object from input files}
 \usage{
-hib_create_db(path_species, path_sites = "", dataset_name = "", ...)
+hib_create_db(path_species, path_sites = "", dataset_name = "")
 }
 \arguments{
-\item{path_species}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted occurrence database.}
+\item{path_species}{A character pointing to a \code{PREDICTS} formatted abundance/
+occurrence database.}
 
-\item{path_sites}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted site database, or "" otherwise.}
+\item{path_sites}{Optional character argument, pointing to a \code{PREDICTS}
+formatted site database. Default value is \code{""}. If \code{""} is provided, site data
+will be generated from the species data.}
 
-\item{dataset_name}{A \code{\link{character}} indicating the dataset used to create the
-HibDatabase. Default is ''. If '' is supplied, function will update parameter
-to the filename associated with \code{path_species}.}
-
-\item{...}{Other non-specified parameters.}
+\item{dataset_name}{A \code{character} indicating the dataset used to create the
+HibDatabase. Default is \code{""}.
+If \code{""} is supplied, the parameter will be internally updated to the filename
+associated with \code{path_species}.}
+}
+\value{
+An object of class \code{HibDatabase}, containing site and species information
+which can be further modified for subsequent ecological analysis.
 }
 \description{
-This function creates a \code{\link{R6}} \code{HibDatabase} object containing the loaded
-\code{PREDICTS} database.
-It assumes that a species database is present, with a site database being optional.
-All files are loaded and compiled in a single database that can be stored for future use.
-
-This object is then used in other functions of this package to prepare or filter the
-database and enable ecological impact analyses.
+This function creates an \code{\link[R6:R6]{R6}} \code{HibDatabase} object containing the loaded
+\code{PREDICTS}-like database.
 }
-\note{
-Other or later \code{PREDICTS} formatted object need to be supplied via ...
+\details{
+This function assumes that a species database file is explicitly provided,
+with a site database file being optional.
+Provided file paths are expected to include a '.rds' extension. \cr
+All files are loaded and compiled into a single database object that can be
+stored for future use (see \code{\link[=hib_save]{hib_save()}}).
+This object is then used in other functions of this package to prepare or filter
+the database and enable ecological impact analyses.
 }
 \examples{
 \dontrun{
   path_species <- "rawdata/PREDICTS/2016/database.rds"
   path_sites <- "rawdata/PREDICTS/2016/sites.rds"
-  obj <- create_hib(path_species, path_sites)
-  obj
+  hibDB <- hib_create_db(path_species, path_sites)
+  hibDB
 }
 }
 \references{
@@ -46,6 +53,14 @@ Other or later \code{PREDICTS} formatted object need to be supplied via ...
 \item 
 \enumerate{
 \item Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Alhusseini, T.I., Bedford, F.E., Bennett, D.J., et al. (2017). The database of the PREDICTS (Projecting Responses of Ecological Diversity In Changing Terrestrial Systems) project. Ecol. Evol. 7, 145–188. 10.1002/ece3.2579.
+}
+\item 
+\enumerate{
+\item Lawrence Hudson; Tim Newbold; Sara Contu; Samantha L L Hill et al. (2023). The 2016 release of the PREDICTS database V1.1. Natural History Museum. https://doi.org/10.5519/j4sh7e0w
+}
+\item 
+\enumerate{
+\item Sara Contu; Adriana De Palma; Rachel Bates; Jessica Borer et al. (2022). Release of data added to the PREDICTS database (November 2022). Natural History Museum. https://doi.org/10.5519/jg7i52dg
 }
 }
 }

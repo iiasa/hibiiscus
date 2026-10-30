@@ -2,34 +2,72 @@
 % Please edit documentation in R/hib_update_db.R
 \name{hib_update_db}
 \alias{hib_update_db}
-\title{This function updates an existing Database object with further data}
+\title{hib_update_db: Update an existing \code{HibDatabase} with further data}
 \usage{
-hib_update_db(obj, path_species, path_sites = "", dataset_name = "", ...)
+hib_update_db(obj, path_species, path_sites = "", dataset_name = "")
 }
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{path_species}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted occurrence database.}
+\item{path_species}{A character pointing to a \code{PREDICTS} formatted abundance/
+occurrence database.}
 
-\item{path_sites}{A \code{\link{character}} pointing to a \code{PREDICTS} formatted site database, or "" otherwise.}
+\item{path_sites}{Optional character argument, pointing to a \code{PREDICTS}
+formatted site database. Default value is \code{""}. If \code{""} is provided, site data
+will be generated from the species data.}
 
-\item{dataset_name}{A \code{\link{character}} indicating the dataset used to create the
-HibDatabase. Default is ''. If '' is supplied, function will update parameter
-to the filename associated with \code{path_species}.}
-
-\item{...}{Other non-specified parameters.}
+\item{dataset_name}{A \code{character} indicating the dataset used to create the
+HibDatabase. Default is \code{""}.
+If \code{""} is supplied, the parameter will be internally updated to the filename
+associated with \code{path_species}.}
+}
+\value{
+An object of class \code{HibDatabase}, containing site and species information
+which can be further modified for subsequent ecological analysis.
 }
 \description{
-This function can update an existing database, for example by adding the 2022
-or a custom PREDICTS version to it.
+This function updates an existing \code{HibDatabase}, for example by adding
+the 2022 version of the PREDICTS data to the 2016 version.
 }
 \details{
-Expects a \code{\link{HibDatabase}} object.
+Newly provided data (from files) will be appended to the previously created
+\code{HibDatabase}. Species data will be added to the species data.frame, and
+site data to the site data.frame.
+Meta-data/descriptors in the \code{HibDatabase} will be updated to reflect
+the additions.
+Note: Prior filtering/processing of the initial \code{HibDatabase} will not
+be applied to the newly provided data. Please load all data of interest into
+the \code{HibDatabase} prior to further processing.
 }
 \examples{
 \dontrun{
-  obj <- update_hib(obj1, obj2)
+  path_species <- "rawdata/PREDICTS/2016/database.rds"
+  path_sites <- "rawdata/PREDICTS/2016/sites.rds"
+  hibDB <- hib_create_db(path_species, path_sites, "predicts_2016")
+  path_species_upd <- "rawdata/PREDICTS/2022/database2ndrelease.rds"
+  hibDB <- update_hib(hibDB, path_species_upd, "", "predicts_2022")
+  hibDB
 } 
+}
+\references{
+\itemize{
+\item 
+\enumerate{
+\item Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Senior, R.A., Bennett, D.J., Booth, H., et al. (2014). The PREDICTS database: a global database of how local terrestrial biodiversity responds to human impacts. Ecol. Evol. 4, 4701–4735. 10.1002/ece3.1303.
+}
+\item 
+\enumerate{
+\item Hudson, L.N., Newbold, T., Contu, S., Hill, S.L.L., Lysenko, I., De Palma, A., Phillips, H.R.P., Alhusseini, T.I., Bedford, F.E., Bennett, D.J., et al. (2017). The database of the PREDICTS (Projecting Responses of Ecological Diversity In Changing Terrestrial Systems) project. Ecol. Evol. 7, 145–188. 10.1002/ece3.2579.
+}
+\item 
+\enumerate{
+\item Lawrence Hudson; Tim Newbold; Sara Contu; Samantha L L Hill et al. (2023). The 2016 release of the PREDICTS database V1.1. Natural History Museum. https://doi.org/10.5519/j4sh7e0w
+}
+\item 
+\enumerate{
+\item Sara Contu; Adriana De Palma; Rachel Bates; Jessica Borer et al. (2022). Release of data added to the PREDICTS database (November 2022). Natural History Museum. https://doi.org/10.5519/jg7i52dg
+}
+}
 }
 \keyword{database,}
 \keyword{preparation}

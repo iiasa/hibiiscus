@@ -13,136 +13,148 @@ Template object for land-use legend
 }
 \keyword{classes}
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{last_update}}{(\code{character()})\cr
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{last_update}}{(\code{character()})\cr
 Identifies the most recent update to the legend object (YYYY-MM-DD)}
 
-\item{\code{input_data}}{(\code{character()})\cr
+    \item{\code{input_data}}{(\code{character()})\cr
 Identifies the source of the input data, either "file ([...])",
 or "dataframe [...]".}
 
-\item{\code{lu_df}}{(\code{data.frame})\cr
+    \item{\code{lu_df}}{(\code{data.frame})\cr
 Contains the LU legend dataframe, i.e, A data.frame
 containing columns for "SSBS", "Predominant_land_use",
 "Use_intensity" and "LUI".}
 
-\item{\code{land_use}}{(\code{character()})\cr
+    \item{\code{land_use}}{(\code{character()})\cr
 The unique values of lu_df$Predominant_land_use.}
 
-\item{\code{management}}{(\code{character()})\cr
+    \item{\code{management}}{(\code{character()})\cr
 The unique values of lu_df$Use_intensity}
 
-\item{\code{land_use_management}}{(\code{character()})\cr
+    \item{\code{land_use_management}}{(\code{character()})\cr
 The unique values of lu_df$LUI}
-}
-\if{html}{\out{</div>}}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-HibLULegend-new}{\code{HibLULegend$new()}}
-\item \href{#method-HibLULegend-checkself}{\code{HibLULegend$checkself()}}
-\item \href{#method-HibLULegend-print}{\code{HibLULegend$print()}}
-\item \href{#method-HibLULegend-plot}{\code{HibLULegend$plot()}}
-\item \href{#method-HibLULegend-clone}{\code{HibLULegend$clone()}}
-}
+  \itemize{
+    \item \href{#method-HibLULegend-initialize}{\code{HibLULegend$new()}}
+    \item \href{#method-HibLULegend-checkself}{\code{HibLULegend$checkself()}}
+    \item \href{#method-HibLULegend-print}{\code{HibLULegend$print()}}
+    \item \href{#method-HibLULegend-plot}{\code{HibLULegend$plot()}}
+    \item \href{#method-HibLULegend-clone}{\code{HibLULegend$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-HibLULegend-new"></a>}}
-\if{latex}{\out{\hypertarget{method-HibLULegend-new}{}}}
-\subsection{Method \code{new()}}{
-Creates a new instance of this \link[R6:R6Class]{R6} class.
+\if{html}{\out{<a id="method-HibLULegend-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-HibLULegend-initialize}{}}}
+\subsection{\code{HibLULegend$new()}}{
+  Creates a new instance of this \link[R6:R6Class]{R6} class.
 Note, this object is constructed via the \link{hib_create_lu_legend}
 function found within this package.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibLULegend$new(input, input_chr)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{input}}{(\code{character()} or \code{data.frame})\cr
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibLULegend$new(input, input_chr)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{input}}{(\code{character()} (rds filepath) or \code{data.frame})\cr
 The source data used to generate the LU legend}
-
-\item{\code{input_chr}}{(\code{character()})\cr
+      \item{\code{input_chr}}{(\code{character()})\cr
 Text indicating the source of the data.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{HibLULegend})\cr
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibLULegend-checkself"></a>}}
 \if{latex}{\out{\hypertarget{method-HibLULegend-checkself}{}}}
-\subsection{Method \code{checkself()}}{
-Self check function to ensure that the legend data.frame
+\subsection{\code{HibLULegend$checkself()}}{
+  Self check function to ensure that the legend data.frame
 contains the correct columns.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibLULegend$checkself(df = self$lu_df)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibLULegend$checkself(df = self$lu_df)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{df}}{(\code{data.frame}).}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{df}}{(\code{data.frame}).}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibLULegend-print"></a>}}
 \if{latex}{\out{\hypertarget{method-HibLULegend-print}{}}}
-\subsection{Method \code{print()}}{
-Base printout function presents core information about the
+\subsection{\code{HibLULegend$print()}}{
+  Base printout function presents core information about the
 object.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibLULegend$print()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibLULegend$print()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{NULL}).
+  }
 }
 
-\subsection{Returns}{
-(\code{NULL}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibLULegend-plot"></a>}}
 \if{latex}{\out{\hypertarget{method-HibLULegend-plot}{}}}
-\subsection{Method \code{plot()}}{
-Function to generate figures summarising the data present
+\subsection{\code{HibLULegend$plot()}}{
+  Function to generate figures summarising the data present
 in the LU legend
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibLULegend$plot(x_var = "land-use")}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibLULegend$plot(x_var = "land-use")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{x_var}}{(\code{character()}) Options are: "land-use",
+"use-intensity", "land-use:use-intensity".}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    (\code{ggplot}).
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{x_var}}{(\code{character()}) Options are: "land-use",
-"use-intensity", "land-use:use-intensity".}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-(\code{ggplot}).
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-HibLULegend-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-HibLULegend-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{HibLULegend$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{HibLULegend$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{HibLULegend$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

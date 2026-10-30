@@ -2,7 +2,7 @@
 % Please edit documentation in R/hib_fit_inla.R
 \name{hib_fit_inla}
 \alias{hib_fit_inla}
-\title{Fit an inla-style mixed-effects model}
+\title{hib_fit_inla: Fit an INLA mixed-effects model}
 \usage{
 hib_fit_inla(
   obj,
@@ -22,42 +22,64 @@ hib_fit_inla(
 \arguments{
 \item{obj}{A \code{\link{HibDatabase}} object.}
 
-\item{response_fixed_form}{A \code{\link{formula}} with the response and fixed effects}
+\item{response_fixed_form}{A \code{formula} with the response and fixed effects}
 
-\item{random_covar}{A \code{\link{formula}} with random, non-spatial, iid effects specified}
+\item{random_covar}{A \code{formula} with random, non-spatial, 'iid' effects specified}
 
-\item{family}{A \code{\link{character}} indicating the model family, e.g., "gaussian"}
+\item{family}{A \code{character} indicating the model family, e.g., "gaussian"}
 
 \item{fit_settings}{In development}
 
-\item{incl_spatial_term}{A \code{\link{logical}}, whether or not to include a spatial
+\item{incl_spatial_term}{A \code{logical}, whether or not to include a spatial
 random effect}
 
-\item{input_mesh}{Optionally provide an inla mesh object}
+\item{input_mesh}{Optionally provide an INLA \code{mesh} object}
 
-\item{mesh_settings}{Optionally specify inla mash settings, e.g., max.edge}
+\item{mesh_settings}{Optionally specify INLA mash settings, e.g., max.edge}
 
-\item{scale_specs}{A \code{\link{list}} containing "covars_to_scale" and "scale_func".
-covars_to_scale is a \code{\link{character}} vector of numeric covariates that should be
-scaled prior to modelling. scale_func is a function that will be used to scale
-the specified covariates - if NULL, base::scale() will be used.}
+\item{scale_specs}{A named \code{list} containing "covars_to_scale" and "scale_func".
+\itemize{
+\item \code{covars_to_scale} is a \code{character} vector of numeric covariates that should be
+scaled prior to modelling.
+\item \code{scale_func} is a function that will be used to scale the specified
+covariates - if \code{NULL}, \code{base::scale()} will be used.
+}}
 
-\item{relevel_specs}{A named \code{\link{vector}} where each item is:
-"<covar_to_relevel_name>" = "<base_level>".}
+\item{relevel_specs}{A \code{vector} where each item is:
+\code{"<covar_to_relevel_name>" = "<base_level>"}.}
 
 \item{prior_list}{In development}
 }
+\value{
+HibModelINLA
+}
 \description{
-This function fits an inla(bru) model using the supplied database, formula and other
+This function fits an INLA model using the supplied database, formula and other
 function arguments tuning the model fitting process
 }
 \details{
-Expects a \code{\link{HibDatabase}} object.
+This function takes the supplied database object (and various other arguments),
+fits the specified model and returns a HibModelINLA object.
+Still in development. Weighted data integration currently not implemented.
 }
 \examples{
 \dontrun{
-  mod <- hib_fit_inla(obj, ...)
+  mod <- hib_fit_inla(obj, y ~ -1 + Intercept + x, ~ f(a, model = "iid"))
 } 
+}
+\references{
+\itemize{
+\item Havard Rue, Sara Martino, and Nicholas Chopin (2009), Approximate Bayesian
+Inference for Latent Gaussian Models Using Integrated Nested Laplace
+Approximations (with discussion), Journal of the Royal Statistical Society B, 71, 319-39
+\item H. Rue, A. Riebler, S. H. Sorbye, J. B. Illian, D. P. Simpson, and F. K.
+Lindgren. Bayesian computing with INLA: A review. Annual Reviews of Statistics
+and Its Applications, 4(March):395-421, 2017. URL http://arxiv.org/abs/1604.00860
+}
+}
+\seealso{
+\link{HibModelINLA}
+\code{\link[INLA]{inla}}
 }
 \keyword{fitting}
 \keyword{model,}

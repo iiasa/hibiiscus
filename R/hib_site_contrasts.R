@@ -1,46 +1,61 @@
-#' Calculate measures of dissimilarity (wrapper) between sites
+#' hib_calc_site_contrasts: Calculate differences between sites for a range of 
+#' environmental variables.
 #' 
 #' @description 
-#' This function calculates dissimilarity measures between sites within a study,
-#' for use as covariates in models of comopositional dis/similarity
+#' This function calculates measures of differences between sites within a study,
+#' which can then be used as covariates in models of compositional dis/similarity.
+#' A `data.frame` (named `site_contrasts`) containing the site-contrast pairs 
+#' (`SSBS1`, `SSBS2`) and the associated 'differences' is added to the provided 
+#' `HibDatabase`.
+#' 
 #' @details 
-#' Expects a [`HibDatabase`] object.
+#' The function currently returns `site1-site2` contrasts for all within-study contrasts
+#' where `site1` has the `baseline_lui`. Subsequent, filtering to ensure contrasts
+#' are based on the same effort level is recommended and may be incrporated in
+#' future releases.
+#' 
 #' @param obj A [`HibDatabase`] object.
-#' @param metrics A [`character`] vector of 'distance' metrics. Current options are;
+#' @param metrics A `character` vector of 'distance' metrics. Current options are;
 #' "lui_contrast", "geogr_dist_hav", "geogr_dist_geod" and "geogr_midpoint", "env_dist".
-#' @param custom_metric_specs A named [`list`] with each named item containing the
-#' specifications for the named custom metric. Custom metrics must be based on 
-#' vegdist distance metrics. 
+#' @param custom_metric_specs A named `list` (or `NULL`) with each named item 
+#' containing the specifications for the named custom metric.
+#' At present, custom metrics must be based on `vegdist` distance metrics.  \cr
 #' Essential named values within the specifications of a custom metric are: 
-#' \code{dist_metr} - a character indicating the metric of choice;
-#' \code{vars} - a character vector indicating the site variables to use when calculating
-#' the distance metric. 
-#' For example: \code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1", "env2", "env3")),
-#'                         Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))}
+#' - \code{dist_metr} - a character indicating the metric of choice;
+#' - \code{vars} - a character vector indicating the site variables to use when calculating
+#' the distance metric. \cr
+#' 
+#' For example: \cr
+#' \code{list(Gower_dist_a = list(dist_metr = "gower", vars = c("env1", "env2", "env3")),
+#'            Gower_dist_b = list(dist_metr = "gower", vars = c("env4", "env5", "env6")))} \cr 
 #' Metric names (as specified in the name of the sub-lists) will be converted to 
 #' sentence-case in the output data.
-#' @param baseline_lui A [`character`] or NULL, indicating the baseline LUI against
-#' which dis/similarity is calculated per study - should match the value used 
-#' when calculating compositional dis/similarity (hib_calc_div_between)
-#' @param overwrite A [`logical`] indicating whether or not any current site contrast
-#' data should be over-written.
+#' @param baseline_lui A `character` (can be multiple entries) or `NULL`, 
+#' indicating the baseline LUI/s against which differences are calculated per study.
+#' Value/s provided should match the value/s used when calculating compositional 
+#' dis/similarity ([`hib_calc_div_between`]).
+#' @param overwrite A `logical` indicating whether or not any current site contrast
+#' data should be over-written. Default value is `FALSE`.
+#' 
+#' @returns HibDatabase
+#' 
+#' @references 
+#' https://adrianadepalma.github.io/BII_tutorial
+#' 
 #' @keywords database, processing
+#' 
 #' @examples 
 #' \dontrun{
 #'   obj <- hib_calc_site_contrasts(obj, 
-#'                               c("lui_contrast", "geogr_dist_hav"),
-#'                               "Primary vegetation_Minimal use")
+#'                                  c("lui_contrast", "geogr_dist_hav"),
+#'                                  baseline_lui = "Primary vegetation_Minimal use")
 #' } 
 #' @export
 hib_calc_site_contrasts <- function(obj,
                                     metrics,
-                                    custom_metric_specs = NULL, #list(list(custom_name = "...", dist_metr = "gower", vars = c("...")), list())
+                                    custom_metric_specs = NULL, 
                                     baseline_lui = "Primary vegetation_Minimal use",
                                     overwrite = FALSE){
-  
-  # TODO:
-  # lui_colname may be unnecessary, - lui_legend assumes LUI...
-
   
   # Assertion checks
   assertthat::assert_that(
@@ -56,16 +71,10 @@ hib_calc_site_contrasts <- function(obj,
                          "geogr_dist_hav", "geogr_dist_geod",
                          "geogr_midpoint", "env_dist",
                          "custom_dist"),
-                       # 
-                       # "custom_dist"
                        several.ok = T)
-  # TODO:
-  # Custom dist specs... 
-  # make a named list - i.e., list(Custom_dist1 = list(...), Custom_dist_2 = list(...)))
-  # Much neater!!
-  # Name, dist_type (vegan), covar cols
-
+  
   if (overwrite){
+    message(crayon::yellow("\nWarning: previously calculated 'site_contrasts' are being overwritten!\n"))
     obj$site_contrasts <- NULL
   }
 
@@ -73,7 +82,7 @@ hib_calc_site_contrasts <- function(obj,
   # get obj$sites columns of interest - SSBS, SS, LUI, lat/long etc
   cols_of_interest <- c("SSBS", "SSB", "SS")
   if ("lui_contrast" %in% metrics){
-    cols_of_interest <- c(cols_of_interest, "LUI")
+    cols_of_interest <- c(cols_of_interest, "LUI", "Sampling_effort")
   }
   if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
     cols_of_interest <- c(cols_of_interest, "Latitude", "Longitude")
@@ -83,14 +92,12 @@ hib_calc_site_contrasts <- function(obj,
   }
 
   # %%%%%%
-  # TODO:
   # Custom distance calcs...
   if ("custom_dist" %in% metrics){  
     assertthat::assert_that(
       is.list(custom_metric_specs) 
       )
 
-    # TODO:
     # assert that all items of list have correct names /formats...
     assertthat::assert_that(
       lapply(custom_metric_specs,
@@ -99,29 +106,23 @@ hib_calc_site_contrasts <- function(obj,
       all()
       )
     
-    # custom_name , dist_metr, vars
-
-    # all present, all chr
 
     # Get custom names
     custom_metric_names <- names(custom_metric_specs)
-    # lapply(custom_metric_specs, function(x){x$custom_name}) |> unlist()
-
+    
     default_metric_names <- c("LUI_contrast", 
                               "Geogr_dist_hav", "Geogr_dist_geod",
                               "Geogr_midpoint", "Env_dist")
+
     # Check names of metrics (no-overlap with defaults.. - if so, add "_custom", and vars of interest 
     if (any(custom_metric_names %in% default_metric_names)){
-      # Alternatively, just stop?
-      # TODO: Warning message
+      
       edit_idx <- which(custom_metric_names %in% default_metric_names)
 
       old_nms <- names(custom_metric_specs)[edit_idx]
 
       names(custom_metric_specs)[edit_idx] <- paste0(names(custom_metric_specs)[edit_idx], "_custom")
-      # for (idx in edit_idx){
-      #   custom_metric_specs[[idx]]$custom_name <- paste0(custom_metric_specs[[idx]]$custom_name, "_custom")
-      # }
+      
       new_nms <- names(custom_metric_specs)[edit_idx]
 
       prnt_df <- data.frame(old_nms = old_nms,
@@ -137,17 +138,13 @@ hib_calc_site_contrasts <- function(obj,
     }
 
     custom_metric_names <- names(custom_metric_specs)
-    # lapply(custom_metric_specs, function(x){x$custom_name}) |> unlist()
-    
-    # print(custom_metric_names)
-
+    # If there are duplications in the names of metrics, adjust output names and
+    # print a warning
     if (length(unique(custom_metric_names)) < length(custom_metric_names)){
-      # print("duplicates")
-      # Alternatively, just stop?
+      
       old_nms <- custom_metric_names
       dupl_nms <- custom_metric_names[duplicated(custom_metric_names)]
 
-      # TODO: Warning message
       # For unique names, id N, add _1:n to end of name...
       un_dupl_nms <- unique(dupl_nms)
       for (nm in un_dupl_nms){
@@ -155,9 +152,7 @@ hib_calc_site_contrasts <- function(obj,
         n_reps <- length(reps)
 
         for (i in 1:n_reps){
-
           names(custom_metric_specs)[reps[i]] <- paste0(names(custom_metric_specs)[reps[i]], "_", as.character(i))
-          # custom_metric_specs[[reps[i]]]$custom_name <- paste0(custom_metric_specs[[reps[i]]]$custom_name, "_", as.character(i))
         }
       }
       new_nms <- names(custom_metric_specs)
@@ -171,19 +166,9 @@ hib_calc_site_contrasts <- function(obj,
       message(crayon::yellow(paste0("\nWarning: multiple custom metric names are the same! ",
                                   "The following names have been adjusted;\n\t",
                                   paste(prnt_df$prnt_out, collapse = "\n\t")
-                                  # "\n"
                                   )))
-      # %%%%%
-      # print(custom_metric_specs)
-
-      # Finally, what about if any custom_metric_names are already in the site_contrasts df - ignore?
-      # Stop?
-
     }
 
-
-    # custom_metric_dist <- lapply(custom_metric_specs, function(x){x$dist_metr}) |> unlist() |> unique()
-    
     # Get custom vars
     custom_metric_vars <- lapply(custom_metric_specs, function(x){x$vars}) |> unlist() |> unique()
 
@@ -205,7 +190,7 @@ hib_calc_site_contrasts <- function(obj,
   # TODO: if site_contrasts already exists in hib object, use this [SS, SSBS...]
   
   # option to incl over-write...
-  # site_contr_empty <- is.null(obj$site_contrasts)
+  
   if ( (!is.null(obj$site_contrasts)) & (overwrite == F) ){
     site_comp_df <- obj$site_contrasts[, c("SSBS1", "SSBS2", "SS")]
     message(crayon::green(paste0("\t", nrow(site_comp_df), 
@@ -246,9 +231,7 @@ hib_calc_site_contrasts <- function(obj,
                                   # "\n"
                                   )))
     }
-    # if nrow(metrics_spec_df) == 0
-    # print(nrow(metrics_spec_df))
-    # TODO: what about custom metrics...!!!
+    
     metrics_prnt <- tools::toTitleCase(metrics)
     metrics_prnt[metrics_prnt == "Lui_contrast"] <- "LUI_contrast"
     metrics_prnt <- metrics_prnt[metrics_prnt != "Custom_dist"]
@@ -256,13 +239,8 @@ hib_calc_site_contrasts <- function(obj,
     if (!is.null(custom_metric_specs)){
       metrics_prnt <- c(metrics_prnt, names(custom_metric_specs))
     }
-    # use metrics_prnt
-
+    
     if (length(metrics_prnt) == 0){
-        # message(crayon::red(paste0("\nError: no uncalculated biodiversity metrics.\n\n",
-        #                        "Check that the specified biodiversity responses ('", baseline_lui,
-        #                        "') is present ...\n"))
-        #   )
         stop("No new contrast metrics to calculate.", call. = F)
     }
 
@@ -275,8 +253,6 @@ hib_calc_site_contrasts <- function(obj,
     # Set contrasts to NULL?? - should over-write over-write the whole site_contrasts df, or just the metrics of interest... - prob the whole thing
     # %%%%%%%%%
     # assert that specific cols are in obj$species 
-    # c(Predominant_land_use, Diversity_metric_type, SS, Sampling_effort, Taxon_name_entered)
-    
     assertthat::assert_that(
       all(c("Diversity_metric_type", "SS", 
             "SSBS", "Sampling_effort", "Taxon_name_entered") %in% colnames(obj$species)),
@@ -289,36 +265,13 @@ hib_calc_site_contrasts <- function(obj,
     spp_tmp <- obj$species
     
     spp_tmp <- spp_tmp |>
-      dplyr::filter(#!is.na(Predominant_land_use) &
-                    Diversity_metric_type == "Abundance") |>
+      dplyr::filter(
+                    Diversity_metric_type %in% c("Abundance", "Occurrence")) |>
       dplyr::group_by(SS) |>
-      dplyr::mutate(n_sample_effort = dplyr::n_distinct(Sampling_effort),
-                    # Taxon_name_entered v best_guess_binomial ?? - what if none..
-                    n_species = dplyr::n_distinct(Taxon_name_entered)) |>
+      dplyr::mutate(n_species = dplyr::n_distinct(Taxon_name_entered)) |>
       dplyr::ungroup() |>
-      dplyr::filter(n_sample_effort == 1 &
-               n_species > 1)
+      dplyr::filter(n_species > 1)
     
-    # if (primin_baseline == T){
-    #   # TODO: should this be ammended to primary forest...
-    #   spp_tmp$prim_min <- as.numeric((grepl("primary", spp_tmp$Predominant_land_use, ignore.case = T) &
-    #                                     grepl("minimal", spp_tmp$Use_intensity, ignore.case = T)))
-    #   spp_tmp <- spp_tmp |>
-    #     dplyr::group_by(SS) |>
-    #     dplyr::mutate(n_primin_records = sum(prim_min)) |>
-    #     dplyr::filter(n_primin_records > 0) |>
-    #     dplyr::ungroup()
-    #   
-    #   site_tmp <- obj$sites |>
-    #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-    #     left_join(unique(spp_tmp[, c("SSBS", "prim_min")])) |>
-    #     droplevels()
-    #   
-    # } else if (primin_baseline == F){
-    #   site_tmp <- obj$sites |>
-    #     dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-    #     droplevels()
-    # }
     if (!is.null(baseline_lui)){
 
       # Better appr is to first get site data..., (subset to spp_tmp_SSBS) 
@@ -329,11 +282,31 @@ hib_calc_site_contrasts <- function(obj,
         dplyr::filter(SSBS %in% unique(spp_tmp$SSBS),
                     !is.na(LUI))
 
-      # print(baseline_lui)
-      # print(unique(site_tmp$LUI))
-      assertthat::assert_that(baseline_lui %in% unique(site_tmp$LUI))
+      # %%%%%%%%%%
+      # allow for multiple baselines
+      # if any baseline_lui missing, throw a warning, keep remainder
+      if (!all(baseline_lui %in% unique(site_tmp$LUI))){
+        missing_baseline <- baseline_lui[!baseline_lui %in% unique(site_tmp$LUI)]
+        baseline_lui <- baseline_lui[baseline_lui %in% unique(site_tmp$LUI)]
 
-      site_tmp$base_lui <- site_tmp$LUI == baseline_lui
+        if (length(baseline_lui) > 0){
+          message(crayon::yellow(paste0("Warning: specified baseline/s missing, only ",
+                                      "using available baseline/s...\n",
+                                      "\tMissing baseline/s: ", paste0(missing_baseline, collapse = ", "), "\n",
+                                      "\tUsed baseline/s:    ", paste0(baseline_lui, collapse = ", "), "\n"
+                                      )))
+        } else {
+          message(crayon::red(paste0("\nError: no sites avilable with specified baseline LUI/s...\n")))
+          stop("Specific baseline not in LUI column.")
+
+        }
+        
+      }
+      
+      # %%%%%%%%%%
+      assertthat::assert_that(all(baseline_lui %in% unique(site_tmp$LUI)))
+
+      site_tmp$base_lui <- site_tmp$LUI %in% baseline_lui
       
       site_tmp <- site_tmp |>
         dplyr::group_by(SS) |>
@@ -342,26 +315,6 @@ hib_calc_site_contrasts <- function(obj,
         dplyr::ungroup() |>
         droplevels()
       # %%%%
-      
-      # This is an issue - what if LUI updates have only been added to the site, not spp data!!
-
-      # assertthat::assert_that(baseline_lui %in% unique(spp_tmp$LUI))
-
-      # spp_tmp$base_lui <- spp_tmp$LUI == baseline_lui
-      
-      # # TODO: 
-
-      # spp_tmp <- spp_tmp |>
-      #   dplyr::group_by(SS) |>
-      #   dplyr::mutate(n_base_lui = sum(base_lui)) |>
-      #   dplyr::filter(n_base_lui > 0) |>
-      #   dplyr::ungroup()
-      
-      # site_tmp <- obj$sites |>
-      #   dplyr::filter(SSBS %in% unique(spp_tmp$SSBS)) |>
-      #   dplyr::left_join(unique(spp_tmp[, c("SSBS", "base_lui")]),
-      #                     by = "SSBS") |>
-      #   droplevels()
       
     } else if (is.null(baseline_lui)){
       site_tmp <- obj$sites |>
@@ -379,21 +332,6 @@ hib_calc_site_contrasts <- function(obj,
     
     site_comp_df <- purrr::map_dfr(.x = studies, .f = function(x){
       
-      # pull out the sites that are Primary minimal (we only want to use comparisons with the baseline)
-      # if (primin_baseline == T){
-      #   site_data <- dplyr::filter(site_tmp, SS == x) |>
-      #     # pull out the SSBS and LandUse information
-      #     dplyr::select(SSBS, prim_min)
-      #   
-      #   baseline_sites <- site_data |>
-      #     dplyr::filter(prim_min == 1) |>
-      #     dplyr::pull(SSBS)
-      # } else if (primin_baseline == F){
-      #   site_data <- dplyr::filter(site_tmp, SS == x)
-      #   
-      #   baseline_sites <- site_data |>
-      #     dplyr::pull(SSBS)
-      # }
       if (!is.null(baseline_lui)){
         site_data <- dplyr::filter(site_tmp, SS == x) |>
           # pull out the SSBS and LandUse information
@@ -415,14 +353,13 @@ hib_calc_site_contrasts <- function(obj,
       
       # get all site x site comparisons for this study
       site_comparisons <- expand.grid(baseline_sites, site_list) |>
-        # rename the columns so they will be what the compositional similarity function expects for ease
+        # rename columns
         dplyr::rename(SSBS1 = Var1, SSBS2 = Var2) |>
-        # make the values characters rather than factors
         dplyr::mutate(SSBS1 = as.character(SSBS1),
                       SSBS2 = as.character(SSBS2)) |>
-        # remove the comparisons where the same site is being compared to itself
+        # remove self comparisons
         dplyr::filter(SSBS1 != SSBS2) |>
-        # add the study id
+        # add study id
         dplyr::mutate(SS = as.character(x)) 
       
       return(site_comparisons)
@@ -430,8 +367,9 @@ hib_calc_site_contrasts <- function(obj,
 
     if (nrow(site_comp_df) == 0){
       message(crayon::red(paste0("\nError: no site comparisons possible...\n\n",
-                                 "Maybe check that the specified baseline LUI ('", baseline_lui,
-                                 "') is present ...\n"))
+                                 "Maybe check that the specified baseline LUI/s ('", 
+                                 paste(baseline_lui, collapse = ", "),
+                                 "') are present ...\n"))
       )
       stop("Unable to generate any site comparisons, see above for details.")
     }
@@ -448,12 +386,7 @@ hib_calc_site_contrasts <- function(obj,
       metrics_prnt <- c(metrics_prnt, names(custom_metric_specs))
     }
   }
-  
-
-  
   # %%%%%%%%%
-  
-  
   
   message(crayon::green("Calculating site contrasts...\n"))
   
@@ -471,55 +404,32 @@ hib_calc_site_contrasts <- function(obj,
       dplyr::left_join(site_df[, c("SSBS", "LUI")], 
                        by = c("SSBS1" = "SSBS")) |>
       dplyr::rename(SSBS1_LUI = LUI) |>
-      # get the land use for s2
       dplyr::left_join(site_df[, c("SSBS", "LUI")], 
                        by = c("SSBS2" = "SSBS")) |>
       dplyr::rename(SSBS2_LUI = LUI) |>
-      # create an lui_contrast column (what we'll use for modelling)
       dplyr::mutate(LUI_contrast = paste(SSBS1_LUI, SSBS2_LUI, sep = "_vs_"),
-                    Baseline_LUI = baseline_lui)
+                    Baseline_LUI = SSBS1_LUI)
+      
     if (is.null(baseline_lui)){
       site_comp_df <- site_comp_df |>
         dplyr::mutate(Baseline_LUI = NA)
     }
+
+    # Add sampling effort - note, present in spp_tmp
+    effort_df <- unique(spp_tmp[, c("SSBS", "Sampling_effort")])
+
+    site_comp_df <- site_comp_df |>
+      dplyr::left_join(effort_df, 
+                       by = c("SSBS1" = "SSBS")) |>
+      dplyr::rename(SSBS1_Effort = Sampling_effort) |> 
+      dplyr::left_join(effort_df, 
+                       by = c("SSBS2" = "SSBS")) |>
+      dplyr::rename(SSBS2_Effort = Sampling_effort) |>
+      dplyr::mutate(SSBS2_Relative_effort_diff = (SSBS2_Effort - SSBS1_Effort)/SSBS1_Effort ,
+                    SSBS2_Relative_effort = SSBS2_Effort / SSBS1_Effort
+                    )
   }
-  # TODO: lu contrast (Predominant_land_use), i contrast (Use_intensity)
-  # if ("lu_contrast" %in% metrics){
-  #   # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
-  #   site_comp_df <- site_comp_df |>
-  #     dplyr::left_join(site_df[, c("SSBS", "Predominant_land_use")], 
-  #                      by = c("SSBS1" = "SSBS")) |>
-  #     dplyr::rename(SSBS1_LU = Predominant_land_use) |>
-  #     # get the land use for s2
-  #     dplyr::left_join(site_df[, c("SSBS", "Predominant_land_use")], 
-  #                      by = c("SSBS2" = "SSBS")) |>
-  #     dplyr::rename(SSBS2_LU = Predominant_land_use) |>
-  #     # create an lu_contrast column (what we'll use for modelling)
-  #     dplyr::mutate(LU_contrast = paste(SSBS1_LU, SSBS2_LU, sep = "_vs_"),
-  #                   Baseline_LUI = baseline_lui) # ??
-  #   if (is.null(baseline_lui)){  # ?? Baseline_LUI isn't really needed for LU??
-  #     site_comp_df <- site_comp_df |>
-  #       dplyr::mutate(Baseline_LUI = NA)
-  #   }
-  # }
-  # if ("i_contrast" %in% metrics){
-  #   # Edited from https://adrianadepalma.github.io/BII_tutorial/bii_example.html
-  #   site_comp_df <- site_comp_df |>
-  #     dplyr::left_join(site_df[, c("SSBS", "Use_intensity")], 
-  #                      by = c("SSBS1" = "SSBS")) |>
-  #     dplyr::rename(SSBS1_I = Use_intensity) |>
-  #     # get the land use for s2
-  #     dplyr::left_join(site_df[, c("SSBS", "Use_intensity")], 
-  #                      by = c("SSBS2" = "SSBS")) |>
-  #     dplyr::rename(SSBS2_I = Use_intensity) |>
-  #     # create an lu_contrast column (what we'll use for modelling)
-  #     dplyr::mutate(I_contrast = paste(SSBS1_I, SSBS2_I, sep = "_vs_"),
-  #                   Baseline_LUI = baseline_lui)
-  #   if (is.null(baseline_lui)){
-  #     site_comp_df <- site_comp_df |>
-  #       dplyr::mutate(Baseline_LUI = NA)
-  #   }
-  # }
+  
 
   # - geo_distance - SSBS1, long1, lat1, SSBS2, long2, lat2
   if (any(c("geogr_dist_hav", "geogr_dist_geod", "geogr_midpoint") %in% metrics)){
@@ -549,16 +459,7 @@ hib_calc_site_contrasts <- function(obj,
                                                            cbind(SSBS2_longitude, SSBS2_latitude)))
     }
     if ("geogr_midpoint" %in% metrics){
-      # site_comp_df <- site_comp_df |>
-      #   # calculate the geographic midpoint between s1 and s2 
-      #   # TODO: is therea better way to do this? - if coords are not 'true' lat/long...
-      #   # then this may be a poor estimate... 
-      #   # If coords are far apart, this is bad, if coords are either side of 180, this is wrong..
-      #   # 
-      #   # sf::st_centroid
-      #   dplyr::mutate(Latitude_midpoint = (SSBS1_latitude + SSBS2_latitude) / 2,
-      #                 Longitude_midpoint = (SSBS1_longitude + SSBS2_longitude) / 2)
-
+     
       midpoint_df <- geosphere::midPoint(site_comp_df[, c("SSBS1_longitude", "SSBS1_latitude")], 
                                          site_comp_df[, c("SSBS2_longitude", "SSBS2_latitude")]) |>
         as.data.frame()
@@ -570,14 +471,13 @@ hib_calc_site_contrasts <- function(obj,
   }
 
 
-
   if ("env_dist" %in% metrics){
     ss_un <- unique(site_comp_df$SS)
 
     site_comp_df <- site_comp_df |>
       dplyr::mutate(SSBS_contrast = paste(SSBS1, SSBS2, sep = "_"))
 
-    # Env dist? - gower dist [altitude, bioclim: maximum and minimum temperature and precipitation of wettest and driest month]
+    # Env dist - gower dist [altitude, bioclim: maximum and minimum temperature and precipitation of wettest and driest month]
     env_dist_df <- purrr::map_dfr(.x = ss_un,
                                  .f = function(ss = .x,
                                                env_data = site_df[,c("SS", "SSBS", "wc2.1_30s_bio_5", "wc2.1_30s_bio_6", "wc2.1_30s_bio_13", "wc2.1_30s_bio_14", "wc2.1_30s_elev")] |> 
@@ -589,7 +489,6 @@ hib_calc_site_contrasts <- function(obj,
                                      dplyr::select(-SS) |> 
                                      tibble::column_to_rownames("SSBS")
                                    
-                                   # print(tmp_env)
                                    # Need to check that this would work even if
                                    # no env data for a whole ss.. 
                                    if (nrow(tmp_env) > 1){
@@ -597,7 +496,8 @@ hib_calc_site_contrasts <- function(obj,
                                                               "gower",
                                                               F,
                                                               F,
-                                                              F)
+                                                              F,
+                                                              "")
                                      
                                      tmp_dist <- tmp_dist |>
                                        dplyr::rename(SSBS_contrast = contrast) |>
@@ -608,18 +508,14 @@ hib_calc_site_contrasts <- function(obj,
                                    return(tmp_dist)
                                  })
 
-    # print(colnames(env_dist_df))
     site_comp_df <- site_comp_df |>
       dplyr::left_join(env_dist_df |>
         dplyr::rename(Env_dist = Distance) |>
         dplyr::select(-metric_nm),
                         by = c("SSBS1", "SSBS2", "SSBS_contrast", "SS"))
   }
-  
-
 
   # %%%%%%
-  # TODO:
   # Custom distance calcs...
   if ("custom_dist" %in% metrics){ 
 
@@ -645,7 +541,6 @@ hib_calc_site_contrasts <- function(obj,
                                      dplyr::select(-SS) |> 
                                      tibble::column_to_rownames("SSBS")
                                    
-                                   # print(tmp_env)
                                    # Need to check that this would work even if
                                    # no env data for a whole ss.. 
                                    if (nrow(tmp_df) > 1){
@@ -653,7 +548,8 @@ hib_calc_site_contrasts <- function(obj,
                                                               metr_nm,
                                                               F,
                                                               F,
-                                                              F)
+                                                              F,
+                                                              "")
                                      
                                      tmp_dist <- tmp_dist |>
                                        dplyr::rename(SSBS_contrast = contrast) |>
@@ -668,85 +564,16 @@ hib_calc_site_contrasts <- function(obj,
       site_comp_df <- site_comp_df |>
         dplyr::left_join(tmp_custom_df |>
           dplyr::rename_with(~c(tmp_nm), c(Distance)) |>
-          # dplyr::rename(Env_dist = Distance) |>
           dplyr::select(-metric_nm),
                           by = c("SSBS1", "SSBS2", "SSBS_contrast", "SS"))
 
     }
   }
-
-  # By SS?, or over all sites... - use hib_calc_veg
-  # veg_df <- purrr::map_dfr(.x = studies,
-  #                                .f = function(ss = .x, 
-  #                                              spp_data = spp_tmp,
-  #                                              comp_df = site_comp_df,
-  #                                              metric_df = veg_metrics_df){
-                                   
-  #                                  # print( spp_data |>
-  #                                  #   # filter out the SS that matches the SS we're interested in
-  #                                  #   dplyr::filter(SS == ss) |>
-  #                                  #   # pull out the site name, species name and abundance information
-  #                                  #   dplyr::select(SSBS, Taxon_name_entered, Measurement) |>
-  #                                  #   # pivot so that each column is a species and each row is a site
-  #                                  #   tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
-  #                                  #                      values_fill = 0) )
-  #                                    # TODO: fix values_fill bug...
-  #                                    # tidyr::pivot_wider(names_from = Taxon_name_entered, 
-  #                                    #                    values_from = Measurement) )
-
-
-  #                                  spp_site_data <- spp_data |>
-  #                                    # filter out the SS that matches the SS we're interested in
-  #                                    dplyr::filter(SS == ss) |>
-  #                                    # pull out the site name, species name and abundance information
-  #                                    dplyr::select(SSBS, Taxon_name_entered, Measurement) |>
-  #                                    # pivot so that each column is a species and each row is a site
-  #                                    tidyr::pivot_wider(names_from = Taxon_name_entered, values_from = Measurement,
-  #                                                       values_fill = 0) |>
-                                     
-  #                                    # set the rownames to the SSBS and then remove that column
-  #                                    tibble::column_to_rownames("SSBS")
-                                   
-  #                                  # TODO: check at least 2 species are present (i.e 2 cols or more)
-  #                                  # TODO: return max_dist value - if NA, set rescale to F...
-  #                                  # Depending on metric_vec values, calc metrics of interest
-  #                                  # %%%
-  #                                  out_df <- purrr::pmap(.l = metric_df,
-  #                                                           .f = function(metric,
-  #                                                                         binary,
-  #                                                                         rel_abund,
-  #                                                                         rescale,
-  #                                                                         spp_data = spp_site_data){
-  #                                                             # print(metric)
-  #                                                             hib_calc_veg(spp_data, 
-  #                                                                          metric,
-  #                                                                          binary,
-  #                                                                          rel_abund,
-  #                                                                          rescale)
-  #                                                           }) |>
-  #                                    dplyr::bind_rows()
-  #                                  # %%%
-                                   
-  #                                  out_df <- out_df |>
-  #                                    dplyr::filter(contrast %in% comp_df$contrast)
-                                   
-  #                                  out_df <- tidyr::pivot_wider(out_df,
-  #                                                               names_from = metric_nm, 
-  #                                                               values_from = Distance)
-  #                                  out_df$SS <- ss
-                                   
-  #                                  return(out_df)
-  #                                })
-    
-  #   veg_df <- veg_df |>
-  #     dplyr::select(-contrast)
-
   # %%%%%%
 
 
   # Also, by default incl SSB - either SSB or NA if sites are from different blocks
   site_comp_df <- site_comp_df |>
-    # get the lat and long for s1
     dplyr::left_join(site_df[, c("SSBS", "SSB")], 
                      by = c("SSBS1" = "SSBS")) |>
     dplyr::rename(SSB1 = SSB) |>
@@ -759,7 +586,6 @@ hib_calc_site_contrasts <- function(obj,
   # TODO:
   # add in version info... ?
 
-  # %%%
   # add site_contrasts to obj
   site_contr_empty <- is.null(obj$site_contrasts)
   
@@ -776,3 +602,4 @@ hib_calc_site_contrasts <- function(obj,
   return(obj)
 
 }
+

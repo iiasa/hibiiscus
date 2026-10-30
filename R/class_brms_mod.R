@@ -1,14 +1,13 @@
 #' Template object for brms model 
 #' @title HibModelBRMS
 #' @description 
-#' This is the template object for an [R6][R6::R6Class] brms model class.
+#' This is the template object for an [R6][R6::R6Class] `brms` model class.
 #' It contains functions for summarising and visualising the model results. 
 #' @keywords classes
 #' @import R6
 #' @rdname HibModelBRMS-Class
 #' @export
 HibModelBRMS <- R6Class("HibModelBRMS",
-                          # hib_brms_model 
                           
                           # Public data objects and functions
                           public = list(
@@ -49,6 +48,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             #' @field site_locations (`data.frame`)\cr
                             #' Contains columns for "SSBS", "Longitude" ,"Latitude"
                             site_locations = NULL,
+                            
                             # TODO: what else to include
                             
                             # Executed when created
@@ -74,7 +74,9 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             #'   Number of sites contributing to the fitted model.
                             #' @param extra_args (`list`)\cr
                             #'   Additional arguments specified during model fitting.
-                            initialize = function(db_obj, # ??
+                            #'   
+                            #'   @return (`HibModelBRMS`)
+                            initialize = function(db_obj, 
                                                   mod_df,
                                                   brms_obj,
                                                   fixef_df,
@@ -82,18 +84,10 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                                   n_spp,
                                                   n_taxa,
                                                   n_sites,
-                                                  extra_args
-                                                  # set_up_specs
-                                                  # spp df?
-                                                  # ???? - should this do the model fitting
-                                                  # or should that be in hib_fit_lme4
-                                                  # and this just return the resultant obj
-                                                  # facilitating summary, printing...
-                            ){
+                                                  extra_args){
                               # - some assertion checks
                               assertthat::assert_that(
                                 # Check database obj
-                                # db_obj$checkself(),
                                 inherits(db_obj, "HibDatabase") ||  ( is.list(db_obj) & all(unlist(lapply(db_obj, function(x){inherits(x, "HibDatabase")}))) ), 
                                 # Check model data
                                 is.data.frame(mod_df),
@@ -141,21 +135,8 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                   self$processing_flags[[i]]$N_sites <- n_sites[[i]]
                                 }
                               }
-                              
-                              # self$processing_flags <- db_obj$processing_flags
+                            
                               # TODO: what about additional data (data2), e.g. covariance structures
-                              
-                              # Calc n sites/species used in  model - need to calc spp with div metrics!!
-                              # N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                              
-                              # if ("SSBS" %in% colnames(mod_df)){
-                              #   self$processing_flags$N_sites <- dplyr::n_distinct(mod_df$SSBS)
-                              # } else if ("SSBS1" %in% colnames(mod_df)){
-                              #   # print("SSBS1 found")
-                              #   self$processing_flags$N_sites <- length(unique(c(mod_df$SSBS1, mod_df$SSBS2)))
-                              # }
-                              
-                              # self$processing_flags$N_spp <- n_spp
                               
                               if (inherits(db_obj, "HibDatabase")){
                                 self$dataset_name <- db_obj$dataset_name
@@ -168,7 +149,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               }
                             
 
-                              # TODO: store site locations
+                              # Store site locations
                               if ("SSBS" %in% colnames(mod_df)){
                                 loc_df <- loc_df |> dplyr::filter(SSBS %in% mod_df$SSBS)
                               } else if ("SSBS1" %in% colnames(mod_df)){
@@ -215,7 +196,6 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                 filled_out
                               }
                               # N spp/sites...
-                              # print(summary(self$model))
                               if (is.null(names(self$processing_flags))){
                                 n_sites <- lapply(self$processing_flags, function(x){x$N_sites}) |>
                                   unlist() |>
@@ -235,14 +215,6 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                               number_taxa = self$processing_flags$N_taxa)
                               }
 
-
-                              # stats <- list(number_sites = self$processing_flags$N_sites,
-                              #               # number_lu = length( unique(self$data$Predominant_land_use) ),
-                              #               # number_lui = length(unique(self$data$Use_intensity)),
-                              #               number_species = paste(self$processing_flags$N_spp, collapse = ", ") ) #,
-                              # filters_applied = paste(self$processing_flags$filtering_steps, collapse = "; "),
-                              # div_metrics = paste(sort(unique(self$diversity$Metric)), collapse = ", ") )  
-                              
                               message(
                                 paste0("Hibiiscus fitted model (brms)\n",
                                        "Last updated: ", crayon::green( self$last_update ),
@@ -276,42 +248,7 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                              "\tWAIC   \t ", metr["waic"], "\n"))
                               
                             },
-                            
-                            # #' @description
-                            # #' Function to save the object to the specified file-path 
-                            # #' ('output_path', must be '.rds').
-                            # #'
-                            # #' @param output_path (`character()`)
-                            # #' @return (`NULL`).
-                            # save_hib = function(output_path = NULL){
-                            #   assertthat::assert_that(
-                            #     is.null(output_path) || is.character(output_path)
-                            #   )
-                              
-                            #   if(!assertthat::has_extension(output_path, "rds")){
-                            #     output_path <- paste0(output_path, ".rds")
-                            #   }
-                              
-                            #   if (!dir.exists(dirname(output_path))){
-                            #     message(crayon::yellow(paste0("\nWarning: '", dirname(output_path), "' doesn't exist.",
-                            #                                   "\n",
-                            #                                   "This folder will be created.\n")))
-                            #     dir.create(dirname(output_path), recursive = T)
-                            #   }
-                              
-                            #   if (file.exists(output_path)){
-                            #     message(crayon::yellow(paste0("\nWarning: '", output_path, "' already exists.",
-                            #                                   "\n",
-                            #                                   "This file will be updated.\n")))
-                            #   }
-                              
-                            #   message(crayon::green(paste0("Saving hib model to: '", output_path, "'\n")) )
-                              
-                            #   saveRDS(self, output_path)
-                            #   assertthat::assert_that(file.exists(output_path),
-                            #                           msg = "Writing a copy of the model failed...")
-                            #   invisible()
-                            # },
+                          
                             
                             #' @description
                             #' Function to generate figures summarising the model.
@@ -320,8 +257,6 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             #' "random-effects", "map-sites".
                             #' @return (`ggplot`).
                             plot = function(type = "fixed-effects"){
-                              # sjPlot::plot_model(self$model, 
-                              #                    show.intercept = T)
                               
                               assertthat::assert_that(is.character(type))
                 
@@ -347,16 +282,10 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                 fixef_df <- self$fixedef_coefficients
                                 
                                 # Set a baseline- Intercept
-                                # TODO: convert chr col of Coefficient_name to factor, based on order of terms in df
+                                # Convert chr col of Coefficient_name to factor, based on order of terms in df
                                 fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name,
                                                                     levels = fixef_df$Coefficient_name)
   
-                                # fixef_df$Coefficient_name <- factor(fixef_df$Coefficient_name)
-                                # if ("Intercept" %in% fixef_df$Coefficient_name){
-                                #   fixef_df$Coefficient <- relevel(fixef_df$Coefficient_name,
-                                #                                   ref = "Intercept")
-                                # }
-                                
                                 # %%%
                                 plt <- ggplot2::ggplot(fixef_df) +
                                   ggplot2::geom_hline(yintercept = 0, lty = 2, colour = "darkgrey") +
@@ -399,13 +328,10 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                                                              Coefficient_error = Est.Error,
                                                              loCI = Q2.5,
                                                              hiCI = Q97.5)
-                                             # return
-                                             # tmp <- as.data.frame(x)
-                                             # colnames(tmp) <- c()
+                                            
                                              tmp
                                              }) |>
                                   dplyr::bind_rows(.id = "Coefficient_group") |>
-                                  # tibble::rownames_to_column("Coefficient_name") |>
                                   dplyr::group_by(Coefficient_group, Coef_term) |>
                                   dplyr::arrange(Coefficient_value, .by_group = T) |>
                                   dplyr::mutate(ID_ord = 1:dplyr::n()) |>
@@ -446,11 +372,10 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                               }
                               
                               if (type == "map-sites"){
-                                # stop("Plotting map of sites used in model-fitting is in development...")
                                 
                                 # Just get a coarse-ish world map...
                                 tmp <- rnaturalearth::ne_countries(scale = 50, returnclass = 'sf')
-                                # NOTE: This differs per model type!!
+                                
                                 resp_var <- all.vars(stats::formula(self$model)$formula[[2]])
                                 resp_lab <- gsub("_", "\n", resp_var)
                                 
@@ -532,10 +457,11 @@ HibModelBRMS <- R6Class("HibModelBRMS",
                             },
                             
                             #' @description
-                            #' Function to assess the model.
+                            #' Function to assess the model using the performance package.
                             #' 
                             #' @return (`NULL`).
                             check_model = function(){
+                              message("Checking model...\n\tNote this function is still in development...")
                               m <- self$model
                               performance::check_model(m)
                             }

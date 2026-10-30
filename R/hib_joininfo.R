@@ -1,12 +1,21 @@
-#' Joins external species information to a HibDatabase object
+#' hib_join_species: Join external species information to a HibDatabase object
 #' 
 #' @description 
 #' This function joins external information to a [`HibDatabase`] object. Such 
 #' information could be for example prepared data on species traits.
-#' @param obj A [`HibDatabase`] object.
-#' @param spp_info A [`data.frame`] or similar of categorical or numeric information 
-#' to be added to the database. Must share atleast one column with obj$species.
+#' @param obj A `HibDatabase` object.
+#' @param spp_info A `data.frame` or similar of categorical or numeric information 
+#' to be added to the species data in the `HibDatabase`. 
+#' Must share at least one column with `HibDatabase$species`, e.g. 'Best_guess_binomial'.
+#' 
+#' @return HibDatabase
+#' 
 #' @keywords database, external
+#' 
+#' @examples 
+#' \dontrun{
+#'   hib_db <- hib_join_species(hib_db, new_spp_data_df)
+#' } 
 #' @export
 hib_join_species <- function(obj, spp_info){
 
@@ -38,7 +47,7 @@ hib_join_species <- function(obj, spp_info){
   obj$last_update <- lubridate::now()
   
   # %%%
-  # TODO: would be useful to flag addition of data - source name/an id..
+  # Flag addition of data - source name/an id..
   spp_info_chr <- deparse(substitute(spp_info))
   new_cols_chr <- info_cols[!info_cols %in% obj_spp_cols]
 
@@ -56,20 +65,30 @@ hib_join_species <- function(obj, spp_info){
 
   obj$checkself()
   
-  
   return(obj)
 }
 
-#' Joins external site information to a HibDatabase object
+
+#' hib_join_sites: Join external site information to a HibDatabase object
 #' 
 #' @description 
 #' This function joins external information to a [`HibDatabase`] object. Such 
 #' information could be for example additional site-specific data that are not 
 #' already present in the database.
-#' @param obj A [`HibDatabase`] object.
-#' @param site_info A [`data.frame`] or similar of categorical or numeric information 
-#' to be added to the database. Must share atleast one column with obj$sites.
+#' 
+#' @param obj A `HibDatabase` object.
+#' @param site_info A `data.frame` or similar of categorical or numeric information 
+#' to be added to the site dataframe within the `HibDatabase`. 
+#' Must share at least one column with `HibDatabase$sites`, e.g., 'SSBS'.
+#' 
+#' @return HibDatabase
+#' 
 #' @keywords database, external
+#' 
+#' @examples 
+#' \dontrun{
+#'   hib_db <- hib_join_sites(hib_db, new_site_data_df)
+#' } 
 #' @export
 hib_join_sites <- function(obj, site_info){
   # Assertions
@@ -122,20 +141,27 @@ hib_join_sites <- function(obj, site_info){
 }
 
 
-# hib_join_site_contrasts
-# as above, but link to site_contrast data - for complex models using 
-# site contrasts not provided in package...
-
-#' Joins external site-contrast information to a HibDatabase object
+#' hib_join_site_contrasts: Join external site-contrast information to a HibDatabase object
 #' 
 #' @description 
 #' This function joins external information to a [`HibDatabase`] object. Such 
-#' information could be for example additional site-contrast-specific data that are not 
-#' already present in the database.
-#' @param obj A [`HibDatabase`] object.
-#' @param site_contrast_info A [`data.frame`] or similar of categorical or numeric information 
-#' to be added to the database. Must share atleast one column with obj$site_contrasts.
+#' information could be for example additional site-contrast-specific data that 
+#' are not already present in the database.
+#' 
+#' @param obj A `HibDatabase` object.
+#' @param site_contrast_info A `data.frame` or similar of categorical or numeric 
+#' information to be added to the database. 
+#' Must share at least one column with `HibDatabase$site_contrasts`. 
+#' Ideally, both/one of 'SSBS1' and 'SSBS2' are present.
+#' 
+#' @return HibDatabase
+#' 
 #' @keywords database, external
+#' 
+#' @examples 
+#' \dontrun{
+#'   hib_db <- hib_join_site_contrasts(hib_db, new_site_contrast_data_df)
+#' } 
 #' @export
 hib_join_site_contrasts <- function(obj, site_contrast_info){
   # Assertions
@@ -144,13 +170,13 @@ hib_join_site_contrasts <- function(obj, site_contrast_info){
     is.data.frame(site_contrast_info)
     )
 
-  # Tests
-  # columns in site_contrast_info 
-  # - at least 1 must be in obj$sites
-  # - at least 1 must not be in obj$sites
-  # Check that site_contrasts exists, if not, create
-
+  # if site_contrasts exists, left_join
   if (!is.null(obj$site_contrasts)){
+    # Tests
+    # columns in site_contrast_info 
+    # - at least 1 must be in obj$site_contrasts
+    # - at least 1 must not be in obj$site_contrasts
+    
     obj_site_contr_cols <- colnames(obj$site_contrasts)
     info_cols <- colnames(site_contrast_info)
     
@@ -167,11 +193,10 @@ hib_join_site_contrasts <- function(obj, site_contrast_info){
                                            site_contrast_info)
   }
 
-  # if site_contrasts exists, left_join
+  # If it doesn't, stop
   if (is.null(obj$site_contrasts)){
     # Check SSBS1, SSBS2...
-    # Refuse to create?
-    # obj$site_contrasts
+    # Refuse to create
     message(crayon::red("Site-contrast data not present in HibDatabase, cannot join new data...\n"))
     stop("hib_join_site_contrasts unsuccessful. See above for details.", call. = F)
   }
