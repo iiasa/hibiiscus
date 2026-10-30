@@ -217,8 +217,8 @@ Note: In the above figures displaying coefficients and predictive performance, t
 ```{r Generate an example 10x10 df for use in projection}
 # Generate a simple df of example land-uses for projection.
 proj_df <- expand.grid(x = 1:10,
-                       y = 1:10) %>%
-  as.data.frame() %>%
+                       y = 1:10) |>
+  as.data.frame() |>
   dplyr::mutate(Forest_cover = runif(dplyr::n()),
                 LUI = dplyr::case_when(Forest_cover <= 0.3 ~ "Human",
                                               Forest_cover > 0.3 & Forest_cover <= 0.7 ~ "Semi-natural",

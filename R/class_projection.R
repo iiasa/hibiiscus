@@ -600,7 +600,7 @@ HibProjection <- R6Class("HibProjection",
                              }
                              
                              if (type == "bivariate-map"){
-                               rlang::check_installed("biscale", reason = "to plot bivariate maps.")
+                               rlang::check_installed(c("biscale", "cowplot"), reason = "to plot bivariate maps.")
                                # TODO: add colour scale options...
                                # c("Bluegill", "BlueGold", "BlueOr", "BlueYl", "Brown",
                                #   "Brown2", "DkBlue","DkBlue2", "DkCyan","DkCyan2", "DkViolet",

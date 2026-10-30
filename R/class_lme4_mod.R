@@ -456,6 +456,7 @@ HibModelLME4 <- R6Class("HibModelLME4",
                       #' 
                       #' @return (`NULL`).
                       check_model = function(){
+                        rlang::check_installed("performance", reason = "to check model diagnostics.")
                         message("Checking model...\n\tNote this function is still in development...")
                         m <- self$model
                         performance::check_model(m)
